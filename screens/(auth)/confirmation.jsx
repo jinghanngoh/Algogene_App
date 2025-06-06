@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import logo_s from '../assets/img/logo_s.png';
+import logo_s from '../../assets/img/logo_s.png';
 
 const Confirmation = () => {
     const router = useRouter();

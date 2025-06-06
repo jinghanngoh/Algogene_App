@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react'; // Add this import for useState
-import logo_s from '../assets/img/logo_s.png';
-import captcha_icon from '../assets/img/captcha_icon.png';
+import logo_s from '../../assets/img/logo_s.png';
+import captcha_icon from '../../assets/img/captcha_icon.png';
 
 const PasswordReset = () => {
     const router = useRouter();

@@ -1,7 +1,7 @@
 // Template: rnfes
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import { useRouter } from 'expo-router'
-import Logo from '../assets/img/logo.png';
+import Logo from '../../assets/img/logo.png';
 
 const Home = () => {
     const router = useRouter();

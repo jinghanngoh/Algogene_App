@@ -1,13 +1,13 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import login from '../assets/img/login.png';
-import logo_s from '../assets/img/logo_s.png';
-import google_icon from '../assets/img/google_icon.png';
-import facebook_icon from '../assets/img/facebook_icon.png';
-import linkedin_icon from '../assets/img/linkedin_icon.png';
-import github_icon from '../assets/img/github_icon.png';
-import captcha_icon from '../assets/img/captcha_icon.png';
+import login from '../../assets/img/login.png';
+import logo_s from '../../assets/img/logo_s.png';
+import google_icon from '../../assets/img/google_icon.png';
+import facebook_icon from '../../assets/img/facebook_icon.png';
+import linkedin_icon from '../../assets/img/linkedin_icon.png';
+import github_icon from '../../assets/img/github_icon.png';
+import captcha_icon from '../../assets/img/captcha_icon.png';
 
 const Login = () => {
     const router = useRouter();
@@ -67,7 +67,7 @@ const Login = () => {
                     />
                 </View>
 
-                <TouchableOpacity style={styles.loginButton}>
+                <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/(tabs)/home')}>
                     <Text style={styles.loginButtonText}>Login</Text>
                 </TouchableOpacity>
             </View>

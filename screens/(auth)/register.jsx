@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import logo_s from '../assets/img/logo_s.png';
-import register from '../assets/img/register.png';
-import captcha_icon from '../assets/img/captcha_icon.png';
+import logo_s from '../../assets/img/logo_s.png';
+import register from '../../assets/img/register.png';
+import captcha_icon from '../../assets/img/captcha_icon.png';
 
 const Register = () => {
     const router = useRouter();
