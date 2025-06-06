@@ -13,6 +13,7 @@ export default function RootLayout() {
       <Stack.Screen name="(auth)/password" />
       <Stack.Screen name="(auth)/confirmation" />
       <Stack.Screen name="(tabs)/profile" />
+      <Stack.Screen name="profile_update" />
     </Stack>
   );
 }

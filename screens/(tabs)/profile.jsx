@@ -1,3 +1,12 @@
+// router.push({
+//     pathname: '/profile_update',
+//     params: { 
+//         updatedName: 'John Doe',
+//         updatedEmail: 'john@example.com'
+//     }
+// });
+// DO WE WANT TO CONSIDER THIS TO SHOW UPDATED DATA IN THE CONFIRMATION SCREEN 
+
 import { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Dimensions } from "react-native";
 import { useRouter } from 'expo-router';
@@ -66,6 +75,10 @@ const Profile = () => {
         if (selectedDate) {
             setDate(selectedDate);
         }
+    };
+
+    const handleUpdateProfile = () => {
+        router.push('/profile_update');
     };
 
     return (
@@ -278,7 +291,7 @@ const Profile = () => {
             </View>
 
             {/* Update Button */}
-            <TouchableOpacity style={styles.updateButton}>
+            <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
                 <Text style={styles.updateButtonText}>Update</Text> {/* Have it update and send out a verification email */}
             </TouchableOpacity>
         </ScrollView>
