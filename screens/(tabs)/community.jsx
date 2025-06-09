@@ -217,14 +217,14 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    marginRight: 10, 
+    marginRight: 5, 
     marginBottom: 10, 
     justifyContent: 'center',
     alignItems: 'center',
   },
   addButtonIcon: {
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
   },
 });
 
