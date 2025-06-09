@@ -10,7 +10,6 @@ const Confirmation = () => {
         router.replace('/login');
     };
 
-    // Determine which message to show
     const getMessage = () => {
         switch (type) {
             case 'password':

@@ -215,14 +215,16 @@ const Profile = () => {
                 <ProfileField label="Contact No:" input={<TextInput style={styles.inputField} />} />
                 <ProfileField label="Address:" input={<TextInput style={styles.inputField} />} />
                 
-                <ProfileField 
+                {/* <ProfileField 
                     label="Birthday:" 
                     input={
-                        <TouchableOpacity 
-                            style={styles.inputField} 
-                            onPress={() => setShowDatePicker(true)}
-                        >
-                            <Text style={styles.dateText}>{formatDate(date)}</Text>
+                        <View style={styles.dateInputContainer}>
+                            <TouchableOpacity 
+                                style={styles.inputField} 
+                                onPress={() => setShowDatePicker(true)}
+                            >
+                                <Text style={styles.dateText}>{formatDate(date)}</Text>
+                            </TouchableOpacity>
                             {showDatePicker && (
                                 <DateTimePicker
                                     value={date}
@@ -231,9 +233,10 @@ const Profile = () => {
                                     onChange={onDateChange}
                                 />
                             )}
-                        </TouchableOpacity>
+                        </View>
                     }
-                />
+                /> */}
+
                 
                 <ProfileField 
                     label="Annual Income:" 
@@ -376,6 +379,9 @@ const styles = StyleSheet.create({
     dateText: {
         color: 'black',
         fontSize: 14,
+    },
+    dateInputContainer: {
+        flex: 1,  // This makes it take up remaining space
     },
     pickerContainer: {
         flex: 1,
