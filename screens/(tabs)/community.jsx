@@ -1,10 +1,16 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Image, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native';
 import { MaterialIcons, Feather, FontAwesome } from '@expo/vector-icons';
 import newpost from '../../assets/img/add_post.png';
+import ReadPostModal from '../components/ReadPostModal';
+import CreatePostModal from '../components/CreatePostModal';
 
 const Community = () => {
-  const posts = [
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [postModalVisible, setPostModalVisible] = useState(false);
+  const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
+  const [posts, setPosts] = useState([
     { 
       id: 1,
       username: 'TraderPro',
@@ -13,7 +19,8 @@ const Community = () => {
       content: 'The recent market trends suggest a bullish pattern forming in tech stocks. We might see a 10-15% increase in the coming weeks.',
       views: 124,
       likes: 56,
-      comments: 23
+      comments: 23,
+      liked: false
     },
     { 
       id: 2,
@@ -23,7 +30,8 @@ const Community = () => {
       content: 'Just uploaded a comprehensive dataset of cryptocurrency prices from 2015-2023. Perfect for backtesting strategies!',
       views: 89,
       likes: 42,
-      comments: 12
+      comments: 12,
+      liked: false
     },
     { 
       id: 3,
@@ -33,7 +41,8 @@ const Community = () => {
       content: 'My new trading algorithm has shown 23% returns in backtesting. Looking forward to testing it live next week. Any suggestions for improvement?',
       views: 215,
       likes: 98,
-      comments: 37
+      comments: 37,
+      liked: false
     },
     { 
       id: 4,
@@ -43,9 +52,66 @@ const Community = () => {
       content: 'The latest employment numbers suggest we might see rate hikes sooner than expected. How is everyone adjusting their portfolios?',
       views: 176,
       likes: 73,
-      comments: 29
+      comments: 29,
+      liked: false
     }
-  ];
+  ]);
+
+  const handleCreatePost = (content) => {
+    const newPost = {
+      id: posts.length + 1,
+      username: 'CurrentUser',
+      date: new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      title: 'New Post',
+      content: content,
+      views: 0,
+      likes: 0,
+      comments: 0,
+      liked: false
+    };
+    
+    setPosts([newPost, ...posts]);
+  };
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  const handlePostPress = (post) => {
+    setSelectedPost(post);
+    setPostModalVisible(true);
+    
+    // Increment views
+    setPosts(posts.map(p => 
+      p.id === post.id ? {...p, views: p.views + 1} : p
+    ));
+  };
+
+  const handleLike = () => {
+    if (!selectedPost) return;
+    
+    setPosts(posts.map(post => 
+      post.id === selectedPost.id 
+        ? {...post, likes: post.liked ? post.likes - 1 : post.likes + 1, liked: !post.liked}
+        : post
+    ));
+    
+    setSelectedPost(prev => ({
+      ...prev,
+      likes: prev.liked ? prev.likes - 1 : prev.likes + 1,
+      liked: !prev.liked
+    }));
+  };
+
+  const filteredPosts = posts.filter(post =>
+    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <View style={styles.container}>
@@ -56,6 +122,8 @@ const Community = () => {
           style={styles.searchInput}
           placeholder="Search"
           placeholderTextColor="#aaa"
+          value={searchQuery}
+          onChangeText={handleSearch}
         />
       </View>
 
@@ -64,8 +132,12 @@ const Community = () => {
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContentContainer}
       >
-        {posts.map((post) => (
-          <View key={post.id} style={styles.postBox}>
+        {filteredPosts.map((post) => (
+          <TouchableOpacity 
+            key={post.id} 
+            style={styles.postBox}
+            onPress={() => handlePostPress(post)}
+          >
             {/* User info section */}
             <View style={styles.userContainer}>
               <Image
@@ -88,6 +160,7 @@ const Community = () => {
                 style={styles.commentInput}
                 placeholder="Write a comment..."
                 placeholderTextColor="#aaa"
+                editable={false}
               />
               <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
@@ -95,18 +168,37 @@ const Community = () => {
                   <Text style={styles.statText}>{post.views.toString().padStart(2, '0')}</Text>
                 </View>
                 <View style={[styles.statItem, { marginLeft: 15 }]}>
-                  <FontAwesome name="heart-o" size={16} color="white" />
+                  <FontAwesome name={post.liked ? "heart" : "heart-o"} size={16} color={post.liked ? "red" : "white"} />
                   <Text style={styles.statText}>{post.likes.toString().padStart(2, '0')}</Text>
                 </View>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
 
-      <TouchableOpacity style={styles.addButton}>
+      {/* Add Post Button */}
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => setCreatePostModalVisible(true)}
+      >
         <Image source={newpost} style={styles.addButtonIcon} />
       </TouchableOpacity>
+
+      {/* Post View Modal */}
+      <ReadPostModal
+        visible={postModalVisible}
+        post={selectedPost}
+        onClose={() => setPostModalVisible(false)}
+        onLike={handleLike}
+      />
+
+      {/* Create Post Modal */}
+      <CreatePostModal
+        visible={createPostModalVisible}
+        onClose={() => setCreatePostModalVisible(false)}
+        onPost={handleCreatePost}
+      />
     </View>
   );
 };

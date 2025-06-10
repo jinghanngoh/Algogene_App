@@ -8,7 +8,8 @@ import {
   Dimensions,
   StyleSheet,
 } from "react-native";
-import WatchlistModal from "../components/WatchlistModal"; // Updated path
+import WatchlistModal from "../components/WatchlistModal"; 
+import NewsModal from "../components/NewsModal"; 
 import HSI from "../../assets/img/hsi_icon.png";
 import DXY from "../../assets/img/dollar_icon.png";
 import NKY from "../../assets/img/225_icon.png";
@@ -41,6 +42,8 @@ const allWatchlistItems = [
 
 const Home = () => {
   const [activeNewsIndex, setActiveNewsIndex] = useState(0);
+  const [selectedNews, setSelectedNews] = useState(null);
+  const [newsModalVisible, setNewsModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItems, setSelectedItems] = useState(["HSI", "DXY", "NKY", "NDX", "DAX"]);
   const scrollViewRef = useRef(null);
@@ -79,7 +82,15 @@ const Home = () => {
           scrollEventThrottle={16}
         >
           {newsItems.map((item) => (
-            <View key={item.id} style={styles.slide}>
+            <TouchableOpacity 
+              key={item.id} 
+              style={styles.slide}
+              onPress={() => {
+                setSelectedNews(item);
+                setNewsModalVisible(true);
+              }}
+              activeOpacity={0.7}
+            >
               <View style={styles.newsContainer}>
                 <Text style={styles.newsText}>{item.title}</Text>
               </View>
@@ -87,8 +98,14 @@ const Home = () => {
                 <Text style={styles.captionHeading}>{item.heading}</Text>
                 <Text style={styles.captionText}>{item.description}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
+
+            <NewsModal
+              visible={newsModalVisible}
+              onClose={() => setNewsModalVisible(false)}
+              newsItem={selectedNews}
+            /> 
         </ScrollView>
 
         <View style={styles.pagination}>
