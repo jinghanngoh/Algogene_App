@@ -9,21 +9,23 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#8E8E93',
         headerShown: false,
         tabBarStyle: {
-          height: 80, 
-          backgroundColor: "black",
+          height: 80,
+          backgroundColor: 'black',
         },
         tabBarIconStyle: {
-            marginTop: 10,
+          marginTop: 10,
         },
         tabBarLabelStyle: {
           marginTop: 4,
           marginBottom: 0,
+          fontSize: 12,
         },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
+          title: 'Home',
           tabBarLabel: 'Home',
           tabBarIcon: ({ color }) => <Ionicons name="home" size={28} color={color} />,
         }}
@@ -31,6 +33,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="marketplace"
         options={{
+          title: 'Marketplace',
           tabBarLabel: 'Marketplace',
           tabBarIcon: ({ color }) => <Ionicons name="cart" size={28} color={color} />,
         }}
@@ -38,6 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="portfolio"
         options={{
+          title: 'Portfolio',
           tabBarLabel: 'Portfolio',
           tabBarIcon: ({ color }) => <Ionicons name="pie-chart" size={28} color={color} />,
         }}
@@ -45,6 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="community"
         options={{
+          title: 'Community',
           tabBarLabel: 'Community',
           tabBarIcon: ({ color }) => <Ionicons name="globe" size={28} color={color} />,
         }}
@@ -52,6 +57,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          title: 'Profile',
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
         }}
