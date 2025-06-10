@@ -1,58 +1,3 @@
-// import React from "react";
-// import {
-//   View,
-//   Text,
-//   Modal,
-//   ScrollView,
-//   TouchableOpacity,
-//   Pressable,
-//   Image,
-//   StyleSheet,
-// } from "react-native";
-
-// const WatchlistModal = ({ visible, onClose, allItems, selectedItems, setSelectedItems }) => {
-//   const toggleItem = (symbol) => {
-//     if (selectedItems.includes(symbol)) {
-//       setSelectedItems(selectedItems.filter((item) => item !== symbol));
-//     } else {
-//       setSelectedItems([...selectedItems, symbol]);
-//     }
-//   };
-
-//   return (
-//     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-//       <View style={styles.modalContainer}>
-//         <View style={styles.modalContent}>
-//           <Text style={styles.modalTitle}>Edit Watchlist</Text>
-//           <ScrollView style={styles.modalScrollView}>
-//             {allItems.map((item) => (
-//               <Pressable key={item.symbol} style={styles.modalItem} onPress={() => toggleItem(item.symbol)}>
-//                 <View style={styles.modalItemContent}>
-//                   <Image source={item.icon} style={styles.modalIcon} />
-//                   <View style={styles.modalItemText}>
-//                     <Text style={styles.modalItemName}>{item.name}</Text>
-//                     <Text style={styles.modalItemSymbol}>{item.symbol}</Text>
-//                   </View>
-//                 </View>
-//                 {selectedItems.includes(item.symbol) && <Text style={styles.selectedIndicator}>✓</Text>}
-//               </Pressable>
-//             ))}
-//           </ScrollView>
-//           <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
-//             <Text style={styles.modalCloseButtonText}>Done</Text>
-//           </TouchableOpacity>
-//         </View>
-//       </View>
-//     </Modal>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   // Add your styles here, same as the modal styles in the original code
-// });
-
-// export default WatchlistModal;
-
 import React from "react";
 import {
   View,
@@ -64,7 +9,6 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-
 import { Ionicons } from '@expo/vector-icons';
 
 const WatchlistModal = ({ 
@@ -83,37 +27,43 @@ const WatchlistModal = ({
   };
 
   return (
-    <Modal visible={visible} transparent={true} animationType="slide">
+    <Modal 
+      animationType="slide" 
+      transparent={true} 
+      visible={visible} 
+      onRequestClose={onClose}
+    >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Select Items</Text>
-          <ScrollView>
+          <Text style={styles.modalTitle}>Edit Watchlist</Text>
+          
+          <ScrollView style={styles.modalScrollView}>
             {allItems.map((item) => (
-              <TouchableOpacity
+              <Pressable
                 key={item.symbol}
-                style={[
-                  styles.item,
-                  selectedItems.includes(item.symbol) && styles.selectedItem
-                ]}
+                style={styles.modalItem}
                 onPress={() => toggleItem(item.symbol)}
               >
-                <Text style={styles.itemText}>{item.name || item.symbol}</Text>
+                <View style={styles.modalItemContent}>
+                  <Image source={item.icon} style={styles.modalIcon} />
+                  <View style={styles.modalItemText}>
+                    <Text style={styles.modalItemName}>{item.name}</Text>
+                    <Text style={styles.modalItemSymbol}>{item.symbol}</Text>
+                  </View>
+                </View>
                 {selectedItems.includes(item.symbol) && (
-                  // Using Ionicons as a reliable alternative
-                  <Ionicons name="checkmark" size={20} color="#2196F3" />
-                  // Or if you fix the image path:
-                  // <Image source={Check} style={styles.checkIcon} />
+                  <Ionicons name="checkmark" size={20} color="white" />
                 )}
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </ScrollView>
-          <Pressable 
-            style={styles.closeButton} 
+          
+          <TouchableOpacity
+            style={styles.modalCloseButton}
             onPress={onClose}
-            android_ripple={{ color: '#fff' }}
           >
-            <Text style={styles.closeButtonText}>Close</Text>
-          </Pressable>
+            <Text style={styles.modalCloseButtonText}>Done</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -125,156 +75,65 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   modalContent: {
-    width: '80%',
-    backgroundColor: 'white',
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: '#1E1E1E',
     borderRadius: 10,
     padding: 20,
-    maxHeight: '80%',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
+    color: 'white',
     marginBottom: 15,
     textAlign: 'center',
   },
-  item: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  modalScrollView: {
+    maxHeight: '80%',
+  },
+  modalItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
   },
-  itemText: {
-    fontSize: 16,
-  },
-  selectedItem: {
-    backgroundColor: '#e6f7ff',
-  },
-  closeButton: {
-    marginTop: 15,
-    padding: 12,
-    backgroundColor: '#2196F3',
-    borderRadius: 5,
+  modalItemContent: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  closeButtonText: {
+  modalIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
+  },
+  modalItemText: {
+    justifyContent: 'space-between',
+  },
+  modalItemName: {
+    color: 'white',
+    fontSize: 16,
+  },
+  modalItemSymbol: {
+    color: 'gray',
+    fontSize: 12,
+  },
+  modalCloseButton: {
+    backgroundColor: '#4682B4',
+    padding: 12,
+    borderRadius: 5,
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
   },
-  checkIcon: {
-    width: 20,
-    height: 20,
-  },
 });
 
 export default WatchlistModal;
-
-
-
-// import React from "react";
-// import {
-//   View,
-//   Text,
-//   Modal,
-//   ScrollView,
-//   TouchableOpacity,
-//   Pressable,
-//   Image,
-//   StyleSheet,
-// } from "react-native";
-
-// import Check from '../../assets/img/checkmark.png';
-
-// const WatchlistModal = ({ 
-//   visible, 
-//   onClose, 
-//   allItems = [], // Provide default empty array
-//   selectedItems = [], // Provide default empty array
-//   setSelectedItems 
-// }) => {
-//   const toggleItem = (symbol) => {
-//     if (selectedItems.includes(symbol)) {
-//       setSelectedItems(selectedItems.filter((item) => item !== symbol));
-//     } else {
-//       setSelectedItems([...selectedItems, symbol]);
-//     }
-//   };
-
-//   return (
-//     <Modal visible={visible} transparent={true} animationType="slide">
-//       <View style={styles.modalContainer}>
-//         <View style={styles.modalContent}>
-//           <Text style={styles.modalTitle}>Select Items</Text>
-//           <ScrollView>
-//             {allItems.map((item) => (
-//               <TouchableOpacity
-//                 key={item.symbol} // or whatever unique identifier your items have
-//                 style={[
-//                   styles.item,
-//                   selectedItems.includes(item.symbol) && styles.selectedItem
-//                 ]}
-//                 onPress={() => toggleItem(item.symbol)}
-//               >
-//                 <Text>{item.name || item.symbol}</Text>
-//                 {selectedItems.includes(item.symbol) && (
-//                   <Image source= {Check} />
-//                 )}
-//               </TouchableOpacity>
-//             ))}
-//           </ScrollView>
-//           <Pressable style={styles.closeButton} onPress={onClose}>
-//             <Text style={styles.closeButtonText}>Close</Text>
-//           </Pressable>
-//         </View>
-//       </View>
-//     </Modal>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   modalContainer: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     backgroundColor: 'rgba(0,0,0,0.5)',
-//   },
-//   modalContent: {
-//     width: '80%',
-//     backgroundColor: 'white',
-//     borderRadius: 10,
-//     padding: 20,
-//     maxHeight: '80%',
-//   },
-//   modalTitle: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     marginBottom: 15,
-//     textAlign: 'center',
-//   },
-//   item: {
-//     padding: 15,
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#eee',
-//   },
-//   selectedItem: {
-//     backgroundColor: '#e6f7ff',
-//   },
-//   closeButton: {
-//     marginTop: 15,
-//     padding: 10,
-//     backgroundColor: '#2196F3',
-//     borderRadius: 5,
-//     alignItems: 'center',
-//   },
-//   closeButtonText: {
-//     color: 'white',
-//     fontWeight: 'bold',
-//   },
-// });
-
-// export default WatchlistModal;
