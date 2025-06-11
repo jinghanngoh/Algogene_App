@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         width: 12,
     },
-    // Modal styles
+
     modalContainer: {
         flex: 1,
         justifyContent: 'center',
