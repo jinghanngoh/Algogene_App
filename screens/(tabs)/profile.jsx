@@ -35,8 +35,25 @@ const Profile = () => {
     ];
 
     const handleMenuItemPress = (itemName) => {
-        console.log(`${itemName} pressed`);
-        // Add navigation logic here
+        switch (itemName) {
+            case "Information":
+                router.push('/Profile/Information');
+                break;
+            case "Invite Friends":
+                router.push('/Profile/InviteFriends');
+                break;
+            case "Customer Service":
+                router.push('/Profile/CustomerService');
+                break;
+            case "Help Center":
+                router.push('/Profile/HelpCenter');
+                break;
+            case "Settings":
+                router.push('/Profile/Settings');
+                break;
+            default:
+                console.log(`${itemName} pressed`);
+        }
     };
 
     return (
