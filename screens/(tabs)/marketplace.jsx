@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingHorizontal: 15,
-    paddingBottom: 20, // Added bottom padding
+    paddingBottom: 20,
   },
   contentBox: {
     backgroundColor: 'white',

@@ -58,14 +58,12 @@ const Profile = () => {
 
     return (
         <View style={styles.container}>
-            {/* Centered Profile Section */}
             <View style={styles.profileSection}>
                 <Image source={Placeholder} style={styles.profileImage} />
                 <Text style={styles.profileName}>NAME</Text>
                 <Text style={styles.profileUserId}>User ID: xxx</Text>
             </View>
             
-            {/* Menu Items with Icons */}
             <View style={styles.menuContainer}>
                 {menuItems.map((item) => (
                     <TouchableOpacity 

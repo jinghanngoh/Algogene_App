@@ -14,33 +14,20 @@ export default function RootLayout() {
       <Stack.Screen name="(auth)/password" />
       <Stack.Screen name="(auth)/confirmation" />
 
-      {/* Main application tabs */}
       <Stack.Screen name="(tabs)" />
+
+      <Stack.Screen name="Profile/CustomerService" />
+      <Stack.Screen name="Profile/HelpCenter" />
+      <Stack.Screen name="Profile/Information" />
+      <Stack.Screen name="Profile/InviteFriends" />
+      <Stack.Screen name="Profile/Settings" />
+      <Stack.Screen name="Profile/Update" />
       
-      {/* Other screens */}
-      <Stack.Screen name="profile_update" />
+      {/* Portfolio screens */}
+      <Stack.Screen name="Portfolio/AIPortfolioAnalysis" />
+      <Stack.Screen name="Portfolio/LiveTest" />
+      <Stack.Screen name="Portfolio/MyAccount" />
+      <Stack.Screen name="Portfolio/RealTrade" />
     </Stack>
   );
 }
-
-
-// import { Stack } from 'expo-router';
-
-// export default function RootLayout() {
-//   return (
-//     <Stack 
-//       screenOptions={{
-//         headerShown: false, // Applies to ALL screens in this stack
-//       }}
-//     >
-//       <Stack.Screen name="(auth)/index" />
-//       <Stack.Screen name="(auth)/login" />
-//       <Stack.Screen name="(auth)/register" />
-//       <Stack.Screen name="(auth)/password" />
-//       <Stack.Screen name="(auth)/confirmation" />
-//       {/* <Stack.Screen name="(tabs)/profile" />
-//       <Stack.Screen name="(tabs)/home" /> */}
-//       <Stack.Screen name="profile_update" />
-//     </Stack>
-//   );
-// }

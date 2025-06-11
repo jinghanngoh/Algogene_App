@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
-import { useRouter } from 'expo-router'
+import React from 'react'; 
+import { useRouter } from 'expo-router';
 import Logo from '../../assets/img/logo.png';
 import { Ionicons } from '@expo/vector-icons'; // Import icons library
 
@@ -7,16 +8,31 @@ const Portfolio = () => {
     const router = useRouter();
 
     const menuItems = [
-        { id: 1, name: "My Account" },
-        { id: 2, name: "Live Test" },
-        { id: 3, name: "Real Trade" },
-        { id: 4, name: "AI Portfolio Analysis" },
+        { id: 1, name: "My Account"},
+        { id: 2, name: "Live Test"},
+        { id: 3, name: "Real Trade"},
+        { id: 4, name: "AI Portfolio Analysis"},
     ];
 
     const handleMenuItemPress = (itemName) => {
-        console.log(`${itemName} pressed`);
-        // Add navigation logic here
+        switch (itemName) {
+            case "My Account":
+                router.push('/Portfolio/MyAccount');
+                break; 
+            case "Live Test":
+                router.push('/Portfolio/LiveTest');
+                break; 
+            case "Real Trade":
+                router.push('/Portfolio/RealTrade');
+                break; 
+            case "AI Portfolio Analysis":
+                router.push('/Portfolio/AIPortfolioAnalysis');
+                break; 
+            default:
+                console.log(`${itemName} pressed`);
+        }
     };
+
 
     return (
         <View style={styles.container}>
@@ -42,8 +58,6 @@ const Portfolio = () => {
         </View>
     );
 };
-
-export default Portfolio;
 
 const styles = StyleSheet.create({
     container: {
@@ -88,3 +102,5 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 });
+
+export default Portfolio;
