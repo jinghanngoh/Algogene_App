@@ -200,16 +200,6 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
               isSubscribed && styles.unsubscribeButton
             ]}
             onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
-            // onPress={() => {
-            //   if (isSubscribed) {
-            //     handleUnsubscribe
-            //     unsubscribeFromAlgorithm()
-            //   } else { 
-            //     handleSubscribe
-            //     subscribeToAlgorithm(mergedStrategy)
-            //   }
-            //   onClose();
-            // }}
           >
             <Text style={styles.subscribeButtonText}>
               {isSubscribed ? 'Unsubscribe' : `Subscribe (HKD ${mergedStrategy.price}/mo)`}

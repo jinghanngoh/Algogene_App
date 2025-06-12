@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   },
   captionContainer: {
     paddingVertical: 15,
-    paddingTop: 25, // Added padding to prevent content from being hidden behind close icon
+    paddingTop: 25,
   },
   captionHeading: {
     fontSize: 20,
