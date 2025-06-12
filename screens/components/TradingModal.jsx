@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions , Alert} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
 
@@ -54,6 +54,42 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
       stroke: "#2196F3"
     }
   };
+
+  const handleUnsubscribe = () => {
+    Alert.alert(
+      'Confirm Unsubscribe',
+      'Are you sure you want to unsubscribe from this strategy?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Unsubscribe',
+          onPress: () => {
+            unsubscribeFromAlgorithm();
+            onClose();
+          },
+          style: 'destructive',
+        },
+      ],
+    );
+  }
+
+  // In TradingModal.jsx
+  const handleSubscribe = () => {
+    if (subscribedAlgorithm && subscribedAlgorithm.id !== mergedStrategy.id) {
+      Alert.alert(
+        "Subscription Conflict",
+        "You're already subscribed to another algorithm. Please unsubscribe first.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    subscribeToAlgorithm(mergedStrategy);
+    onClose();
+  };
+
 
   return (
     <Modal
@@ -163,12 +199,17 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
               styles.subscribeButton, 
               isSubscribed && styles.unsubscribeButton
             ]}
-            onPress={() => {
-              isSubscribed 
-                ? unsubscribeFromAlgorithm() 
-                : subscribeToAlgorithm(mergedStrategy);
-              onClose();
-            }}
+            onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
+            // onPress={() => {
+            //   if (isSubscribed) {
+            //     handleUnsubscribe
+            //     unsubscribeFromAlgorithm()
+            //   } else { 
+            //     handleSubscribe
+            //     subscribeToAlgorithm(mergedStrategy)
+            //   }
+            //   onClose();
+            // }}
           >
             <Text style={styles.subscribeButtonText}>
               {isSubscribed ? 'Unsubscribe' : `Subscribe (HKD ${mergedStrategy.price}/mo)`}

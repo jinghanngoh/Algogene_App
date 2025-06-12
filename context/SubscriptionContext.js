@@ -8,7 +8,11 @@ export const SubscriptionProvider = ({ children }) => {
   const [subscribedAlgorithm, setSubscribedAlgorithm] = useState(null);
 
   const subscribeToAlgorithm = (algorithm) => {
+    if (subscribedAlgorithm && subscribedAlgorithm.id !== algorithm.id) {
+      return false; // Or throw an error/return a status
+    }
     setSubscribedAlgorithm(algorithm);
+    return true;
   };
 
   const unsubscribeFromAlgorithm = () => {
