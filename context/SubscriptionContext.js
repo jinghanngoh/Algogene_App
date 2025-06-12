@@ -1,6 +1,5 @@
 // This is a new folder for context providers (More specifically, we have subscription state management here)
 // State management solution to track the subscribed algorithm 
-
 import React, { createContext, useState, useContext } from 'react';
 
 const SubscriptionContext = createContext();

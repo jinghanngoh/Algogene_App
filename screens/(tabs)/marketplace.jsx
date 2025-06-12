@@ -279,7 +279,8 @@ const Marketplace = () => {
       <TradingModal 
         visible={modalVisible} 
         onClose={() => setModalVisible(false)} 
-        strategy={selectedStrategy || sampleStrategy} 
+        // strategy={selectedStrategy || sampleStrategy} 
+        strategy={selectedStrategy} 
       />
 
       {/* App Modal */}

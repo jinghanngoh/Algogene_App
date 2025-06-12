@@ -1,22 +1,43 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions } from 'react-native';
-import { LineChart } from 'react-native-chart-kit'; // You'll need to install this package
+import { LineChart } from 'react-native-chart-kit';
+import { useSubscription } from '../../context/SubscriptionContext';
 
-const TradingModal = ({ visible, onClose, strategy }) => {
-  // if (!strategy) {
-  //   return null; // If strategy is undefined, return null or a loading indicator
-  // }
+const TradingModal = ({ visible, onClose, strategy = null }) => {
+  const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
 
-  // Sample chart data - replace with your actual data
+  const defaultStrategy = {
+    id: 'default-strategy',
+    title: '定海神針',
+    userName: 'Trader Pro',
+    category: 'Forex',
+    description: 'This strategy uses advanced machine learning to predict currency movements with 85% accuracy.',
+    assetClass: 'Forex',
+    tradingInstruments: 'EUR/USD, GBP/USD, USD/JPY',
+    supportedBrokers: 'Broker A, Broker B, Broker C',
+    tradingRequirements: 'Minimum $500 account balance',
+    performance: {
+      score: '65',
+      tradingDays: '256',
+      sharpeRatio: '1.8',
+      sortinoRatio: '2.1',
+      volatility: '12%',
+      annualReturn: '24%',
+      maxDrawdown: '8%',
+    },
+    price: 999
+  };
+
+  const mergedStrategy = strategy ? { ...defaultStrategy, ...strategy } : defaultStrategy;
+  const isSubscribed = subscribedAlgorithm?.id === mergedStrategy.id;
+
   const chartData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        data: [100, 110, 120, 150, 180, 210],
-        color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-        strokeWidth: 2
-      }
-    ],
+    datasets: [{
+      data: [100, 110, 120, 150, 180, 210],
+      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+      strokeWidth: 2
+    }],
   };
 
   const chartConfig = {
@@ -26,9 +47,7 @@ const TradingModal = ({ visible, onClose, strategy }) => {
     decimalPlaces: 0,
     color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: {
-      borderRadius: 16
-    },
+    style: { borderRadius: 16 },
     propsForDots: {
       r: "4",
       strokeWidth: "2",
@@ -51,15 +70,13 @@ const TradingModal = ({ visible, onClose, strategy }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Strategy Title and Performance Score */}
           <View style={styles.titleSection}>
-            <Text style={styles.strategyTitle}>定海神針</Text>
+            <Text style={styles.strategyTitle}>{mergedStrategy.title}</Text>
             <View style={styles.scoreContainer}>
-              <Text style={styles.scoreText}>65</Text>
+              <Text style={styles.scoreText}>{mergedStrategy.performance.score}</Text>
             </View>
           </View>
 
-          {/* Performance Chart */}
           <View style={styles.chartContainer}>
             <LineChart
               data={chartData}
@@ -72,83 +89,90 @@ const TradingModal = ({ visible, onClose, strategy }) => {
             <Text style={styles.performanceText}>+120.4062%</Text>
           </View>
 
-          {/* User and Category */}
           <View style={styles.userSection}>
-            <Text style={styles.userName}>{strategy.userName}</Text>
+            <Text style={styles.userName}>{mergedStrategy.userName}</Text>
             <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{strategy.category}</Text>
+              <Text style={styles.categoryText}>{mergedStrategy.category}</Text>
             </View>
           </View>
 
-          {/* Strategy Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>STRATEGY DESCRIPTION:</Text>
-            <Text style={styles.sectionContent}>{strategy.description}</Text>
+            <Text style={styles.sectionContent}>{mergedStrategy.description}</Text>
           </View>
 
-          {/* Strategy Details */}
           <View style={styles.detailsContainer}>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>ASSET CLASS:</Text>
-              <Text style={styles.detailValue}>{strategy.assetClass}</Text>
+              <Text style={styles.detailValue}>{mergedStrategy.assetClass}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>TRADING INSTRUMENTS:</Text>
-              <Text style={styles.detailValue}>{strategy.tradingInstruments}</Text>
+              <Text style={styles.detailValue}>{mergedStrategy.tradingInstruments}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>SUPPORTED BROKERS:</Text>
-              <Text style={styles.detailValue}>{strategy.supportedBrokers}</Text>
+              <Text style={styles.detailValue}>{mergedStrategy.supportedBrokers}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>TRADING REQUIREMENTS:</Text>
-              <Text style={styles.detailValue}>{strategy.tradingRequirements}</Text>
+              <Text style={styles.detailValue}>{mergedStrategy.tradingRequirements}</Text>
             </View>
           </View>
 
-          {/* Performance */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>PERFORMANCE</Text>
             <View style={styles.performanceGrid}>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>score</Text>
-                <Text style={styles.performanceValue}>{strategy.performance.score}</Text>
+                <Text style={styles.performanceValue}>{mergedStrategy.performance.score}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>trading days</Text>
-                <Text style={styles.performanceValue}>{strategy.performance.tradingDays}</Text>
+                <Text style={styles.performanceValue}>{mergedStrategy.performance.tradingDays}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>sharpe ratio</Text>
-                <Text style={styles.performanceValue}>{strategy.performance.sharpeRatio}</Text>
+                <Text style={styles.performanceValue}>{mergedStrategy.performance.sharpeRatio}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>sortino ratio</Text>
-                <Text style={styles.performanceValue}>{strategy.performance.sortinoRatio}</Text>
+                <Text style={styles.performanceValue}>{mergedStrategy.performance.sortinoRatio}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>volatility</Text>
-                <Text style={styles.performanceValue}>{strategy.performance.volatility}%</Text>
+                <Text style={styles.performanceValue}>{mergedStrategy.performance.volatility}%</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>ann. return</Text>
-                <Text style={styles.performanceValue}>{strategy.performance.annualReturn}%</Text>
+                <Text style={styles.performanceValue}>{mergedStrategy.performance.annualReturn}%</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>max. drawdown</Text>
-                <Text style={styles.performanceValue}>{strategy.performance.maxDrawdown}%</Text>
+                <Text style={styles.performanceValue}>{mergedStrategy.performance.maxDrawdown}%</Text>
               </View>
             </View>
           </View>
 
-          {/* Pricing Information */}
           <View style={styles.pricingSection}>
-            <Text style={styles.pricingText}>HKD 999 / mo</Text>
+            <Text style={styles.pricingText}>HKD {mergedStrategy.price} / mo</Text>
           </View>
 
-          {/* Subscribe Button */}
-          <TouchableOpacity style={styles.subscribeButton}>
-            <Text style={styles.subscribeButtonText}>Subscribe</Text>
+          <TouchableOpacity
+            style={[
+              styles.subscribeButton, 
+              isSubscribed && styles.unsubscribeButton
+            ]}
+            onPress={() => {
+              isSubscribed 
+                ? unsubscribeFromAlgorithm() 
+                : subscribeToAlgorithm(mergedStrategy);
+              onClose();
+            }}
+          >
+            <Text style={styles.subscribeButtonText}>
+              {isSubscribed ? 'Unsubscribe' : `Subscribe (HKD ${mergedStrategy.price}/mo)`}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -297,6 +321,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
+  },
+  unsubscribeButton: {
+    backgroundColor: '#F44336',
   },
   subscribeButtonText: {
     color: 'white',

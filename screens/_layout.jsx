@@ -1,33 +1,36 @@
 import { Stack } from 'expo-router';
+import { SubscriptionProvider } from '../context/SubscriptionContext';
 
 export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false, // Hides the header for all screens in this stack
-      }}
-    >
-      {/* Authentication stack */}
-      <Stack.Screen name="(auth)/index" />
-      <Stack.Screen name="(auth)/login" />
-      <Stack.Screen name="(auth)/register" />
-      <Stack.Screen name="(auth)/password" />
-      <Stack.Screen name="(auth)/confirmation" />
+    <SubscriptionProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false, // Hides the header for all screens in this stack
+        }}
+      >
+        {/* Authentication stack */}
+        <Stack.Screen name="(auth)/index" />
+        <Stack.Screen name="(auth)/login" />
+        <Stack.Screen name="(auth)/register" />
+        <Stack.Screen name="(auth)/password" />
+        <Stack.Screen name="(auth)/confirmation" />
 
-      <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(tabs)" />
 
-      <Stack.Screen name="Profile/CustomerService" />
-      <Stack.Screen name="Profile/HelpCenter" />
-      <Stack.Screen name="Profile/Information" />
-      <Stack.Screen name="Profile/InviteFriends" />
-      <Stack.Screen name="Profile/Settings" />
-      <Stack.Screen name="Profile/Update" />
-      
-      {/* Portfolio screens */}
-      <Stack.Screen name="Portfolio/AIPortfolioAnalysis" />
-      <Stack.Screen name="Portfolio/LiveTest" />
-      <Stack.Screen name="Portfolio/MyAccount" />
-      <Stack.Screen name="Portfolio/RealTrade" />
-    </Stack>
+        <Stack.Screen name="Profile/CustomerService" />
+        <Stack.Screen name="Profile/HelpCenter" />
+        <Stack.Screen name="Profile/Information" />
+        <Stack.Screen name="Profile/InviteFriends" />
+        <Stack.Screen name="Profile/Settings" />
+        <Stack.Screen name="Profile/Update" />
+        
+        {/* Portfolio screens */}
+        <Stack.Screen name="Portfolio/AIPortfolioAnalysis" />
+        <Stack.Screen name="Portfolio/LiveTest" />
+        <Stack.Screen name="Portfolio/MyAccount" />
+        <Stack.Screen name="Portfolio/RealTrade" />
+      </Stack>
+    </SubscriptionProvider>
   );
 }

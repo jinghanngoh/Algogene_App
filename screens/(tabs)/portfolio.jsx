@@ -2,16 +2,18 @@ import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import React from 'react'; 
 import { useRouter } from 'expo-router';
 import Logo from '../../assets/img/logo.png';
-import { Ionicons } from '@expo/vector-icons'; // Import icons library
+import { Ionicons } from '@expo/vector-icons'; 
+import SubscribedAlgorithm from '../Portfolio/SubscribedAlgorithm';
 
 const Portfolio = () => {
     const router = useRouter();
 
     const menuItems = [
-        { id: 1, name: "My Account"},
-        { id: 2, name: "Live Test"},
-        { id: 3, name: "Real Trade"},
-        { id: 4, name: "AI Portfolio Analysis"},
+        { id: 1, name: "My Algorithm"},
+        { id: 2, name: "My Account"},
+        { id: 3, name: "Live Test"},
+        { id: 4, name: "Real Trade"},
+        { id: 5, name: "AI Portfolio Analysis"},
     ];
 
     const handleMenuItemPress = (itemName) => {
