@@ -1,8 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity} from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons'; 
 
 const MyAccount = () => {
+    const navigation = useNavigation();
+
     const accountData = {
         currency: 'USD',
         leverage: '5.0',
@@ -29,6 +33,12 @@ const MyAccount = () => {
     return (
         <View style={styles.container}>
             {/* Box 1: Account Info */}
+            <TouchableOpacity 
+                style={styles.backButton} 
+                onPress={() => navigation.goBack()}
+            >
+                <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
             <View style={styles.box}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>#1000</Text>
@@ -152,6 +162,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 15,
+        marginTop: 20, 
     },
     headerTitle: {
         fontSize: 24,

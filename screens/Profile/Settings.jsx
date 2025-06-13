@@ -1,5 +1,5 @@
 // screens/(tabs)/profile/Settings.jsx
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, TextInput, Alert } from 'react-native';
 import { useRouter, useState } from 'expo-router';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 
@@ -41,8 +41,26 @@ const Settings = () => {
       title: "LOG OUT",
       icon: <Feather name="log-out" size={22} color="#FF3B30" />,
       textColor: "#FF3B30",
-      action: () => console.log("Log out pressed")
-    },
+      action: () => {
+        Alert.alert(
+          "Log Out",
+          "Are you sure you want to log out?",
+          [
+            {
+              text: "Cancel",
+              style: "cancel"
+            },
+            { 
+              text: "Log Out", 
+              onPress: () => {
+                router.replace('/(auth)');
+
+              }
+            }
+          ]
+        );
+      }
+    }
   ];
 
   return (

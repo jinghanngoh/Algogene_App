@@ -63,7 +63,7 @@ const InviteFriends = () => {
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.title}>Invite Friends</Text>
-        <View style={{ width: 24 }} /> // Spacer for alignment
+        <View style={{ width: 24 }} />
       </View>
 
       {/* Referral Link Section */}

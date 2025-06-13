@@ -84,6 +84,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginBottom: 20,
+    marginTop: 10, 
   },
   postContainer: {
     backgroundColor: '#333',

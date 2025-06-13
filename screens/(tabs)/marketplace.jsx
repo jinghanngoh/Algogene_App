@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image, Modal } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image, Modal , Alert} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,8 @@ import placeholder from '../../assets/img/placeholder.png';
 import TradingModal from '../components/TradingModal'; 
 import AppModal from '../components/AppModal';
 import DataModal from '../components/DataModal';
+import { fetchPublicAlgos } from '../../services/testApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Marketplace = () => {
   const router = useRouter();
@@ -19,11 +21,11 @@ const Marketplace = () => {
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedData, setSelectedData] = useState(null);
   const [subscribedAlgorithm, setSubscribedAlgorithm] = useState(null);
-
+  const [isLoading, setIsLoading] = useState(false);
 
   const buttons = [
     { label: 'Trading System' },
-    { label: 'App Collection' },
+    { label: 'Application Collection' },
     { label: 'Data Marketplace' },
   ];
 
@@ -41,6 +43,42 @@ const Marketplace = () => {
     setShowTradingSystemBoxes(button.label === 'Trading System');
     console.log(`Button pressed: ${button.label}`);
   };
+
+  const handleTestAPI = async () => {
+    setIsLoading(true);
+    try {
+      const result = await fetchPublicAlgos();
+      
+      if (result.status === false) {
+        Alert.alert('API Response', result.res || 'Request was unsuccessful');
+        return;
+      }
+      
+      Alert.alert('Success', `Found ${result.data?.length || 0} algorithms`);
+      console.log('API Data:', result.data);
+      
+    } catch (error) {
+      let errorMessage = error.message;
+      
+      if (error.response) {
+        errorMessage = [
+          `Status: ${error.response.status}`,
+          `Message: ${error.response.data?.res || 'No error details'}`,
+          `Path: ${error.config.url}`
+        ].join('\n\n');
+      }
+      
+      Alert.alert('API Error', errorMessage);
+      console.error('Full Error:', {
+        error,
+        request: error.config,
+        response: error.response
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   // Sample strategy data
 
@@ -114,7 +152,7 @@ const Marketplace = () => {
 
   const renderContentBoxes = () => {
     const isTradingSystem = activeTab === 'Trading System';
-    const isAppCollection = activeTab === 'App Collection';
+    const isAppCollection = activeTab === 'Application Collection';
     const isDataMarketplace = activeTab === 'Data Marketplace';
     
     return (
@@ -122,6 +160,17 @@ const Marketplace = () => {
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContentContainer}
       >
+        <TouchableOpacity 
+          style={styles.apiTestButton}
+          onPress={handleTestAPI}
+          disabled={isLoading}
+        >
+          <Text style={styles.apiTestButtonText}>
+            {isLoading ? 'Testing...' : 'Test API Connection'}
+          </Text>
+        </TouchableOpacity>
+
+
         {isTradingSystem ? (
           // Render trading strategies with subscription capability
           sampleStrategies.map((strategy, index) => {
@@ -481,7 +530,7 @@ const styles = StyleSheet.create({
   },
   graphContainer: {
     marginBottom: 15,
-    overflow: 'hidden', // Prevent chart from protruding
+    overflow: 'hidden', 
   },
   performanceScore: {
     backgroundColor: '#2196F3',
@@ -490,7 +539,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10, // Add some space between title and score
+    marginLeft: 10, 
   },
   performanceScoreText: {
     color: 'white',
@@ -546,6 +595,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     padding: 10,
+  },
+  apiTestButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  apiTestButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 
