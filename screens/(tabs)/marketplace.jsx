@@ -1,248 +1,164 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image, Modal , Alert} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image, Modal , Alert, ActivityIndicator} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import placeholder from '../../assets/img/placeholder.png';
 import TradingModal from '../components/TradingModal'; 
-import AppModal from '../components/AppModal';
-import DataModal from '../components/DataModal';
 import { fetchPublicAlgos } from '../../services/testApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import 'react-native-get-random-values';
+import { polyfillWebCrypto } from 'expo-standard-web-crypto'; 
 
 const Marketplace = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('Trading System'); 
   const [showTradingSystemBoxes, setShowTradingSystemBoxes] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [appModalVisible, setAppModalVisible] = useState(false);
-  const [dataModalVisible, setDataModalVisible] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState(null);
-  const [selectedApp, setSelectedApp] = useState(null);
-  const [selectedData, setSelectedData] = useState(null);
   const [subscribedAlgorithm, setSubscribedAlgorithm] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [algorithms, setAlgorithms] = useState([]);
+  const [page, setPage] = useState(1); 
+  const [hasMore, setHasMore] = useState(true); 
+  const itemsPerPage = 10; 
 
-  const buttons = [
-    { label: 'Trading System' },
-    { label: 'Application Collection' },
-    { label: 'Data Marketplace' },
-  ];
-
-  const tradingSystemTabs = [
-    { label: 'Tab 1' },
-    { label: 'Tab 2' },
-    { label: 'Tab 3' },
-    { label: 'Tab 4' },
-    { label: 'Tab 5' },
-    { label: 'Tab 6' },
-  ];
-
-  const handleButtonPress = (button) => {
-    setActiveTab(button.label);
-    setShowTradingSystemBoxes(button.label === 'Trading System');
-    console.log(`Button pressed: ${button.label}`);
-  };
-
-  const handleTestAPI = async () => {
+  const loadAlgorithms = async () => {
+    if (isLoading || !hasMore) return;
+    
     setIsLoading(true);
     try {
       const result = await fetchPublicAlgos();
+      console.log("API Response:", result);
       
-      if (result.status === false) {
-        Alert.alert('API Response', result.res || 'Request was unsuccessful');
-        return;
+      // Check if response has the expected structure
+      if (!result || !result.data || !Array.isArray(result.data)) {
+        throw new Error('Invalid API response format');
       }
+  
+      const startIndex = (page - 1) * itemsPerPage;
+      const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
       
-      Alert.alert('Success', `Found ${result.data?.length || 0} algorithms`);
-      console.log('API Data:', result.data);
-      
+      setAlgorithms(prev => [...prev, ...paginatedData]);
+      setHasMore(result.data.length > page * itemsPerPage);
+      setPage(prev => prev + 1);
     } catch (error) {
-      let errorMessage = error.message;
-      
-      if (error.response) {
-        errorMessage = [
-          `Status: ${error.response.status}`,
-          `Message: ${error.response.data?.res || 'No error details'}`,
-          `Path: ${error.config.url}`
-        ].join('\n\n');
-      }
-      
-      Alert.alert('API Error', errorMessage);
-      console.error('Full Error:', {
-        error,
-        request: error.config,
-        response: error.response
-      });
+      console.error('Error loading algorithms:', error);
+      Alert.alert('Error', error.message || 'Failed to load algorithms');
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadAlgorithms();
+  }, []);
 
-  // Sample strategy data
-
-  const sampleStrategies = [
-    {
-      id: 'algo-1',
-      title: '定海神針',
-      userName: 'Trader Pro',
-      category: 'Forex',
-      description: 'Forex strategy with 85% accuracy',
-      performance: { score: '92' },
-      price: 999,
-      chartData: {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        data: [100, 110, 120, 150, 180, 210]
-      }
-    },
-    {
-      id: 'algo-2',
-      title: 'Golden Cross',
-      userName: 'Quant Master',
-      category: 'Stocks',
-      description: 'Stock trading using moving averages',
-      performance: { score: '88' },
-      price: 799,
-      chartData: {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        data: [80, 95, 110, 130, 150, 170]
-      }
-    },
-    {
-      id: 'algo-3',
-      title: 'Crypto Surfer',
-      userName: 'Blockchain Trader',
-      category: 'Crypto',
-      description: 'BTC/ETH volatility strategy',
-      performance: { score: '85' },
-      price: 1299,
-      chartData: {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        data: [120, 135, 150, 170, 190, 220]
-      }
-    }
-  ];
-
-  // Sample app data
-  const sampleApp = {
-    name: "AI Risk Analyst",
-    userName: "FinTech Solutions",
-    rating: 4,
-    introduction: "In today's fast-paced financial landscape, staying informed about market trends and economic developments is crucial for managing your investments effectively. Our innovative AI product is designed to analyze market risks and provide real-time insights.",
-    technicalImplementation: "The app uses machine learning algorithms to process market data and identify potential risks. It integrates with major financial data providers through REST APIs.",
-    requestHeaders: "Authorization: Bearer {token}\nContent-Type: application/json",
-    requestBody: "{\n  \"market\": \"NASDAQ\",\n  \"timeframe\": \"1h\",\n  \"indicators\": [\"RSI\", \"MACD\"]\n}",
-    responses: "200: Successful response\n400: Bad request\n401: Unauthorized",
-    responseBody: "{\n  \"risk_score\": 0.75,\n  \"trend\": \"bearish\",\n  \"recommendation\": \"reduce position\"\n}",
-    price: 999
+  const renderFooter = () => {
+    if (!hasMore) return (
+      <Text style={styles.footerText}>No more algorithms to load</Text>
+    );
+    
+    return isLoading ? (
+      <ActivityIndicator size="small" color="#2196F3" />
+    ) : (
+      <TouchableOpacity 
+        style={styles.loadMoreButton}
+        onPress={loadAlgorithms}
+      >
+        <Text style={styles.loadMoreText}>Load More</Text>
+      </TouchableOpacity>
+    );
   };
 
-  const sampleData = {
-    name: "Dow Jones Index Composite History",
-    userName: "Market Data Inc.",
-    rating: 5,
-    introduction: "The Dow Jones Industrial Average (DJIA) is a stock market index of 30 prominent companies listed on stock exchanges in the United States. Unlike other stock indices which use market capitalization, it is price-weighted.",
-    description: "The composite data is important for investment analysis, portfolio management and hedging. It can help you to understand the composition of the index, evaluate the performance of individual stocks, and assess the overall market trends.",
-    technicalImplementation: "This API enables you to download historical constitutes of the stock index, its weighting and sensitivity.",
-    requestParameters: "date: YYYY-MM-DD\nformat: json/csv",
-    responses: "200: Successful response\n400: Invalid date format\n404: Data not found",
-    price: 1499
+  // Generate random performance score (60-99) for each algorithm
+  const getRandomPerformance = () => ({
+    score: Math.floor(Math.random() * 40) + 60
+  });
+
+  // Generate chart data for visualization
+  const generateChartData = () => {
+    const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+    const baseValue = Math.floor(Math.random() * 50) + 50;
+    return {
+      labels,
+      data: labels.map((_, i) => baseValue + (i * 10) + Math.floor(Math.random() * 10))
+    };
   };
 
   const renderContentBoxes = () => {
-    const isTradingSystem = activeTab === 'Trading System';
-    const isAppCollection = activeTab === 'Application Collection';
-    const isDataMarketplace = activeTab === 'Data Marketplace';
-    
+    if (isLoading && page === 1) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2196F3" />
+        </View>
+      );
+    }
+
     return (
-      <ScrollView 
+      <ScrollView
         style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContentContainer}
+        contentContainerStyle={[styles.scrollContentContainer, { paddingTop: 50 }]}
       >
-        <TouchableOpacity 
-          style={styles.apiTestButton}
-          onPress={handleTestAPI}
-          disabled={isLoading}
-        >
-          <Text style={styles.apiTestButtonText}>
-            {isLoading ? 'Testing...' : 'Test API Connection'}
-          </Text>
-        </TouchableOpacity>
-
-
-        {isTradingSystem ? (
-          // Render trading strategies with subscription capability
-          sampleStrategies.map((strategy, index) => {
-            const isSubscribed = subscribedAlgorithm?.id === strategy.id;
-            const isAnotherSubscribed = subscribedAlgorithm && !isSubscribed;
-
+        {algorithms.length > 0 ? (
+          algorithms.map((algorithm, index) => {
+            const performance = getRandomPerformance();
+            const chartData = generateChartData();
+            
             return (
-              <TouchableOpacity 
-                key={strategy.id} 
-                style={[
-                  styles.contentBox,
-                  isSubscribed && styles.subscribedBox,
-                  isAnotherSubscribed && styles.disabledBox
-                ]}
+              <TouchableOpacity
+                key={algorithm.algo_id}
+                style={[styles.contentBox, index === 0 && styles.firstContentBox]}
                 onPress={() => {
-                  if (isAnotherSubscribed) {
-                    Alert.alert(
-                      "Subscription Limit",
-                      "You're already subscribed to another algorithm. Please unsubscribe first.",
-                      [{ text: "OK" }]
-                    );
-                    return;
-                  }
-                  setSelectedStrategy(strategy);
+                  setSelectedStrategy({
+                    ...algorithm,
+                    performance,
+                    chartData
+                  });
                   setModalVisible(true);
                 }}
-                disabled={isAnotherSubscribed}
               >
-                {isSubscribed && (
-                  <View style={styles.subscribedBadge}>
-                    <Text style={styles.subscribedText}>SUBSCRIBED</Text>
-                  </View>
-                )}
-
-                {isAnotherSubscribed && (
-                  <View style={styles.disabledOverlay}>
-                    <Text style={styles.disabledText}>Unsubscribe from current algorithm first</Text>
-                  </View>
-                )}
-  
-                {/* Category label */}
-                <View style={[
-                  styles.categoryLabel,
-                  { backgroundColor: ["#4FC3F7", "#81C784", "#FF8A65"][index % 3] }
-                ]}>
-                  <Text style={styles.categoryLabelText}>{strategy.category}</Text>
+                {/* Category label - using first word of strategy name or 'Algorithm' */}
+                <View
+                  style={[
+                    styles.categoryLabel,
+                    { backgroundColor: ["#4FC3F7", "#81C784", "#FF8A65"][index % 3] }
+                  ]}
+                >
+                  <Text style={styles.categoryLabelText}>
+                    {algorithm.strategy.split(' ')[0] || 'Algorithm'}
+                  </Text>
                 </View>
-                
+
                 {/* User info section */}
                 <View style={styles.userContainer}>
                   <Image source={placeholder} style={styles.userIcon} />
-                  <Text style={styles.userName}>{strategy.userName}</Text>
+                  <Text style={styles.userName}>{algorithm.developer}</Text>
                 </View>
-                
+
                 {/* Black line divider */}
                 <View style={styles.divider} />
-                
+
                 {/* Title section */}
                 <View style={styles.titleContainer}>
-                  <Text style={styles.titleText}>{strategy.title}</Text>
+                  <Text style={styles.titleText}>{algorithm.strategy}</Text>
                   <View style={styles.performanceScore}>
-                    <Text style={styles.performanceScoreText}>{strategy.performance.score}</Text>
+                    <Text style={styles.performanceScoreText}>{performance.score}</Text>
                   </View>
                 </View>
-                
+
+                {/* Price section */}
+                <View style={styles.priceContainer}>
+                  <Text style={styles.priceText}>Price: {algorithm.cur} {algorithm.price}</Text>
+                </View>
+
                 {/* Content section */}
                 <View style={styles.graphContainer}>
                   <LineChart
                     data={{
-                      labels: strategy.chartData.labels,
+                      labels: chartData.labels,
                       datasets: [{
-                        data: strategy.chartData.data,
+                        data: chartData.data,
                         color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
                         strokeWidth: 2
                       }]
@@ -250,11 +166,11 @@ const Marketplace = () => {
                     width={Dimensions.get('window').width - 70}
                     height={120}
                     withDots={false}
-                    withShadow={false} // 
+                    withShadow={false}
                     withInnerLines={false}
                     withOuterLines={false}
                     withVerticalLines={false}
-                    withHorizontalLines={false} // 
+                    withHorizontalLines={false}
                     chartConfig={{
                       backgroundColor: '#ffffff',
                       backgroundGradientFrom: '#ffffff',
@@ -270,13 +186,17 @@ const Marketplace = () => {
                     style={styles.chartStyle}
                   />
                 </View>
-                
+
                 {/* Read more button */}
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.readMoreButton}
                   onPress={(e) => {
                     e.stopPropagation();
-                    setSelectedStrategy(strategy);
+                    setSelectedStrategy({
+                      ...algorithm,
+                      performance,
+                      chartData
+                    });
                     setModalVisible(true);
                   }}
                 >
@@ -286,158 +206,38 @@ const Marketplace = () => {
             );
           })
         ) : (
-          // Render App Collection or Data Marketplace
-          tradingSystemTabs.map((tab, index) => {
-            const boxData = {
-              title: isAppCollection ? `App ${index + 1}` : `Strategy ${index + 1}`,
-              category: ["Forex", "Stocks", "Crypto"][index % 3],
-              userName: isAppCollection ? `Developer ${index + 1}` : `Trader ${index + 1}`,
-              performance: isAppCollection ? sampleApp.price : 65 + (index * 5),
-              rating: 3 + (index % 3),
-              chartData: {
-                labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-                data: [100, 110, 120, 150, 180, 210].map(val => val + (index * 10))
-              }
-            };
-  
-            return (
-              <TouchableOpacity 
-                key={index} 
-                style={styles.contentBox}
-                onPress={() => {
-                  if (isAppCollection) {
-                    setSelectedApp(sampleApp);
-                    setAppModalVisible(true);
-                  } else if (isDataMarketplace) {
-                    setSelectedData(sampleData);
-                    setDataModalVisible(true);
-                  }
-                }}
-              >
-                {/* User info section */}
-                <View style={styles.userContainer}>
-                  <Image source={placeholder} style={styles.userIcon} />
-                  <Text style={styles.userName}>{boxData.userName}</Text>
-                </View>
-                
-                {/* Black line divider */}
-                <View style={styles.divider} />
-                
-                {/* Title section */}
-                <View style={styles.titleContainer}>
-                  <Text style={styles.titleText}>{boxData.title}</Text>
-                  <View style={styles.starsContainer}>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Text key={i} style={styles.star}>
-                        {i <= boxData.rating ? '★' : '☆'}
-                      </Text>
-                    ))}
-                  </View>
-                </View>
-                
-                {/* Content section */}
-                <Text style={styles.descriptionText}>
-                  {isAppCollection 
-                    ? "This app provides advanced financial analysis tools for traders and investors."
-                    : "This dataset provides comprehensive historical market data for analysis."}
-                </Text>
-                
-                {/* Read more button */}
-                <TouchableOpacity 
-                  style={styles.readMoreButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    if (isAppCollection) {
-                      setSelectedApp(sampleApp);
-                      setAppModalVisible(true);
-                    } else if (isDataMarketplace) {
-                      setSelectedData(sampleData);
-                      setDataModalVisible(true);
-                    }
-                  }}
-                >
-                  <Text style={styles.readMoreText}>Read more</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            );
-          })
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              No algorithms found. Please try refreshing.
+            </Text>
+          </View>
         )}
+        <View style={styles.footerContainer}>
+          {renderFooter()}
+        </View>
       </ScrollView>
     );
   };
 
   return (
     <View style={styles.container}>
-      {/* Buttons */}
-      <View style={styles.buttonsContainer}>
-        {buttons.map((button, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.button,
-              {
-                backgroundColor: activeTab === button.label ? 'white' : 'lightgray',
-                borderColor: activeTab === button.label ? 'lightblue' : 'lightgray',
-                borderWidth: activeTab === button.label ? 3 : 0,
-                width: Dimensions.get('window').width / 3 - 25,
-              }
-            ]}
-            onPress={() => handleButtonPress(button)}
-          >
-            <Text style={{ color: 'black', flexWrap: 'wrap', textAlign: 'center' }}>{button.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Spacer to maintain black space */}
-      <View style={styles.spacer} />
-
       {/* Content Boxes */}
       {renderContentBoxes()}
 
       {/* Trading Modal */}
-      <TradingModal 
-        visible={modalVisible} 
-        onClose={() => setModalVisible(false)} 
-        strategy={selectedStrategy} 
+      <TradingModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        strategy={selectedStrategy}
       />
-
-      {/* App Modal */}
-      <AppModal
-        visible={appModalVisible}
-        onClose={() => setAppModalVisible(false)}
-        app={selectedApp || sampleApp}
-      />
-
-      <DataModal
-        visible={dataModalVisible}
-        onClose={() => setDataModalVisible(false)}
-        data={selectedData || sampleData}
-      />
-
     </View>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-  },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 50,
-    paddingHorizontal: 10,
-  },
-  button: {
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    alignItems: 'center',
-    marginHorizontal: 10, 
   },
   spacer: {
     height: 20, 
@@ -456,6 +256,10 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     width: '100%',
+    marginTop: 10, 
+  },
+  firstContentBox:{
+    marginTop: 30,
   },
   userContainer: {
     flexDirection: 'row',
@@ -595,17 +399,41 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     padding: 10,
-  },
-  apiTestButton: {
-    backgroundColor: '#2196F3',
+  }, 
+  loadMoreButton: {
     padding: 15,
+    backgroundColor: '#2196F3',
     borderRadius: 5,
     alignItems: 'center',
-    marginBottom: 20,
+    marginVertical: 10,
   },
-  apiTestButtonText: {
+  loadMoreText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  footerContainer: {
+    padding: 10,
+    alignItems: 'center',
+  },
+  footerText: {
+    color: '#666',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    color: 'white',
+    textAlign: 'center',
   },
 });
 

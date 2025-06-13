@@ -1,35 +1,59 @@
-import React from 'react';
+import React , {useState, useEffect} from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions , Alert} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
+import { fetchStrategyStats } from '../../services/testApi';
 
 const TradingModal = ({ visible, onClose, strategy = null }) => {
   const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
+  const [performanceData, setPerformanceData] = useState(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
 
-  const defaultStrategy = {
-    id: 'default-strategy',
-    title: '定海神針',
-    userName: 'Trader Pro',
-    category: 'Forex',
-    description: 'This strategy uses advanced machine learning to predict currency movements with 85% accuracy.',
-    assetClass: 'Forex',
-    tradingInstruments: 'EUR/USD, GBP/USD, USD/JPY',
-    supportedBrokers: 'Broker A, Broker B, Broker C',
-    tradingRequirements: 'Minimum $500 account balance',
-    performance: {
-      score: '65',
-      tradingDays: '256',
-      sharpeRatio: '1.8',
-      sortinoRatio: '2.1',
-      volatility: '12%',
-      annualReturn: '24%',
-      maxDrawdown: '8%',
-    },
-    price: 999
+  useEffect(() => {
+    if (visible && strategy?.algo_id) {
+      fetchPerformanceData(strategy.algo_id);
+    }
+  }, [visible, strategy]);
+
+  const fetchPerformanceData = async (algoId) => {
+    setIsLoadingStats(true);
+    try {
+      const data = await fetchStrategyStats(algoId);
+      setPerformanceData(data);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load performance data');
+      console.error('Error fetching performance data:', error);
+    } finally {
+      setIsLoadingStats(false);
+    }
   };
 
-  const mergedStrategy = strategy ? { ...defaultStrategy, ...strategy } : defaultStrategy;
-  const isSubscribed = subscribedAlgorithm?.id === mergedStrategy.id;
+  const getDefaultStrategy = () => ({
+    id: strategy?.algo_id || 'default-strategy',
+    title: strategy?.strategy || 'Unnamed Strategy',
+    developer: strategy?.developer || 'Unknown Developer',
+    category: strategy?.category || 'Algorithm',
+    description: strategy?.description || 'No description available for this algorithm.',
+    assetClass: strategy?.asset_class || 'Various',
+    tradingInstruments: strategy?.instruments || 'Not specified',
+    supportedBrokers: strategy?.supported_brokers || 'Not specified',
+    tradingRequirements: strategy?.requirements || 'None specified',
+    performance: {
+      score: strategy?.performance?.score || Math.floor(Math.random() * 40) + 60,
+      tradingDays: strategy?.performance?.tradingDays || 'N/A',
+      sharpeRatio: strategy?.performance?.sharpeRatio || 'N/A',
+      sortinoRatio: strategy?.performance?.sortinoRatio || 'N/A',
+      volatility: strategy?.performance?.volatility || 'N/A',
+      annualReturn: strategy?.performance?.annualReturn || 'N/A',
+      maxDrawdown: strategy?.performance?.maxDrawdown || 'N/A',
+    },
+    price: strategy?.price || 0,
+    cur: strategy?.cur || 'USD',
+    settings: performanceData?.setting || {}
+  });
+
+  const currentStrategy = strategy ? getDefaultStrategy() : getDefaultStrategy();
+  const isSubscribed = subscribedAlgorithm?.id === currentStrategy.id;
 
   const chartData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -78,7 +102,7 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
 
   // In TradingModal.jsx
   const handleSubscribe = () => {
-    if (subscribedAlgorithm && subscribedAlgorithm.id !== mergedStrategy.id) {
+    if (subscribedAlgorithm && subscribedAlgorithm.id !== currentStrategy.id) {
       Alert.alert(
         "Subscription Conflict",
         "You're already subscribed to another algorithm. Please unsubscribe first.",
@@ -86,7 +110,7 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
       );
       return;
     }
-    subscribeToAlgorithm(mergedStrategy);
+    subscribeToAlgorithm(currentStrategy);
     onClose();
   };
 
@@ -107,9 +131,9 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
           </View>
 
           <View style={styles.titleSection}>
-            <Text style={styles.strategyTitle}>{mergedStrategy.title}</Text>
+            <Text style={styles.strategyTitle}>{currentStrategy.title}</Text>
             <View style={styles.scoreContainer}>
-              <Text style={styles.scoreText}>{mergedStrategy.performance.score}</Text>
+              <Text style={styles.scoreText}>{currentStrategy.performance.score}</Text>
             </View>
           </View>
 
@@ -122,37 +146,36 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
               bezier
               style={styles.chart}
             />
-            <Text style={styles.performanceText}>+120.4062%</Text>
           </View>
 
           <View style={styles.userSection}>
-            <Text style={styles.userName}>{mergedStrategy.userName}</Text>
+            <Text style={styles.userName}>{currentStrategy.userName}</Text>
             <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{mergedStrategy.category}</Text>
+              <Text style={styles.categoryText}>{currentStrategy.category}</Text>
             </View>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>STRATEGY DESCRIPTION:</Text>
-            <Text style={styles.sectionContent}>{mergedStrategy.description}</Text>
+            <Text style={styles.sectionContent}>{currentStrategy.description}</Text>
           </View>
 
           <View style={styles.detailsContainer}>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>ASSET CLASS:</Text>
-              <Text style={styles.detailValue}>{mergedStrategy.assetClass}</Text>
+              <Text style={styles.detailValue}>{currentStrategy.assetClass}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>TRADING INSTRUMENTS:</Text>
-              <Text style={styles.detailValue}>{mergedStrategy.tradingInstruments}</Text>
+              <Text style={styles.detailValue}>{currentStrategy.tradingInstruments}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>SUPPORTED BROKERS:</Text>
-              <Text style={styles.detailValue}>{mergedStrategy.supportedBrokers}</Text>
+              <Text style={styles.detailValue}>{currentStrategy.supportedBrokers}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>TRADING REQUIREMENTS:</Text>
-              <Text style={styles.detailValue}>{mergedStrategy.tradingRequirements}</Text>
+              <Text style={styles.detailValue}>{currentStrategy.tradingRequirements}</Text>
             </View>
           </View>
 
@@ -161,37 +184,37 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
             <View style={styles.performanceGrid}>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>score</Text>
-                <Text style={styles.performanceValue}>{mergedStrategy.performance.score}</Text>
+                <Text style={styles.performanceValue}>{currentStrategy.performance.score}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>trading days</Text>
-                <Text style={styles.performanceValue}>{mergedStrategy.performance.tradingDays}</Text>
+                <Text style={styles.performanceValue}>{currentStrategy.performance.tradingDays}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>sharpe ratio</Text>
-                <Text style={styles.performanceValue}>{mergedStrategy.performance.sharpeRatio}</Text>
+                <Text style={styles.performanceValue}>{currentStrategy.performance.sharpeRatio}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>sortino ratio</Text>
-                <Text style={styles.performanceValue}>{mergedStrategy.performance.sortinoRatio}</Text>
+                <Text style={styles.performanceValue}>{currentStrategy.performance.sortinoRatio}</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>volatility</Text>
-                <Text style={styles.performanceValue}>{mergedStrategy.performance.volatility}%</Text>
+                <Text style={styles.performanceValue}>{currentStrategy.performance.volatility}%</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>ann. return</Text>
-                <Text style={styles.performanceValue}>{mergedStrategy.performance.annualReturn}%</Text>
+                <Text style={styles.performanceValue}>{currentStrategy.performance.annualReturn}%</Text>
               </View>
               <View style={styles.performanceItem}>
                 <Text style={styles.performanceLabel}>max. drawdown</Text>
-                <Text style={styles.performanceValue}>{mergedStrategy.performance.maxDrawdown}%</Text>
+                <Text style={styles.performanceValue}>{currentStrategy.performance.maxDrawdown}%</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.pricingSection}>
-            <Text style={styles.pricingText}>HKD {mergedStrategy.price} / mo</Text>
+            <Text style={styles.pricingText}>HKD {currentStrategy.price} / mo</Text>
           </View>
 
           <TouchableOpacity
@@ -202,7 +225,7 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
             onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
           >
             <Text style={styles.subscribeButtonText}>
-              {isSubscribed ? 'Unsubscribe' : `Subscribe (HKD ${mergedStrategy.price}/mo)`}
+              {isSubscribed ? 'Unsubscribe' : `Subscribe (${currentStrategy.cur} ${currentStrategy.price}/mo)`}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -210,6 +233,174 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
     </Modal>
   );
 };
+
+// import React, { useState, useEffect } from 'react';
+// import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
+// import { LineChart } from 'react-native-chart-kit';
+// import { useSubscription } from '../../context/SubscriptionContext';
+// import { fetchAlgoPerformance } from '../../services/testApi';
+
+// const TradingModal = ({ visible, onClose, strategy = null }) => {
+//   const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
+//   const [performanceStats, setPerformanceStats] = useState(null);
+//   const [loadingPerformance, setLoadingPerformance] = useState(false);
+
+//   useEffect(() => {
+//     if ( visible && strategy?.algo_id) {
+//       fetchPerformanceStats(strategy.algo_id);
+//     }
+//   }, [visible, strategy]);
+
+//   const fetchPerformanceStats = async (algoId) => {
+//     setLoadingPerformance(true);
+//     try {
+//       const performance = await fetchAlgoPerformance(algoId);
+//       setPerformanceStats(performance);
+//     } catch (error) {
+//       console.error('Error fetching performance stats:', error);
+//       Alert.alert('Error', 'Failed to fetch performance stats.');
+//     } finally {
+//       setLoadingPerformance(false);
+//     }
+//   };
+
+//   const currentStrategy = strategy || {
+//     id: 'default-strategy',
+//     title: 'Unnamed Strategy',
+//     developer: 'Unknown Developer',
+//     description: 'No description available.',
+//     price: 0,
+//     cur: 'USD'
+//   };
+
+//   //   const getDefaultStrategy = () => ({
+// //     id: strategy?.algo_id || 'default-strategy',
+// //     title: strategy?.strategy || 'Unnamed Strategy',
+// //     developer: strategy?.developer || 'Unknown Developer',
+// //     category: strategy?.category || 'Algorithm',
+// //     description: strategy?.description || 'No description available for this algorithm.',
+// //     assetClass: strategy?.asset_class || 'Various',
+// //     tradingInstruments: strategy?.instruments || 'Not specified',
+// //     supportedBrokers: strategy?.supported_brokers || 'Not specified',
+// //     tradingRequirements: strategy?.requirements || 'None specified',
+// //     performance: {
+// //       score: strategy?.performance?.score || Math.floor(Math.random() * 40) + 60,
+// //       tradingDays: strategy?.performance?.tradingDays || 'N/A',
+// //       sharpeRatio: strategy?.performance?.sharpeRatio || 'N/A',
+// //       sortinoRatio: strategy?.performance?.sortinoRatio || 'N/A',
+// //       volatility: strategy?.performance?.volatility || 'N/A',
+// //       annualReturn: strategy?.performance?.annualReturn || 'N/A',
+// //       maxDrawdown: strategy?.performance?.maxDrawdown || 'N/A',
+// //     },
+// //     price: strategy?.price || 0,
+// //     cur: strategy?.cur || 'USD',
+// //     settings: performanceData?.setting || {}
+// //   });
+
+// //   const currentStrategy = strategy ? getDefaultStrategy() : getDefaultStrategy();
+//   const isSubscribed = subscribedAlgorithm?.id === currentStrategy.id;
+
+//   const handleSubscribe = () => {
+//     if (subscribedAlgorithm && subscribedAlgorithm.id !== currentStrategy.id) {
+//       Alert.alert(
+//         'Subscription Conflict',
+//         "You're already subscribed to another algorithm. Please unsubscribe first.",
+//         [{ text: 'OK' }]
+//       );
+//       return;
+//     }
+//     subscribeToAlgorithm(currentStrategy);
+//     onClose();
+//   };
+
+//   const handleUnsubscribe = () => {
+//     Alert.alert(
+//       'Confirm Unsubscribe',
+//       'Are you sure you want to unsubscribe from this strategy?',
+//       [
+//         { text: 'Cancel', style: 'cancel' },
+//         { text: 'Unsubscribe', onPress: () => {
+//             unsubscribeFromAlgorithm();
+//             onClose();
+//           }, style: 'destructive' }
+//       ]
+//     );
+//   };
+
+//   const chartData = {
+//     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+//     datasets: [{
+//       data: performanceStats?.rolling_return_30d || [100, 110, 120, 150, 180, 210],
+//       color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+//       strokeWidth: 2
+//     }],
+//   };
+
+//   const chartConfig = {
+//     backgroundColor: '#ffffff',
+//     backgroundGradientFrom: '#ffffff',
+//     backgroundGradientTo: '#ffffff',
+//     decimalPlaces: 2,
+//     color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+//     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+//     style: { borderRadius: 16 },
+//     propsForDots: {
+//       r: "4",
+//       strokeWidth: "2",
+//       stroke: "#2196F3"
+//     }
+//   };
+
+//   return (
+//     <Modal animationType="slide" transparent={false} visible={visible} onRequestClose={onClose}>
+//       <View style={styles.container}>
+//         <ScrollView contentContainerStyle={styles.scrollContainer}>
+//           <View style={styles.header}>
+//             <TouchableOpacity onPress={onClose}>
+//               <Text style={styles.closeButton}>×</Text>
+//             </TouchableOpacity>
+//           </View>
+
+//           <View style={styles.titleSection}>
+//             <Text style={styles.strategyTitle}>{currentStrategy.title}</Text>
+//           </View>
+
+//           {loadingPerformance ? (
+//             <ActivityIndicator size="large" color="#2196F3" />
+//           ) : (
+//             <View style={styles.performanceSection}>
+//               <Text style={styles.sectionTitle}>Performance Statistics:</Text>
+//               <Text>Sharpe Ratio: {performanceStats?.AnnualSharpe || 'N/A'}</Text>
+//               <Text>Sortino Ratio: {performanceStats?.AnnualSortino || 'N/A'}</Text>
+//               <Text>Max Drawdown: {performanceStats?.maxDrawdown_pct || 'N/A'}%</Text>
+//               <Text>Annual Return: {(performanceStats?.MeanAnnualReturn * 100).toFixed(2) || 'N/A'}%</Text>
+//             </View>
+//           )}
+
+//           <View style={styles.chartContainer}>
+//             <LineChart
+//               data={chartData}
+//               width={Dimensions.get('window').width - 40}
+//               height={220}
+//               chartConfig={chartConfig}
+//               bezier
+//               style={styles.chart}
+//             />
+//           </View>
+
+//           <TouchableOpacity
+//             style={[styles.subscribeButton, isSubscribed && styles.unsubscribeButton]}
+//             onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
+//           >
+//             <Text style={styles.subscribeButtonText}>
+//               {isSubscribed ? 'Unsubscribe' : `Subscribe (${currentStrategy.cur} ${currentStrategy.price}/mo)`}
+//             </Text>
+//           </TouchableOpacity>
+//         </ScrollView>
+//       </View>
+//     </Modal>
+//   );
+// };
 
 const styles = StyleSheet.create({
   container: {
