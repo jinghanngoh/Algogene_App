@@ -20,6 +20,7 @@
     "expo-standard-web-crypto": "^2.1.4",
     "expo-status-bar": "~2.2.3",
     "expo-web-browser": "^14.1.6",
+    "hcaptcha": "^0.2.0",
     "prop-types": "^15.8.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",

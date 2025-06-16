@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable, BackHandler} from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import React, { useState , useRef, useEffect, useCallback} from 'react';
+import HCaptcha from '@hcaptcha/react-native-hcaptcha';
 import login from '../../assets/img/login.png';
 import logo_s from '../../assets/img/logo_s.png';
 import google_icon from '../../assets/img/google_icon.png';
@@ -11,33 +12,131 @@ import captcha_icon from '../../assets/img/captcha_icon.png';
 
 const Login = () => {
     const router = useRouter();
-    const [isHumanChecked , setIsHumanChecked] = useState(false);
+    const [isHumanVerified , setIsHumanVerified] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isCaptchaLoading, setIsCaptchaLoading] = useState(false);
+    const captchaRef = useRef(null);
 
-    const toggleHumanCheck = () => {
-        setIsHumanChecked(!isHumanChecked);
+    // useEffect(() => {
+    //     console.log('Captcha ref initialized:', captchaRef.current);
+    // }, []);
+    useEffect(() => {
+        console.log('Captcha ref initialized:', captchaRef.current);
+        // Optional: Manually handle back press to dismiss if needed
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            if (isCaptchaLoading) {
+                setIsCaptchaLoading(false);
+                setIsHumanVerified(false);
+                return true; // Prevent default back behavior
+            }
+            return false;
+        });
+        return () => backHandler.remove(); // Clean up
+    }, [isCaptchaLoading]);
+
+    const handleHumanCheckPress = useCallback(() => {
+        if (!isHumanVerified && !isCaptchaLoading) {
+            setIsCaptchaLoading(true);
+            if (captchaRef.current) {
+                try {
+                    captchaRef.current.show();
+                    const timeoutId = setTimeout(() => {
+                        if (isCaptchaLoading) {
+                            console.warn('Captcha timeout, resetting loading state');
+                            setIsHumanVerified(false);
+                            setIsCaptchaLoading(false);
+                            if (captchaRef.current.hide) {
+                                captchaRef.current.hide();
+                            }
+                        }
+                    }, 5000);
+                    return () => clearTimeout(timeoutId);
+                } catch (error) {
+                    console.error('Error showing captcha:', error);
+                    setIsCaptchaLoading(false);
+                }
+            } else {
+                console.error('Captcha ref is null');
+                setIsCaptchaLoading(false);
+            }
+        } else if (isHumanVerified) {
+            setIsHumanVerified(false);
+        }
+    }, [isHumanVerified, isCaptchaLoading]);
+    
+    // const toggleHumanCheck = () => {
+    //     setIsHumanVerified(!isHumanVerified);
+    // }
+
+    const handleLoginPress = () => {
+        if (!email || !password) {
+            alert('Please enter both email and password');
+            return;
+        }
+        if (!isHumanVerified) {
+            alert('Please complete human verification');
+            return;
+        }
+        router.push('/(tabs)/home');
     }
+    const onMessage = (event) => {
+        const message = event.nativeEvent.data;
+        console.log('Received hCaptcha message (raw):', JSON.stringify(message), 'Event:', JSON.stringify(event.nativeEvent));
+        console.log('Current state - isCaptchaLoading:', isCaptchaLoading, 'isHumanVerified:', isHumanVerified); // Debug state
+        if (typeof message === 'string' && message.startsWith('P1_')) {
+            console.log('Captcha verified with token:', message);
+            setIsHumanVerified(true);
+            setIsCaptchaLoading(false);
+            // Force UI update
+            if (captchaRef.current && captchaRef.current.hide) {
+                captchaRef.current.hide();
+            }
+        } else if (message === 'error' || message === 'onError') {
+            alert('Verification failed. Please try again.');
+            setIsCaptchaLoading(false);
+        } else if (message === 'expired' || message === 'onExpire') {
+            setIsHumanVerified(false);
+            setIsCaptchaLoading(false);
+        } else if (message === 'open') {
+            console.log('Captcha modal opened');
+        } else {
+            console.log('Unknown hCaptcha message:', message);
+        }
+    };
 
     return (
         <View style={styles.container}>
+            <HCaptcha
+                ref={captchaRef}
+                siteKey = "e3889ef2-1348-45b3-bceb-b03dbfffcede"
+                onMessage={onMessage}
+                size="invisible"
+                languageCode="en"
+                hasBackdrop = {false}
+            />
+
             <View style={styles.imageContainer}>
                 <Image source={logo_s} style={styles.img} />
             </View>
+
             <View style={styles.loginContainer}>
                 <Image source={login} style={styles.img} />
             </View>
-            
-            
-            {/* User Input Field */}
+
             <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>User:</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Enter Your Email or UserID"
                     placeholderTextColor="#999"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
                 />
             </View>
-            
-            {/* Password Input Field */}
+
             <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Password:</Text>
                 <TextInput
@@ -45,41 +144,65 @@ const Login = () => {
                     placeholder="Enter Your Password"
                     placeholderTextColor="#999"
                     secureTextEntry={true}
+                    value={password}
+                    onChangeText={setPassword}
                 />
             </View>
-            
-            {/* Human Checkbox and Login Button */}
-            <View style={styles.checkboxAndButtonContainer}>
+
+            <View style={styles.humanLoginContainer}>
                 <View style={styles.humanContainer}>
-                    <Pressable 
+                    <Pressable
                         style={styles.humanCheckboxContainer}
-                        onPress={toggleHumanCheck}
+                        onPress={handleHumanCheckPress}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isHumanVerified }}
+                        disabled={isCaptchaLoading}
                     >
-                        <View style={[styles.checkbox, isHumanChecked && styles.checkedBox]}>
-                            {isHumanChecked && <View style={styles.checkmark} />}
+                        <View style={[styles.checkbox, isHumanVerified && styles.checkedBox]}>
+                            {isHumanVerified && <View style={styles.checkmark} />}
                         </View>
-                        <Text style={styles.humanCheckboxText}>I am Human</Text>
+                        <Text style={styles.humanCheckboxText}>
+                            {isHumanVerified ? 'Verified' : isCaptchaLoading ? 'Verifying...' : 'I am Human'}
+                        </Text>
                     </Pressable>
-                    <Image 
-                        source={captcha_icon} 
-                        style={styles.captchaIcon} 
+                    <Image
+                        source={captcha_icon}
+                        style={styles.captchaIcon}
                         resizeMode="contain"
                     />
                 </View>
 
-                <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/(tabs)/home')}>
+                <TouchableOpacity
+                    style={[
+                        styles.loginButton,
+                        (!email || !password || !isHumanVerified) && styles.loginButtonDisabled
+                    ]}
+                    onPress={handleLoginPress}
+                    disabled={!email || !password || !isHumanVerified || isCaptchaLoading}
+                >
                     <Text style={styles.loginButtonText}>Login</Text>
                 </TouchableOpacity>
             </View>
-                        
-            {/* OR Divider */}
+
+            {/* May not need this */}
+            {isCaptchaLoading && (
+                <TouchableOpacity
+                    style={styles.resetButton}
+                    onPress={() => {
+                        setIsCaptchaLoading(false);
+                        setIsHumanVerified(false);
+                    }}
+                >
+                    <Text style={styles.resetButtonText}>Reset Captcha</Text>
+                </TouchableOpacity>
+            )}
+
             <View style={styles.dividerContainer}>
                 <View style={styles.dividerLine} />
                 <Text style={styles.dividerText}>OR</Text>
                 <View style={styles.dividerLine} />
             </View>
-            
-            {/* Social Login Options */}
+
             <View style={styles.socialContainer}>
                 <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
                     <Image source={google_icon} style={styles.socialIcon} />
@@ -98,8 +221,7 @@ const Login = () => {
                     <Text style={styles.socialButtonText}>Sign in with LinkedIn</Text>
                 </TouchableOpacity>
             </View>
-            
-            {/* Footer Links */}
+
             <View style={styles.footerContainer}>
                 <TouchableOpacity onPress={() => router.push('/password')}>
                     <Text style={styles.footerLink}>Forgot Password</Text>
@@ -139,8 +261,8 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     loginImage: {
-        width: 100,
-        height: 100,
+        width: 10,
+        height: 10,
     },
     loginContainer: {
         alignItems: 'center'
@@ -155,9 +277,10 @@ const styles = StyleSheet.create({
     },
     checkboxAndButtonContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',  // This will push items to opposite ends
-        alignItems: 'center',             // Vertically center items
-        marginTop: 15,                    // Adjust as needed
+        justifyContent: 'space-between',  
+        alignItems: 'center',             
+        marginTop: 15,                    
+        gap: 10, 
     },
     humanCheckContainer: {
         flexDirection: 'row',
@@ -166,10 +289,11 @@ const styles = StyleSheet.create({
     loginButton: {
         backgroundColor: '#87cefa',
         paddingVertical: 12,
-        paddingHorizontal: 20,
+        paddingHorizontal: 15,
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
+        width: '50%',
     },
     loginButtonText: {
         color: 'white',
@@ -184,15 +308,32 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         fontSize: 16,
     },
+    humanLoginContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 15,
+    },
     humanContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: '#D9D9D9',
         padding: 15,
         borderRadius: 8,
-        width : "55%"
- 
+        flex: 1, 
+    },
+    loginButton: {
+        backgroundColor: '#87cefa',
+        paddingVertical: 12,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 120,
+        height: 50,
+    },
+    loginButtonDisabled: {
+        opacity: 0.6,
+        backgroundColor: '#87cefa', // Same color but faded
     },
     checkbox: {
         width: 20,
@@ -234,22 +375,11 @@ const styles = StyleSheet.create({
     },
     humanText: {
         color: '#333',
-        fontSize: 14,
+        fontSize: 12,
     },
     humanLogo: {
-        width: 20,
-        height: 20,
-    },
-    loginButton: {
-        backgroundColor: '#87cefa',
-        paddingVertical: 20,
-        borderRadius: 8,
-        width: '40%',
-    },
-    loginButtonText: {
-        color: 'white',
-        fontSize: 16,
-        marginLeft: 45,
+        width: 18,
+        height: 18,
     },
     dividerContainer: {
         flexDirection: 'row',
