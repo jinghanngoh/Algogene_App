@@ -1,142 +1,149 @@
-import React , {useState, useEffect} from 'react';
-import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions , Alert} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { fetchStrategyStats } from '../../services/testApi';
+import { fetchAlgoPerformance } from '../../services/testApi';
 
 const TradingModal = ({ visible, onClose, strategy = null }) => {
   const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
-  const [performanceData, setPerformanceData] = useState(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [performanceStats, setPerformanceStats] = useState(null);
+  const [loadingPerformance, setLoadingPerformance] = useState(false);
 
   useEffect(() => {
-    if (visible && strategy?.algo_id) {
-      fetchPerformanceData(strategy.algo_id);
+    console.log('Strategy:', strategy);
+    if (strategy?.algo_id) {
+      fetchPerformanceStats(strategy.algo_id);
     }
-  }, [visible, strategy]);
+  }, [strategy]);
 
-  const fetchPerformanceData = async (algoId) => {
-    setIsLoadingStats(true);
+  // Optional debugging log
+  // useEffect(() => {
+  //   console.log('Performance Stats:', performanceStats);
+  // }, [performanceStats]);
+
+  const fetchPerformanceStats = async (algoId) => {
+    setLoadingPerformance(true);
     try {
-      const data = await fetchStrategyStats(algoId);
-      setPerformanceData(data);
+      const performance = await fetchAlgoPerformance(algoId);
+      setPerformanceStats(performance);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load performance data');
       console.error('Error fetching performance data:', error);
+      Alert.alert('Error', 'Failed to load performance data');
     } finally {
-      setIsLoadingStats(false);
+      setLoadingPerformance(false);
     }
   };
 
-  const getDefaultStrategy = () => ({
-    id: strategy?.algo_id || 'default-strategy',
-    title: strategy?.strategy || 'Unnamed Strategy',
-    developer: strategy?.developer || 'Unknown Developer',
-    category: strategy?.category || 'Algorithm',
-    description: strategy?.description || 'No description available for this algorithm.',
-    assetClass: strategy?.asset_class || 'Various',
-    tradingInstruments: strategy?.instruments || 'Not specified',
-    supportedBrokers: strategy?.supported_brokers || 'Not specified',
-    tradingRequirements: strategy?.requirements || 'None specified',
-    performance: {
-      score: strategy?.performance?.score || Math.floor(Math.random() * 40) + 60,
-      tradingDays: strategy?.performance?.tradingDays || 'N/A',
-      sharpeRatio: strategy?.performance?.sharpeRatio || 'N/A',
-      sortinoRatio: strategy?.performance?.sortinoRatio || 'N/A',
-      volatility: strategy?.performance?.volatility || 'N/A',
-      annualReturn: strategy?.performance?.annualReturn || 'N/A',
-      maxDrawdown: strategy?.performance?.maxDrawdown || 'N/A',
-    },
-    price: strategy?.price || 0,
-    cur: strategy?.cur || 'USD',
-    settings: performanceData?.setting || {}
-  });
-
-  const currentStrategy = strategy ? getDefaultStrategy() : getDefaultStrategy();
-  const isSubscribed = subscribedAlgorithm?.id === currentStrategy.id;
-
-  const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [{
-      data: [100, 110, 120, 150, 180, 210],
-      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-      strokeWidth: 2
-    }],
+  const currentStrategy = strategy || {
+    algo_id: 'default-strategy',
+    strategy: 'Unnamed Strategy',
+    developer: 'Unknown Developer',
+    desc: 'No description available.',
+    price: 0,
+    cur: 'USD',
+    settings: {}
   };
 
-  const chartConfig = {
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: { borderRadius: 16 },
-    propsForDots: {
-      r: "4",
-      strokeWidth: "2",
-      stroke: "#2196F3"
-    }
-  };
+  const isSubscribed = subscribedAlgorithm?.algo_id === currentStrategy.algo_id;
+
+    // In TradingModal.jsx
+    const handleSubscribe = () => {
+      if (subscribedAlgorithm && subscribedAlgorithm.algo_id !== currentStrategy.algo_id) {
+        Alert.alert(
+          'Subscription Conflict',
+          "You're already subscribed to another algorithm. Please unsubscribe first.",
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      subscribeToAlgorithm(currentStrategy);
+      onClose();
+    };
 
   const handleUnsubscribe = () => {
     Alert.alert(
       'Confirm Unsubscribe',
       'Are you sure you want to unsubscribe from this strategy?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Unsubscribe',
           onPress: () => {
             unsubscribeFromAlgorithm();
             onClose();
           },
-          style: 'destructive',
-        },
-      ],
+          style: 'destructive'
+        }
+      ]
     );
-  }
-
-  // In TradingModal.jsx
-  const handleSubscribe = () => {
-    if (subscribedAlgorithm && subscribedAlgorithm.id !== currentStrategy.id) {
-      Alert.alert(
-        "Subscription Conflict",
-        "You're already subscribed to another algorithm. Please unsubscribe first.",
-        [{ text: "OK" }]
-      );
-      return;
-    }
-    subscribeToAlgorithm(currentStrategy);
-    onClose();
   };
 
+  const chartData = performanceStats ? {
+    labels: ['7d', '30d', '90d', '180d', '365d'],
+    datasets: [{
+      data: [
+        performanceStats.rolling_return_7d * 100,
+        performanceStats.rolling_return_30d * 100,
+        performanceStats.rolling_return_90d * 100,
+        performanceStats.rolling_return_180d * 100,
+        performanceStats.rolling_return_365d * 100
+      ],
+      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+      strokeWidth: 2
+    }]
+  } : {
+    labels: ['7d', '30d', '90d', '180d', '365d'],
+    datasets: [{
+      data: [0, 0, 0, 0, 0],
+      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+      strokeWidth: 2
+    }]
+  };
+
+  const chartConfig = {
+    backgroundColor: '#1E1E1E',
+    backgroundGradientFrom: '#1E1E1E',
+    backgroundGradientTo: '#1E1E1E',
+    decimalPlaces: 2,
+    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    style: { borderRadius: 8 },
+    propsForDots: {
+      r: '5',
+      strokeWidth: '2',
+      stroke: '#4FC3F7'
+    },
+    propsForBackgroundLines: {
+      strokeWidth: 1,
+      stroke: 'rgba(255, 255, 255, 0.1)'
+    }
+  };
 
   return (
-    <Modal
-      animationType="slide"
-      transparent={false}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={styles.closeButton}>×</Text>
-            </TouchableOpacity>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <ScrollView style={styles.container}>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>{currentStrategy.strategy}</Text>
+            <Text style={styles.developer}>By {currentStrategy.developer}</Text>
           </View>
-
-          <View style={styles.titleSection}>
-            <Text style={styles.strategyTitle}>{currentStrategy.title}</Text>
-            <View style={styles.scoreContainer}>
-              <Text style={styles.scoreText}>{currentStrategy.performance.score}</Text>
-            </View>
+          <View style={styles.priceContainer}>
+            <Text style={styles.price}>
+              {currentStrategy.price} {currentStrategy.cur}/month
+            </Text>
           </View>
+        </View>
 
+        {/* Description Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>DESCRIPTION</Text>
+          <Text style={styles.description}>{currentStrategy.desc}</Text>
+        </View>
+
+        {/* Performance Chart */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ROLLING RETURNS (%)</Text>
           <View style={styles.chartContainer}>
             <LineChart
               data={chartData}
@@ -147,411 +154,236 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
               style={styles.chart}
             />
           </View>
+        </View>
 
-          <View style={styles.userSection}>
-            <Text style={styles.userName}>{currentStrategy.userName}</Text>
-            <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{currentStrategy.category}</Text>
-            </View>
-          </View>
-
+        {/* Strategy Settings */}
+        {performanceStats?.setting && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>STRATEGY DESCRIPTION:</Text>
-            <Text style={styles.sectionContent}>{currentStrategy.description}</Text>
+            <Text style={styles.sectionTitle}>STRATEGY SETTINGS</Text>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Asset Class:</Text>
+              <Text style={styles.detailValue}>{performanceStats.setting.assetClass.join(', ')}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Base Currency:</Text>
+              <Text style={styles.detailValue}>{performanceStats.setting.BaseCurrency}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Min Capital:</Text>
+              <Text style={styles.detailValue}>${performanceStats.setting.min_capital.toLocaleString()}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Min Leverage:</Text>
+              <Text style={styles.detailValue}>{performanceStats.setting.min_leverage}:1</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Allow Short Sell:</Text>
+            </View>
           </View>
+        )}
 
-          <View style={styles.detailsContainer}>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>ASSET CLASS:</Text>
-              <Text style={styles.detailValue}>{currentStrategy.assetClass}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>TRADING INSTRUMENTS:</Text>
-              <Text style={styles.detailValue}>{currentStrategy.tradingInstruments}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>SUPPORTED BROKERS:</Text>
-              <Text style={styles.detailValue}>{currentStrategy.supportedBrokers}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>TRADING REQUIREMENTS:</Text>
-              <Text style={styles.detailValue}>{currentStrategy.tradingRequirements}</Text>
-            </View>
+        {/* Performance Metrics */}
+        {loadingPerformance ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4FC3F7" />
           </View>
-
+        ) : performanceStats ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PERFORMANCE</Text>
-            <View style={styles.performanceGrid}>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceLabel}>score</Text>
-                <Text style={styles.performanceValue}>{currentStrategy.performance.score}</Text>
+            <Text style={styles.sectionTitle}>PERFORMANCE METRICS</Text>
+            <View style={styles.metricsGrid}>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Sortino Ratio</Text>
+                <Text style={styles.detailValue}>{performanceStats.AnnualSortino.toFixed(2)}</Text>
               </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceLabel}>trading days</Text>
-                <Text style={styles.performanceValue}>{currentStrategy.performance.tradingDays}</Text>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Win Rate</Text>
+                <Text style={styles.detailValue}>{(performanceStats.WinRate * 100).toFixed(1)}%</Text>
               </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceLabel}>sharpe ratio</Text>
-                <Text style={styles.performanceValue}>{currentStrategy.performance.sharpeRatio}</Text>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Profit Factor</Text>
+                <Text style={styles.detailValue}>{performanceStats.profit_factor.toFixed(2)}</Text>
               </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceLabel}>sortino ratio</Text>
-                <Text style={styles.performanceValue}>{currentStrategy.performance.sortinoRatio}</Text>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Mean Annual Return</Text>
+                <Text style={styles.detailValue}>{(performanceStats.MeanAnnualReturn * 100).toFixed(1)}%</Text>
               </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceLabel}>volatility</Text>
-                <Text style={styles.performanceValue}>{currentStrategy.performance.volatility}%</Text>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Total PnL</Text>
+                <Text style={styles.detailValue}>${performanceStats.TotalPnL.toLocaleString()}</Text>
               </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceLabel}>ann. return</Text>
-                <Text style={styles.performanceValue}>{currentStrategy.performance.annualReturn}%</Text>
-              </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceLabel}>max. drawdown</Text>
-                <Text style={styles.performanceValue}>{currentStrategy.performance.maxDrawdown}%</Text>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Max Drawdown</Text>
+                <Text style={styles.detailValue}>{(performanceStats.maxDrawdown_pct * 100).toFixed(1)}%</Text>
               </View>
             </View>
           </View>
-
-          <View style={styles.pricingSection}>
-            <Text style={styles.pricingText}>HKD {currentStrategy.price} / mo</Text>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.description}>No performance data available</Text>
           </View>
+        )}
 
+        {/* Action Buttons */}
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[
-              styles.subscribeButton, 
-              isSubscribed && styles.unsubscribeButton
-            ]}
+            style={[styles.button, isSubscribed ? styles.unsubscribeButton : styles.subscribeButton]}
             onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
           >
-            <Text style={styles.subscribeButtonText}>
-              {isSubscribed ? 'Unsubscribe' : `Subscribe (${currentStrategy.cur} ${currentStrategy.price}/mo)`}
+            <Text style={styles.buttonText}>
+              {isSubscribed ? 'UNSUBSCRIBE' : 'SUBSCRIBE'}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
-      </View>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Text style={styles.closeButtonText}>CLOSE</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </Modal>
   );
 };
 
-// import React, { useState, useEffect } from 'react';
-// import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
-// import { LineChart } from 'react-native-chart-kit';
-// import { useSubscription } from '../../context/SubscriptionContext';
-// import { fetchAlgoPerformance } from '../../services/testApi';
-
-// const TradingModal = ({ visible, onClose, strategy = null }) => {
-//   const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
-//   const [performanceStats, setPerformanceStats] = useState(null);
-//   const [loadingPerformance, setLoadingPerformance] = useState(false);
-
-//   useEffect(() => {
-//     if ( visible && strategy?.algo_id) {
-//       fetchPerformanceStats(strategy.algo_id);
-//     }
-//   }, [visible, strategy]);
-
-//   const fetchPerformanceStats = async (algoId) => {
-//     setLoadingPerformance(true);
-//     try {
-//       const performance = await fetchAlgoPerformance(algoId);
-//       setPerformanceStats(performance);
-//     } catch (error) {
-//       console.error('Error fetching performance stats:', error);
-//       Alert.alert('Error', 'Failed to fetch performance stats.');
-//     } finally {
-//       setLoadingPerformance(false);
-//     }
-//   };
-
-//   const currentStrategy = strategy || {
-//     id: 'default-strategy',
-//     title: 'Unnamed Strategy',
-//     developer: 'Unknown Developer',
-//     description: 'No description available.',
-//     price: 0,
-//     cur: 'USD'
-//   };
-
-//   //   const getDefaultStrategy = () => ({
-// //     id: strategy?.algo_id || 'default-strategy',
-// //     title: strategy?.strategy || 'Unnamed Strategy',
-// //     developer: strategy?.developer || 'Unknown Developer',
-// //     category: strategy?.category || 'Algorithm',
-// //     description: strategy?.description || 'No description available for this algorithm.',
-// //     assetClass: strategy?.asset_class || 'Various',
-// //     tradingInstruments: strategy?.instruments || 'Not specified',
-// //     supportedBrokers: strategy?.supported_brokers || 'Not specified',
-// //     tradingRequirements: strategy?.requirements || 'None specified',
-// //     performance: {
-// //       score: strategy?.performance?.score || Math.floor(Math.random() * 40) + 60,
-// //       tradingDays: strategy?.performance?.tradingDays || 'N/A',
-// //       sharpeRatio: strategy?.performance?.sharpeRatio || 'N/A',
-// //       sortinoRatio: strategy?.performance?.sortinoRatio || 'N/A',
-// //       volatility: strategy?.performance?.volatility || 'N/A',
-// //       annualReturn: strategy?.performance?.annualReturn || 'N/A',
-// //       maxDrawdown: strategy?.performance?.maxDrawdown || 'N/A',
-// //     },
-// //     price: strategy?.price || 0,
-// //     cur: strategy?.cur || 'USD',
-// //     settings: performanceData?.setting || {}
-// //   });
-
-// //   const currentStrategy = strategy ? getDefaultStrategy() : getDefaultStrategy();
-//   const isSubscribed = subscribedAlgorithm?.id === currentStrategy.id;
-
-//   const handleSubscribe = () => {
-//     if (subscribedAlgorithm && subscribedAlgorithm.id !== currentStrategy.id) {
-//       Alert.alert(
-//         'Subscription Conflict',
-//         "You're already subscribed to another algorithm. Please unsubscribe first.",
-//         [{ text: 'OK' }]
-//       );
-//       return;
-//     }
-//     subscribeToAlgorithm(currentStrategy);
-//     onClose();
-//   };
-
-//   const handleUnsubscribe = () => {
-//     Alert.alert(
-//       'Confirm Unsubscribe',
-//       'Are you sure you want to unsubscribe from this strategy?',
-//       [
-//         { text: 'Cancel', style: 'cancel' },
-//         { text: 'Unsubscribe', onPress: () => {
-//             unsubscribeFromAlgorithm();
-//             onClose();
-//           }, style: 'destructive' }
-//       ]
-//     );
-//   };
-
-//   const chartData = {
-//     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-//     datasets: [{
-//       data: performanceStats?.rolling_return_30d || [100, 110, 120, 150, 180, 210],
-//       color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-//       strokeWidth: 2
-//     }],
-//   };
-
-//   const chartConfig = {
-//     backgroundColor: '#ffffff',
-//     backgroundGradientFrom: '#ffffff',
-//     backgroundGradientTo: '#ffffff',
-//     decimalPlaces: 2,
-//     color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-//     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-//     style: { borderRadius: 16 },
-//     propsForDots: {
-//       r: "4",
-//       strokeWidth: "2",
-//       stroke: "#2196F3"
-//     }
-//   };
-
-//   return (
-//     <Modal animationType="slide" transparent={false} visible={visible} onRequestClose={onClose}>
-//       <View style={styles.container}>
-//         <ScrollView contentContainerStyle={styles.scrollContainer}>
-//           <View style={styles.header}>
-//             <TouchableOpacity onPress={onClose}>
-//               <Text style={styles.closeButton}>×</Text>
-//             </TouchableOpacity>
-//           </View>
-
-//           <View style={styles.titleSection}>
-//             <Text style={styles.strategyTitle}>{currentStrategy.title}</Text>
-//           </View>
-
-//           {loadingPerformance ? (
-//             <ActivityIndicator size="large" color="#2196F3" />
-//           ) : (
-//             <View style={styles.performanceSection}>
-//               <Text style={styles.sectionTitle}>Performance Statistics:</Text>
-//               <Text>Sharpe Ratio: {performanceStats?.AnnualSharpe || 'N/A'}</Text>
-//               <Text>Sortino Ratio: {performanceStats?.AnnualSortino || 'N/A'}</Text>
-//               <Text>Max Drawdown: {performanceStats?.maxDrawdown_pct || 'N/A'}%</Text>
-//               <Text>Annual Return: {(performanceStats?.MeanAnnualReturn * 100).toFixed(2) || 'N/A'}%</Text>
-//             </View>
-//           )}
-
-//           <View style={styles.chartContainer}>
-//             <LineChart
-//               data={chartData}
-//               width={Dimensions.get('window').width - 40}
-//               height={220}
-//               chartConfig={chartConfig}
-//               bezier
-//               style={styles.chart}
-//             />
-//           </View>
-
-//           <TouchableOpacity
-//             style={[styles.subscribeButton, isSubscribed && styles.unsubscribeButton]}
-//             onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
-//           >
-//             <Text style={styles.subscribeButtonText}>
-//               {isSubscribed ? 'Unsubscribe' : `Subscribe (${currentStrategy.cur} ${currentStrategy.price}/mo)`}
-//             </Text>
-//           </TouchableOpacity>
-//         </ScrollView>
-//       </View>
-//     </Modal>
-//   );
-// };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
     padding: 20,
-    marginTop: 20, 
-  },
-  scrollContainer: {
-    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 20,
-  },
-  closeButton: {
-    fontSize: 30,
-    color: '#333',
-  },
-  titleSection: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingBottom: 15,
   },
-  strategyTitle: {
+  titleContainer: {
+    flex: 2,
+  },
+  priceContainer: {
+    backgroundColor: '#333',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
-  scoreContainer: {
-    backgroundColor: '#4FC3F7',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 5,
+  developer: {
+    fontSize: 14,
+    color: '#9E9E9E',
   },
-  scoreText: {
-    color: 'white',
-    fontWeight: 'bold',
+  description: {
+    fontSize: 15,
+    color: '#E0E0E0',
+    lineHeight: 22,
+  },
+  price: {
     fontSize: 16,
-  },
-  chartContainer: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  chart: {
-    borderRadius: 16,
-    marginBottom: 10,
-  },
-  performanceText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    textAlign: 'center',
-  },
-  userSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  categoryTag: {
-    backgroundColor: '#4FC3F7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  categoryText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#4FC3F7',
   },
   section: {
-    marginBottom: 25,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
+    color: '#9E9E9E',
+    marginBottom: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  sectionContent: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#555',
+  chartContainer: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 8,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  detailsContainer: {
-    marginBottom: 25,
+  chart: {
+    borderRadius: 8,
   },
-  detailRow: {
+  detailItem: {
     flexDirection: 'row',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   detailLabel: {
-    fontWeight: 'bold',
-    width: 160,
     fontSize: 14,
-    color: '#333',
+    color: '#9E9E9E',
+    flex: 1,
   },
   detailValue: {
-    flex: 1,
     fontSize: 14,
-    color: '#555',
+    fontWeight: '500',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'right',
   },
-  performanceGrid: {
+  metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  performanceItem: {
-    width: '30%',
-    marginBottom: 15,
+  metricItem: {
+    width: '48%',
+    marginBottom: 12,
   },
-  performanceLabel: {
-    fontSize: 12,
-    color: '#666',
-    textTransform: 'uppercase',
+  buttonContainer: {
+    marginTop: 10,
+    marginBottom: 30,
   },
-  performanceValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  pricingSection: {
-    marginVertical: 20,
-    alignItems: 'center',
-  },
-  pricingText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subscribeButton: {
-    backgroundColor: '#2196F3',
-    padding: 15,
+  button: {
+    padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
+    marginBottom: 12,
+  },
+  subscribeButton: {
+    backgroundColor: '#4FC3F7',
   },
   unsubscribeButton: {
     backgroundColor: '#F44336',
   },
-  subscribeButtonText: {
-    color: 'white',
-    fontSize: 18,
+  buttonText: {
+    color: '#FFFFFF',
     fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  closeButton: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#333',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  loadingContainer: {
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

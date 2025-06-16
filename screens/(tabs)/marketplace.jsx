@@ -29,7 +29,7 @@ const Marketplace = () => {
     setIsLoading(true);
     try {
       const result = await fetchPublicAlgos();
-      console.log("API Response:", result);
+      // console.log("API Response:", result);
       
       // Check if response has the expected structure
       if (!result || !result.data || !Array.isArray(result.data)) {
