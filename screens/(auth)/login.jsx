@@ -18,9 +18,6 @@ const Login = () => {
     const [isCaptchaLoading, setIsCaptchaLoading] = useState(false);
     const captchaRef = useRef(null);
 
-    // useEffect(() => {
-    //     console.log('Captcha ref initialized:', captchaRef.current);
-    // }, []);
     useEffect(() => {
         console.log('Captcha ref initialized:', captchaRef.current);
         // Optional: Manually handle back press to dismiss if needed
@@ -321,10 +318,10 @@ const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 8,
         flex: 1, 
+        height: 50, 
     },
     loginButton: {
         backgroundColor: '#87cefa',
-        paddingVertical: 12,
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
@@ -354,7 +351,8 @@ const styles = StyleSheet.create({
     },
     humanCheckboxText: {
         color: 'black',
-        fontSize: 16,
+        fontSize: 14,
+        marginHorizontal: 6, 
     },
     captchaIcon: {
         width: 120,
