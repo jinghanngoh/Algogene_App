@@ -58,38 +58,3 @@ API.interceptors.response.use(
 );
 
 export default API;
-
-
-// export const fetchStrategyStats = async (algo_id) => {
-//   try {
-//     console.log('Making API Request to /rest/v1/strategy_stats');
-    
-//     // Get session ID
-//     let sessionId = await AsyncStorage.getItem('sessionId');
-//     if (!sessionId) {
-//       sessionId = generateSessionId();
-//       await AsyncStorage.setItem('sessionId', sessionId);
-//     }
-    
-//     const response = await API.get('/rest/v1/strategy_stats', {
-//       params: {
-//         user: 'AGBOT1',
-//         api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-//         sid: sessionId,
-//         algo_id: algo_id
-//       }
-//     });
-    
-//     console.log('Strategy Stats API Response:', response);
-
-//     if (!response.status) {
-//       throw new Error(response.res || 'API returned false status');
-//     }
-
-//     return response;
-
-//   } catch (error) {
-//     console.error('Error fetching strategy stats:', error);
-//     throw error;
-//   }
-// };

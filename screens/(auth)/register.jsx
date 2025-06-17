@@ -1,6 +1,10 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
+import React, {useState, useRef, useEffect, useCallback } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable, BackHandler, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import HCaptcha from '@hcaptcha/react-native-hcaptcha/Hcaptcha';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { signup } from '../../services/auth/auth';
 import logo_s from '../../assets/img/logo_s.png';
 import register from '../../assets/img/register.png';
 import captcha_icon from '../../assets/img/captcha_icon.png';
@@ -9,14 +13,63 @@ const Register = () => {
     const router = useRouter();
     const [isTermsChecked, setIsTermsChecked] = useState(false);
     const [isHumanChecked, setIsHumanChecked] = useState(false);
+    const [isCaptchaLoading, setIsCaptchaLoading] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState(null);
+    const [email, setEmail] = useState(''); 
+    const [c_Name, setc_Name] = useState(''); 
+    const [password, setPassword] = useState('');
+    const captchaRef = useRef(null);
+    const [error, setError] = useState('');
 
     const handleBackToLogin = () => {
-        router.back();
+        // router.back();
+        router.push('/login');
     };
 
-    const handleCreateAccount = () => {
-        router.push('/confirmation?type=register');
-    };
+    // const Account = () => {
+    //     router.push('/confirmation?type=register');
+    // };
+    
+    const handleCreateAccount = async () => {
+        if (!email || !c_Name) {
+          setError('Please fill in all required fields');
+          Alert.alert('Missing Fields', 'Please fill in email and name');
+          return;
+        }
+        if (!isTermsChecked) {
+          setError('Please agree to the Terms');
+          Alert.alert('Terms Required', 'Please agree to the Terms');
+          return;
+        }
+        if (!isHumanChecked) {
+          setError('Please verify you are human');
+          Alert.alert('Verification Required', 'Please verify you are human');
+          return;
+        }
+    
+        setError(''); // Clear previous errors
+    
+        try {
+            const result = await signup({ email, c_Name , captchaToken: isHumanChecked ? 'verified' : ''});
+        //   const result = await signup({ username, email, c_Name , captchaToken: isHumanChecked ? 'verified' : ''});
+    
+          if (result.success) {
+            Alert.alert(
+              'Success', 
+              'Account created! Please check your email for your login credentials.'
+            );
+            router.push('/confirmation?type=register');
+          } else {
+            setError(result.message);
+            Alert.alert('Registration Failed', result.message);
+          }
+        } catch (error) {
+          console.error('Registration error:', error);
+          const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred';
+          setError(errorMessage);
+          Alert.alert('Registration Failed', errorMessage);
+        }
+      };
 
     const toggleTermsCheck = () => {
         setIsTermsChecked(!isTermsChecked);
@@ -37,7 +90,21 @@ const Register = () => {
             <Text style={styles.subtitle}>
                 New to ALGOGENE?{"\n"}Simply provide your email to get an initial password
             </Text>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
             
+            {/* <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Username:</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Enter Your Username"
+                    placeholderTextColor="#999"
+                    value={username}
+                    onChangeText={setUsername}
+                    autoCapitalize="none"
+                    />
+            </View> */}
+
             <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Email:</Text>
                 <TextInput
@@ -46,6 +113,8 @@ const Register = () => {
                     placeholderTextColor="#999"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
                 />
             </View>
             
@@ -55,33 +124,34 @@ const Register = () => {
                     style={styles.input}
                     placeholder="Enter Your Name"
                     placeholderTextColor="#999"
-                />
+                    value={c_Name}
+                    onChangeText={setc_Name}
+                    autoCapitalize="none"
+                    />
             </View>
             
             <View style={styles.checkboxGroup}>
-                {/* Terms Checkbox - moved closer to name input by reducing marginTop */}
                 <View style={[styles.checkboxContainer, { marginTop: 5 }]}>
-                    <Pressable onPress={toggleTermsCheck}>
-                        {/* White outline checkbox */}
-                        <View style={[styles.termsCheckbox, isTermsChecked && styles.termsCheckedBox]}>
-                            {isTermsChecked && <View style={styles.termsCheckmark} />}
-                        </View>
-                    </Pressable>
-                    <Text style={styles.checkboxText}>
-                        I agree to the <Text style={styles.underlineText}>Terms</Text>
-                    </Text>
+                <Pressable onPress={toggleTermsCheck}>
+                    <View style={[styles.termsCheckbox, isTermsChecked && styles.termsCheckedBox]}>
+                    {isTermsChecked && <View style={styles.termsCheckmark} />}
+                    </View>
+                </Pressable>
+                <Text style={styles.checkboxText}>
+                    I agree to the <Text style={styles.underlineText}>Terms</Text>
+                </Text>
                 </View>
 
-                {/* Human Checkbox */}
                 <View style={styles.humanContainer}>
                     <View style={styles.humanCheckboxContainer}>
                         <Pressable onPress={toggleHumanCheck}>
-                            {/* Black outline checkbox */}
-                            <View style={[styles.humanCheckbox, isHumanChecked && styles.humanCheckedBox]}>
-                                {isHumanChecked && <View style={styles.humanCheckmark} />}
-                            </View>
+                        <View style={[styles.humanCheckbox, isHumanChecked && styles.humanCheckedBox]}>
+                            {isHumanChecked && <View style={styles.humanCheckmark} />}
+                        </View>
                         </Pressable>
-                        <Text style={styles.humanCheckboxText}>I am Human</Text>
+                        <Text style={styles.humanCheckboxText}>
+                        {isHumanChecked ? 'Verified' : 'I am Human'}
+                        </Text>
                     </View>
                     <Image
                         source={captcha_icon}
@@ -90,20 +160,33 @@ const Register = () => {
                     />
                 </View>
             </View>
-            
-            <TouchableOpacity 
-                style={styles.createAccountButton}
+                    
+            <TouchableOpacity
+                style={[
+                styles.createAccountButton,
+                (!email || !c_Name || !isTermsChecked || !isHumanChecked) &&
+                    styles.createAccountButtonDisabled,
+                ]}
                 onPress={handleCreateAccount}
+                disabled={!email || !c_Name || !isTermsChecked || !isHumanChecked}
             >
                 <Text style={styles.createAccountButtonText}>Create account</Text>
             </TouchableOpacity>
+    
+
+        <TouchableOpacity onPress={handleBackToLogin}>
+            <Text style={styles.footerLink}>Back to Login</Text>
+        </TouchableOpacity>
+    </View>
+  );
+};
             
-            <TouchableOpacity onPress={handleBackToLogin}>
+            {/* <TouchableOpacity onPress={handleBackToLogin}>
                 <Text style={styles.footerLink}>Back to Login</Text>
             </TouchableOpacity>
         </View>
     );
-};
+}; */}
 
 const styles = StyleSheet.create({
     container: {
@@ -224,7 +307,6 @@ const styles = StyleSheet.create({
         width: 120,
         height: 40,
     },
-
 
     termsCheckbox: {
         width: 20,
