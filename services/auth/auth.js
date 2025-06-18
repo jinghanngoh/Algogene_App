@@ -2,26 +2,16 @@ import API from '../api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
-// Generate a 32-character session ID
 const generateSessionId = () => {
-  return uuidv4().replace(/-/g, ''); // 32 chars
+  return uuidv4().replace(/-/g, '');
 };
 
-// Signup function for ALGOGENE API
-export const signup = async ({ username, email, c_Name, password, captchaToken }) => {
+export const signup = async ({ email, c_Name, captchaToken }) => {
   try {
-
-    console.log('Signup params:', { username, email, c_Name, captchaToken });
+    console.log('Signup params:', { email, c_Name, captchaToken });
 
     const sessionId = await AsyncStorage.getItem('sessionId') || generateSessionId();
     await AsyncStorage.setItem('sessionId', sessionId);
-
-    // Get or generate session ID
-    // let sessionId = await AsyncStorage.getItem('sessionId');
-    // if (!sessionId) {
-    //   sessionId = generateSessionId();
-    //   await AsyncStorage.setItem('sessionId', sessionId);
-    // }
 
     const payload = {
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
@@ -29,33 +19,21 @@ export const signup = async ({ username, email, c_Name, password, captchaToken }
       sid: sessionId,
       c_Email: email,
       c_Name: c_Name,
-      'h-captcha-response': captchaToken 
-      // 'h-captcha-response': captchaToken || '', // Uncomment for hCaptcha
+      'h-captcha-response': captchaToken || '',
     };
 
     console.log('Signup Request Payload:', JSON.stringify(payload, null, 2));
     console.log('Making API Request to /rest/v1/app_createuser');
 
-    const response = await API.post('/rest/v1/app_createuser', payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'user': 'AGBOT1',
-          'api_key': '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-          'sid': sessionId
-        }
-      });
+    const response = await API.post('/rest/v1/app_createuser', payload);
 
     console.log('Signup API Response:', JSON.stringify(response, null, 2));
 
     if (response.status) {
-      // Store response data for activation/login
-    //   await AsyncStorage.setItem('c_Email', response.c_Email);
-    //   await AsyncStorage.setItem('user', response.user);
-    //   await AsyncStorage.setItem('cid', response.cid); 
-    await AsyncStorage.multiSet([
-        ['c_Email', response.c_Email],
-        ['cid', response.cid],
-        ]);
+      await AsyncStorage.multiSet([
+        ['c_Email', response.c_Email || email],
+        ['cid', response.cid || ''],
+      ]);
       return {
         success: true,
         data: response,
@@ -63,7 +41,7 @@ export const signup = async ({ username, email, c_Name, password, captchaToken }
     } else {
       return {
         success: false,
-        message: response.res,
+        message: response.res || 'Signup failed',
       };
     }
   } catch (error) {
@@ -80,7 +58,96 @@ export const signup = async ({ username, email, c_Name, password, captchaToken }
 
     return {
       success: false,
-      message: error.response?.data?.res || error.message || 'An error occurred during registration',
+      message: errorMessage,
+    };
+  }
+};
+
+export const resetPassword = async ({ userIdentifier, captchaToken }) => {
+  try {
+    const sessionId = await AsyncStorage.getItem('sessionId') || generateSessionId();
+    await AsyncStorage.setItem('sessionId', sessionId);
+
+    const payload = {
+      api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+      user: 'AGBOT1',
+      sid: sessionId,
+      c_Email: userIdentifier.includes('@') ? userIdentifier : undefined,
+      user_id: userIdentifier.includes('@') ? undefined : userIdentifier,
+      'h-captcha-response': captchaToken || '',
+    };
+
+    Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+
+    const response = await API.post('/rest/v1/app_resetpassword', payload);
+    
+    if (!response.status) {
+      throw new Error(response.res || 'Password reset failed');
+    }
+    
+    return { 
+      success: true, 
+      message: response.res || 'New password sent to your email' 
+    };
+  } catch (error) {
+    console.error('Reset password error:', error.response?.data || error.message);
+    throw new Error(
+      error.response?.data?.res || 
+      'Failed to reset password. Please try again later.'
+    );
+  }
+};
+
+export const login = async ({ email, password, captchaToken }) => {
+  try {
+    await AsyncStorage.removeItem('sessionId');
+    const sessionId = generateSessionId();
+    await AsyncStorage.setItem('sessionId', sessionId);
+
+    const payload = {
+      api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+      user: 'AGBOT1',
+      sid: sessionId,
+      c_Email: email,
+      c_Pwd: password,
+      'h-captcha-response': captchaToken || '',
+    };
+
+    console.log('Login Request Payload:', JSON.stringify(payload, null, 2));
+    console.log('Making API Request to /rest/v1/app_userlogin');
+
+    const response = await API.post('/rest/v1/app_userlogin', payload);
+
+    console.log('Login API Response:', JSON.stringify(response, null, 2));
+
+    if (response.status) {
+      await AsyncStorage.multiSet([
+        ['c_Email', response.data.c_Email || email],
+        ['cid', response.data.cid || ''],
+        ['c_Name', response.data.c_Name || ''],
+        ['c_region', response.data.c_region || 'hk'],
+        ['c_lang', response.data.c_lang || 'en'],
+        ['c_clientcur', response.data.c_clientcur || 'HKD'],
+        ['isLoggedIn', 'true'],
+      ]);
+
+      return {
+        success: true,
+        data: response,
+        message: response.res || 'Login successful',
+      };
+    } else {
+      throw new Error(response.res || 'Login failed');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    console.log('Error response:', JSON.stringify(error.response?.data, null, 2));
+    if (error.response?.status === 401 || error.response?.status === 400) {
+      await AsyncStorage.removeItem('sessionId');
+    }
+    return {
+      success: false,
+      message: error.response?.data?.res || error.message || 'Login failed. Please try again.',
     };
   }
 };
