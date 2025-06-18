@@ -1,12 +1,15 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react'; // Add this import for useState
+import { resetPassword } from '../../services/auth/auth';
 import logo_s from '../../assets/img/logo_s.png';
 import captcha_icon from '../../assets/img/captcha_icon.png';
 
 const PasswordReset = () => {
     const router = useRouter();
     const [isHumanChecked, setIsHumanChecked] = useState(false);
+    const [userIdentifier, setUserIdentifier] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleBackToLogin = () => {
         router.back();
@@ -16,8 +19,36 @@ const PasswordReset = () => {
         router.push('/register'); // Add this navigation handler
     };
 
-    const handleResetPassword = () => {
-        router.push('/confirmation?type=password');
+    // const handleResetPassword = () => {
+    //     router.push('/confirmation?type=password');
+    // };
+
+    const handleResetPassword = async () => {
+        if (!userIdentifier) {
+            Alert.alert('Error', 'Please enter your email or User ID');
+            return;
+        }
+        if (!isHumanChecked) {
+            Alert.alert('Error', 'Please verify you are human');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const result = await resetPassword({
+                userIdentifier,
+                captchaToken: isHumanChecked ? 'verified' : ''
+            });
+
+            if (result.success) {
+                Alert.alert('Success', 'New password sent to your email');
+                router.push('/confirmation?type=password');
+            }
+        } catch (error) {
+            Alert.alert('Error', error.message || 'Failed to reset password. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const toggleHumanCheck = () => {
@@ -26,7 +57,6 @@ const PasswordReset = () => {
 
     return (
         <View style={styles.container}>
-            {/* Logo at top left */}
             <Image source={logo_s} style={styles.logo} />
             
             {/* Left-aligned title and subtitle */}
@@ -41,6 +71,10 @@ const PasswordReset = () => {
                     style={styles.input}
                     placeholder="Enter Your Email or User ID"
                     placeholderTextColor="#999"
+                    value={userIdentifier}
+                    onChangeText={setUserIdentifier}
+                    autoCapitalize="none"
+                    autoCorrect={false}
                 />
             </View>
             
@@ -64,10 +98,17 @@ const PasswordReset = () => {
             
             {/* Centered Reset Button */}
             <TouchableOpacity 
-                style={styles.resetButton} 
+                style={[
+                    styles.resetButton, 
+                    isLoading && styles.disabledButton,
+                    (!userIdentifier || !isHumanChecked) && styles.disabledButton
+                ]}
                 onPress={handleResetPassword}
+                disabled={isLoading || !userIdentifier || !isHumanChecked}
             >
-                <Text style={styles.resetButtonText}>Reset password</Text>
+                <Text style={styles.resetButtonText}>
+                    {isLoading ? 'Sending...' : 'Reset password'}
+                </Text>
             </TouchableOpacity>
             
             {/* Footer Links below the button */}

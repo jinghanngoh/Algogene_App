@@ -7,9 +7,10 @@ const API = axios.create({
   // baseURL: 'https://algogene.com',
     headers: {
       'Content-Type': 'application/json',
-      'user': 'AGBOT1',
-      'api_key': '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff' 
-    }
+      // 'user': 'AGBOT1',
+      // 'api_key': '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff' 
+    },
+    withCredentials: true,
 });
 
 // Request interceptor for session ID - runs before every API call

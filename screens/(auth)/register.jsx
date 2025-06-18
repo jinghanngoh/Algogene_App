@@ -180,13 +180,6 @@ const Register = () => {
     </View>
   );
 };
-            
-            {/* <TouchableOpacity onPress={handleBackToLogin}>
-                <Text style={styles.footerLink}>Back to Login</Text>
-            </TouchableOpacity>
-        </View>
-    );
-}; */}
 
 const styles = StyleSheet.create({
     container: {
