@@ -1,11 +1,46 @@
 // screens/(tabs)/profile/Settings.jsx
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, TextInput, Alert } from 'react-native';
-import { useRouter, useState } from 'expo-router';
+import { useRouter} from 'expo-router';
+import { useState } from 'react'; 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { logout } from '../../services/auth/auth';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 const Settings = () => {
   const router = useRouter();
+  const { unsubscribeFromAlgorithm } = useSubscription();
   // const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  const handleLogout = async () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Log Out',
+        onPress: async () => {
+          try {
+            // Clear subscription context
+            unsubscribeFromAlgorithm();
+            console.log('Subscription context cleared');
+
+            // Call logout from auth.js
+            const result = await logout();
+            if (result.success) {
+              console.log('Logout successful, navigating to login');
+              router.replace('/(auth)/login');
+            } else {
+              Alert.alert('Error', result.message);
+            }
+          } catch (error) {
+            console.error('Logout error:', error);
+            Alert.alert('Error', 'Failed to log out. Please try again.');
+          }
+        },
+      },
+    ]);
+  };
 
   const settingsItems = [
     {
@@ -33,34 +68,16 @@ const Settings = () => {
 
   const accountActions = [
     {
-      title: "SWITCH ACCOUNT",
+      title: 'SWITCH ACCOUNT',
       icon: <Ionicons name="swap-horizontal" size={22} color="white" />,
-      action: () => console.log("Switch account pressed")
+      action: () => console.log('Switch account pressed'),
     },
     {
-      title: "LOG OUT",
+      title: 'LOG OUT',
       icon: <Feather name="log-out" size={22} color="#FF3B30" />,
-      textColor: "#FF3B30",
-      action: () => {
-        Alert.alert(
-          "Log Out",
-          "Are you sure you want to log out?",
-          [
-            {
-              text: "Cancel",
-              style: "cancel"
-            },
-            { 
-              text: "Log Out", 
-              onPress: () => {
-                router.replace('/(auth)');
-
-              }
-            }
-          ]
-        );
-      }
-    }
+      textColor: '#FF3B30',
+      action: handleLogout, // Use top-level function
+    },
   ];
 
   return (

@@ -151,3 +151,23 @@ export const login = async ({ email, password, captchaToken }) => {
     };
   }
 };
+
+export const logout = async () => {
+  try {
+    await AsyncStorage.multiRemove([
+      'sessionId',
+      'c_Email',
+      'cid',
+      'c_Name',
+      'c_region',
+      'c_lang',
+      'c_clientcur',
+      'isLoggedIn',
+    ]);
+    console.log('AsyncStorage cleared for logout');
+    return { success: true, message: 'Logged out successfully' };
+  } catch (error) {
+    console.error('Logout error:', error);
+    return { success: false, message: 'Failed to log out. Please try again.' };
+  }
+};
