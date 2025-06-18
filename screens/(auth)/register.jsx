@@ -1,5 +1,5 @@
 import React, {useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable, BackHandler, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { v4 as uuidv4 } from 'uuid';
 import HCaptcha from '@hcaptcha/react-native-hcaptcha/Hcaptcha';
