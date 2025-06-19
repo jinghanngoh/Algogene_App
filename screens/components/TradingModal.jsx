@@ -2,35 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { fetchAlgoPerformance } from '../../services/testApi';
+import { fetchAlgoDailyReturns, fetchAlgoPerformance } from '../../services/testApi';
 
 const TradingModal = ({ visible, onClose, strategy = null }) => {
   const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
   const [performanceStats, setPerformanceStats] = useState(null);
+  const [dailyReturns, setDailyReturns] = useState(null);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
+  const [loadingDailyReturns, setLoadingDailyReturns] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     console.log('Strategy:', strategy);
     if (strategy?.algo_id) {
       fetchPerformanceStats(strategy.algo_id);
+      fetchDailyReturnsData(strategy.algo_id);
     }
   }, [strategy]);
 
-  // Optional debugging log
-  // useEffect(() => {
-  //   console.log('Performance Stats:', performanceStats);
-  // }, [performanceStats]);
-
   const fetchPerformanceStats = async (algoId) => {
     setLoadingPerformance(true);
+    setErrorMessage(null);
     try {
       const performance = await fetchAlgoPerformance(algoId);
       setPerformanceStats(performance);
     } catch (error) {
       console.error('Error fetching performance data:', error);
-      Alert.alert('Error', 'Failed to load performance data');
+      setErrorMessage('Failed to load performance data.');
     } finally {
       setLoadingPerformance(false);
+    }
+  };
+
+  const fetchDailyReturnsData = async (algoId) => {
+    setLoadingDailyReturns(true);
+    setErrorMessage(null);
+    try {
+      const returns = await fetchAlgoDailyReturns(algoId);
+      const formattedReturns = returns.slice(-5).map((item) => ({
+        date: item.t, // Map 't' to 'date'
+        return: item.r * 100, // Daily return as percentage (optional, keep if you want to show it)
+        cumulativeReturn: item.cr * 100, // Cumulative return as percentage
+      }));
+      setDailyReturns(formattedReturns);
+    } catch (error) {
+      console.error('Error fetching daily returns:', error);
+      setErrorMessage('Using random daily returns due to fetch error.');
+    } finally {
+      setLoadingDailyReturns(false);
     }
   };
 
@@ -223,6 +242,36 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
           </View>
         )}
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>LAST 5 DAILY RETURNS</Text>
+          {loadingDailyReturns ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4FC3F7" />
+            </View>
+          ) : dailyReturns ? (
+            <View style={styles.tableContainer}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderText, styles.tableCell]}>Date</Text>
+                <Text style={[styles.tableHeaderText, styles.tableCell]}>Daily Return (%)</Text>
+                <Text style={[styles.tableHeaderText, styles.tableCell]}>Cumulative Return (%)</Text>
+              </View>
+              {dailyReturns.map((item, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={[styles.tableCell, styles.tableText]}>{item.date}</Text>
+                  <Text style={[styles.tableCell, styles.tableText]}>
+                    {item.return > 0 ? `+${item.return.toFixed(2)}` : item.return.toFixed(2)}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.tableText]}>
+                    {item.cumulativeReturn > 0 ? `+${item.cumulativeReturn.toFixed(2)}` : item.cumulativeReturn.toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.description}>No daily returns available</Text>
+          )}
+        </View>
+
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -384,6 +433,38 @@ const styles = StyleSheet.create({
     height: 100,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#2A2A2A',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  tableHeaderText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  tableCell: {
+    flex: 1,
+    padding: 10,
+    textAlign: 'center',
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  tableText: {
+    fontSize: 14,
   },
 });
 
