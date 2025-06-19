@@ -2,6 +2,7 @@
 import API from './api';
 import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// import { login } from '../services/auth/auth';
 
 // Generate a 32-character session ID
 const generateSessionId = () => {
@@ -12,42 +13,94 @@ const generateSessionId = () => {
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Fetch Trading Bots (2.1)
-export const fetchPublicAlgos = async () => { 
+// export const fetchPublicAlgos = async () => { 
+//   try {
+//     console.log('Making API Request to /rest/v1/app_mp_topalgo');
+    
+//     // Get or generate session ID
+//     let sessionId = await AsyncStorage.getItem('sessionId');
+//     if (!sessionId) {
+//       sessionId = generateSessionId();
+//       await AsyncStorage.setItem('sessionId', sessionId);
+//     }
+    
+//     const response = await API.get('/rest/v1/app_mp_topalgo', {
+//       params: {
+//         user: 'AGBOT1',
+//         api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+//         sid: sessionId
+//       }
+//     });
+
+//     if (!response.status) {
+//       throw new Error(response.res || 'API returned false status');
+//     }
+
+//     return {
+//       status: response.status,
+//       count: response.count,
+//       data: response.res
+//     };
+//   } catch (error) {
+//     console.error('Error fetching public algos:', error);
+//     console.error('Error details:', {
+//       response: error.response?.data,
+//       status: error.response?.status,
+//       request: error.request,
+//       message: error.message
+//     });
+//     throw error;
+//   }
+// };
+
+export const fetchPublicAlgos = async (retries = 1) => {
   try {
     console.log('Making API Request to /rest/v1/app_mp_topalgo');
     
-    // Get or generate session ID
     let sessionId = await AsyncStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = generateSessionId();
       await AsyncStorage.setItem('sessionId', sessionId);
     }
+    const cid = await AsyncStorage.getItem('cid') || 'AGBOTKOlnrdLJ';
+    console.log('Using sessionId:', sessionId);
     
     const response = await API.get('/rest/v1/app_mp_topalgo', {
       params: {
         user: 'AGBOT1',
         api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-        sid: sessionId
-      }
+        sid: sessionId,
+      },
     });
 
-    if (!response.status) {
-      throw new Error(response.res || 'API returned false status');
+    if (!response?.status) {
+      throw new Error(response?.res || 'API returned false status');
     }
+    
+    // if (!response.data.status) {
+    //   throw new Error(response.res || 'API returned false status');
+    // }
 
     return {
       status: response.status,
       count: response.count,
-      data: response.res
+      data: response.res,
     };
   } catch (error) {
     console.error('Error fetching public algos:', error);
     console.error('Error details:', {
       response: error.response?.data,
       status: error.response?.status,
-      request: error.request,
-      message: error.message
+      message: error.message,
     });
+
+    if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
+      console.log(`Invalid session detected. Retrying (${retries} left)...`);
+      await AsyncStorage.removeItem('sessionId');
+      await delay(1000);
+      return fetchPublicAlgos(retries - 1);
+    }
+
     throw error;
   }
 };

@@ -23,35 +23,76 @@ const Marketplace = () => {
   const [hasMore, setHasMore] = useState(true); 
   const itemsPerPage = 10; 
 
+  // const loadAlgorithms = async (retryCount = 2) => {
+  // // const loadAlgorithms = async () => {
+  //   if (isLoading || !hasMore) return;
+    
+  //   setIsLoading(true);
+  //   try {
+  //     const result = await fetchPublicAlgos();
+  //     // console.log("API Response:", result);
+      
+  //     // Check if response has the expected structure
+  //     if (!result || !result.data || !Array.isArray(result.data)) {
+  //       throw new Error('Invalid API response format');
+  //     }
+  
+  //     const startIndex = (page - 1) * itemsPerPage;
+  //     const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
+      
+  //     setAlgorithms((prev) => [...prev, ...paginatedData]);
+  //     setHasMore(result.data.length > page * itemsPerPage);
+  //     setPage(prev => prev + 1);
+  //   } catch (error) {
+  //     console.error('Error loading algorithms:', error);
+  //     if (retryCount > 0 && error.message.includes('Invalid session')) {
+  //       console.log(`Retrying loadAlgorithms (${retryCount - 1} left)...`);
+  //       await AsyncStorage.removeItem('sessionId');
+  //       setIsLoading(false);
+  //       return loadAlgorithms(retryCount - 1);
+  //     // console.error('Error loading algorithms:', error);
+  //     // Alert.alert('Error', error.message || 'Failed to load algorithms');
+  //   } 
+  //   Alert.alert('Error', error.message || 'Failed to load algorithms');
+  //   }finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   const loadAlgorithms = async () => {
     if (isLoading || !hasMore) return;
-    
+
     setIsLoading(true);
     try {
+      const sessionId = await AsyncStorage.getItem('sessionId');
+      console.log('Marketplace sessionId:', sessionId);
       const result = await fetchPublicAlgos();
-      // console.log("API Response:", result);
-      
-      // Check if response has the expected structure
+      console.log('API Response:', result);
+
       if (!result || !result.data || !Array.isArray(result.data)) {
         throw new Error('Invalid API response format');
       }
-  
+
       const startIndex = (page - 1) * itemsPerPage;
       const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
-      
-      setAlgorithms(prev => [...prev, ...paginatedData]);
+
+      setAlgorithms((prev) => [...prev, ...paginatedData]);
       setHasMore(result.data.length > page * itemsPerPage);
-      setPage(prev => prev + 1);
+      setPage((prev) => prev + 1);
     } catch (error) {
       console.error('Error loading algorithms:', error);
-      Alert.alert('Error', error.message || 'Failed to load algorithms');
+      Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // useEffect(() => {
+  //   loadAlgorithms();
+  // }, []);
+
   useEffect(() => {
-    loadAlgorithms();
+    const timer = setTimeout(() => loadAlgorithms(), 1000); // Delay 1s
+    return () => clearTimeout(timer);
   }, []);
 
   const renderFooter = () => {

@@ -116,9 +116,32 @@ export const login = async ({ email, password, captchaToken }) => {
     console.log('Login Request Payload:', JSON.stringify(payload, null, 2));
     console.log('Making API Request to /rest/v1/app_userlogin');
 
-    const response = await API.post('/rest/v1/app_userlogin', payload);
+    // const response = await API.post('/rest/v1/app_userlogin', payload);
+    const response = await API.post('/rest/v1/app_userlogin', payload, {
+      headers: { 'Content-Type': 'application/json' },
+      // validateStatus: () => true,
+    });
 
     console.log('Login API Response:', JSON.stringify(response, null, 2));
+
+    // const setCookie = response.headers?.['set-cookie'];
+    // if (setCookie) {
+    //   let sid;
+    //   if (Array.isArray(setCookie)) {
+    //     const sidCookie = setCookie.find((cookie) => cookie.includes('sid='));
+    //     if (sidCookie) {
+    //       const sidMatch = sidCookie.match(/sid=([^;]+)/);
+    //       sid = sidMatch ? sidMatch[1] : null;
+    //     }
+    //   } else if (typeof setCookie === 'string') {
+    //     const sidMatch = setCookie.match(/sid=([^;]+)/);
+    //     sid = sidMatch ? sidMatch[1] : null;
+    //   }
+    //   if (sid) {
+    //     await AsyncStorage.setItem('sessionId', sid);
+    //     console.log('Stored sessionId from set-cookie:', sid);
+    //   }
+    // }
 
     if (response.status) {
       await AsyncStorage.multiSet([
