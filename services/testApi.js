@@ -87,17 +87,25 @@ export const fetchPublicAlgos = async (retries = 1) => {
       data: response.res,
     };
   } catch (error) {
-    console.error('Error fetching public algos:', error);
-    console.error('Error details:', {
-      response: error.response?.data,
-      status: error.response?.status,
-      message: error.message,
-    });
+    // console.error('Error fetching public algos:', error);
+    // console.error('Error details:', {
+    //   response: error.response?.data,
+    //   status: error.response?.status,
+    //   message: error.message,
+    // });
+    if (!(error.response?.status === 400 && error.response?.data?.res === 'Invalid session!')) {
+      console.error('Error fetching public algos:', error);
+      console.error('Error details:', {
+        response: error.response?.data,
+        status: error.response?.status,
+        message: error.message,
+      });
+    }
 
     if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
       console.log(`Invalid session detected. Retrying (${retries} left)...`);
       await AsyncStorage.removeItem('sessionId');
-      await delay(1000);
+      await delay(500);
       return fetchPublicAlgos(retries - 1);
     }
 

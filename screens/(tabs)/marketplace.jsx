@@ -1,7 +1,6 @@
-import React from 'react';
+import React , { useState, useEffect, useCallback} from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image, Modal , Alert, ActivityIndicator} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import placeholder from '../../assets/img/placeholder.png';
 import TradingModal from '../components/TradingModal'; 
@@ -9,6 +8,7 @@ import { fetchPublicAlgos } from '../../services/testApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-get-random-values';
 import { polyfillWebCrypto } from 'expo-standard-web-crypto'; 
+import { debounce } from 'lodash';
 
 const Marketplace = () => {
   const router = useRouter();
@@ -58,42 +58,72 @@ const Marketplace = () => {
   //     setIsLoading(false);
   //   }
   // };
-  const loadAlgorithms = async () => {
-    if (isLoading || !hasMore) return;
+  const loadAlgorithms = useCallback(
+    debounce(async () => {
+      if (isLoading || !hasMore) return;
 
-    setIsLoading(true);
-    try {
-      const sessionId = await AsyncStorage.getItem('sessionId');
-      console.log('Marketplace sessionId:', sessionId);
-      const result = await fetchPublicAlgos();
-      console.log('API Response:', result);
+      setIsLoading(true);
+      try {
+        const sessionId = await AsyncStorage.getItem('sessionId');
+        console.log('Marketplace sessionId:', sessionId);
+        const result = await fetchPublicAlgos();
+        console.log('API Response:', result);
 
-      if (!result || !result.data || !Array.isArray(result.data)) {
-        throw new Error('Invalid API response format');
+        if (!result || !result.data || !Array.isArray(result.data)) {
+          throw new Error('Invalid API response format');
+        }
+
+        const startIndex = (page - 1) * itemsPerPage;
+        const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
+
+        setAlgorithms((prev) => [...prev, ...paginatedData]);
+        setHasMore(result.data.length > page * itemsPerPage);
+        setPage((prev) => prev + 1);
+      } catch (error) {
+        console.error('Error loading algorithms:', error);
+        Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
+    }, 300), // Debounce for 300ms to prevent rapid calls
+    [isLoading, hasMore, page]
+  );
+  // const loadAlgorithms = async () => {
+  //   if (isLoading || !hasMore) return;
 
-      const startIndex = (page - 1) * itemsPerPage;
-      const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
+  //   setIsLoading(true);
+  //   try {
+  //     const sessionId = await AsyncStorage.getItem('sessionId');
+  //     console.log('Marketplace sessionId:', sessionId);
+  //     const result = await fetchPublicAlgos();
+  //     console.log('API Response:', result);
 
-      setAlgorithms((prev) => [...prev, ...paginatedData]);
-      setHasMore(result.data.length > page * itemsPerPage);
-      setPage((prev) => prev + 1);
-    } catch (error) {
-      console.error('Error loading algorithms:', error);
-      Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     if (!result || !result.data || !Array.isArray(result.data)) {
+  //       throw new Error('Invalid API response format');
+  //     }
 
-  // useEffect(() => {
-  //   loadAlgorithms();
-  // }, []);
+  //     const startIndex = (page - 1) * itemsPerPage;
+  //     const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
+
+  //     setAlgorithms((prev) => [...prev, ...paginatedData]);
+  //     setHasMore(result.data.length > page * itemsPerPage);
+  //     setPage((prev) => prev + 1);
+  //   } catch (error) {
+  //     console.error('Error loading algorithms:', error);
+  //     Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   useEffect(() => {
-    const timer = setTimeout(() => loadAlgorithms(), 1000); // Delay 1s
-    return () => clearTimeout(timer);
+    loadAlgorithms();
   }, []);
+
+  // useEffect(() => {
+  //   const timer = setTimeout(() => loadAlgorithms(), 1000); // Delay 1s
+  //   return () => clearTimeout(timer);
+  // }, []);
 
   const renderFooter = () => {
     if (!hasMore) return (
