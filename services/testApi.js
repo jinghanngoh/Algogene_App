@@ -12,54 +12,56 @@ const generateSessionId = () => {
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Log formatted strategy performance response
-const logFullApiResponse = (response) => {
-  console.log('=== FORMATTED STRATEGY RESPONSE ===');
+// const logFullApiResponse = (response) => {
+//   console.log('=== FORMATTED STRATEGY RESPONSE ===');
   
-  // Performance section
-  console.log('\nPERFORMANCE METRICS:');
-  console.log('-------------------');
-  const performance = response.performance || {};
-  for (const [key, value] of Object.entries(performance)) {
-    if (typeof value === 'number') {
-      // Format numbers nicely
-      if (key.includes('pct') || key.includes('Rate') || key.includes('ratio')) {
-        console.log(`${key}: ${(value * 100).toFixed(2)}%`);
-      } else if (Math.abs(value) < 0.01) {
-        console.log(`${key}: ${value.toExponential(4)}`);
-      } else {
-        console.log(`${key}: ${value.toLocaleString()}`);
-      }
-    } else {
-      console.log(`${key}: ${value}`);
-    }
-  }
+//   // Performance section
+//   console.log('\nPERFORMANCE METRICS:');
+//   console.log('-------------------');
+//   const performance = response.performance || {};
+//   for (const [key, value] of Object.entries(performance)) {
+//     if (typeof value === 'number') {
+//       // Format numbers nicely
+//       if (key.includes('pct') || key.includes('Rate') || key.includes('ratio')) {
+//         console.log(`${key}: ${(value * 100).toFixed(2)}%`);
+//       } else if (Math.abs(value) < 0.01) {
+//         console.log(`${key}: ${value.toExponential(4)}`);
+//       } else {
+//         console.log(`${key}: ${value.toLocaleString()}`);
+//       }
+//     } else {
+//       console.log(`${key}: ${value}`);
+//     }
+//   }
 
-  // Settings section
-  console.log('\nSTRATEGY SETTINGS:');
-  console.log('-----------------');
-  const settings = response.setting || {};
-  for (const [key, value] of Object.entries(settings)) {
-    if (Array.isArray(value)) {
-      console.log(`${key}: [${value.join(', ')}]`);
-    } else {
-      console.log(`${key}: ${value}`);
-    }
-  }
+//   // Settings section
+//   console.log('\nSTRATEGY SETTINGS:');
+//   console.log('-----------------');
+//   const settings = response.setting || {};
+//   for (const [key, value] of Object.entries(settings)) {
+//     if (Array.isArray(value)) {
+//       console.log(`${key}: [${value.join(', ')}]`);
+//     } else {
+//       console.log(`${key}: ${value}`);
+//     }
+//   }
 
-  console.log('=== END OF FORMATTED RESPONSE ===');
-};
+//   console.log('=== END OF FORMATTED RESPONSE ===');
+// };
 
 export const fetchPublicAlgos = async (retries = 1) => {
   try {
-    console.log('Making API Request to /rest/v1/app_mp_topalgo');
+    // console.log('Making API Request to /rest/v1/app_mp_topalgo');
     
     let sessionId = await AsyncStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = generateSessionId();
+      // console.log(`Generated new sessionId: ${sessionId}`);
       await AsyncStorage.setItem('sessionId', sessionId);
     }
     const cid = await AsyncStorage.getItem('cid') || 'AGBOTKOlnrdLJ';
-    console.log('Using sessionId:', sessionId);
+    // console.log('Using sessionId:', sessionId);
+    // console.log('Using cid:', cid);
     
     const response = await API.get('/rest/v1/app_mp_topalgo', {
       params: {
@@ -89,7 +91,7 @@ export const fetchPublicAlgos = async (retries = 1) => {
     }
 
     if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
-      console.log(`Invalid session detected. Retrying (${retries} left)...`);
+      // console.log(`Invalid session detected. Retrying (${retries} left)...`);
       await AsyncStorage.removeItem('sessionId');
       await delay(500);
       return fetchPublicAlgos(retries - 1);
@@ -108,17 +110,12 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
 
     // Check cache first
     const cacheKey = `performance_${algoId}_${accountingDate || 'latest'}`;
-    const cachedData = await AsyncStorage.getItem(cacheKey);
-    if (cachedData) {
-      console.log(`Returning cached performance data for algo_id: ${algoId}`);
-      return JSON.parse(cachedData);
-    }
 
-    console.log(`Making API Request to /rest/v1/strategy_stats for algo_id: ${algoId}, acdate: ${accountingDate || 'latest'}`);
+    // console.log(`Making API Request to /rest/v1/strategy_stats for algo_id: ${algoId}, acdate: ${accountingDate || 'latest'}`);
     let sessionId = await AsyncStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = generateSessionId();
-      console.log(`Generated new sessionId: ${sessionId}`);
+      // console.log(`Generated new sessionId: ${sessionId}`);
       await AsyncStorage.setItem('sessionId', sessionId);
     }
 
@@ -135,10 +132,10 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
       },
     });
 
-    // Log raw response
-    console.log('=== FULL RAW STRATEGY RESPONSE ===');
-    console.log(JSON.stringify(response, null, 2));
-    console.log('=== END RAW RESPONSE ===');
+    // // Log raw response
+    // console.log('=== FULL RAW STRATEGY RESPONSE ===');
+    // console.log(JSON.stringify(response, null, 2));
+    // console.log('=== END RAW RESPONSE ===');
 
     // Validate response
     if (!response?.performance) {
@@ -146,16 +143,16 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
     }
 
     // Log formatted response
-    logFullApiResponse(response);
+    // logFullApiResponse(response);
 
-    // Cache the response
+    // Cache the full response
     try {
-      await AsyncStorage.setItem(cacheKey, JSON.stringify(response.performance));
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(response));
     } catch (cacheError) {
       console.warn(`Failed to cache performance data for algo_id ${algoId}:`, cacheError.message);
     }
 
-    return response.performance;
+    return response; // Return full response (performance and setting)
   } catch (error) {
     console.error(`Error fetching algorithm performance for algo_id ${algoId}:`, error);
     console.error('Error details:', {
@@ -213,7 +210,7 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
       }
     });
 
-    console.log(`Raw Daily Returns Response for algo_id ${algoId}:`, JSON.stringify(response, null, 2));
+    // console.log(`Raw Daily Returns Response for algo_id ${algoId}:`, JSON.stringify(response, null, 2));
 
     if (!response.res) {
       throw new Error('Daily returns data not available.');
@@ -253,3 +250,4 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
     throw error;
   }
 };
+
