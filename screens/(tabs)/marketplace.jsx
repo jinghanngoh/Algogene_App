@@ -67,7 +67,7 @@ const Marketplace = () => {
         const sessionId = await AsyncStorage.getItem('sessionId');
         console.log('Marketplace sessionId:', sessionId);
         const result = await fetchPublicAlgos();
-        console.log('API Response:', result);
+        // console.log('API Response:', result);
 
         if (!result || !result.data || !Array.isArray(result.data)) {
           throw new Error('Invalid API response format');

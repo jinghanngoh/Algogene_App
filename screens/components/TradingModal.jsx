@@ -28,7 +28,7 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
       setPerformanceStats(performance);
     } catch (error) {
       console.error('Error fetching performance data:', error);
-      setErrorMessage('Failed to load performance data.');
+      setErrorMessage(error.message || 'Failed to load performance data.');
     } finally {
       setLoadingPerformance(false);
     }
@@ -138,9 +138,172 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
     }
   };
 
+  // return (
+  //   <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+  //     <ScrollView style={styles.container}>
+  //       {/* Header Section */}
+  //       <View style={styles.header}>
+  //         <View style={styles.titleContainer}>
+  //           <Text style={styles.title}>{currentStrategy.strategy}</Text>
+  //           <Text style={styles.developer}>By {currentStrategy.developer}</Text>
+  //         </View>
+  //         <View style={styles.priceContainer}>
+  //           <Text style={styles.price}>
+  //             {currentStrategy.price} {currentStrategy.cur}/month
+  //           </Text>
+  //         </View>
+  //       </View>
+
+  //       {/* Description Section */}
+  //       <View style={styles.section}>
+  //         <Text style={styles.sectionTitle}>DESCRIPTION</Text>
+  //         <Text style={styles.description}>{currentStrategy.desc}</Text>
+  //       </View>
+
+  //       {/* Performance Chart */}
+  //       <View style={styles.section}>
+  //         <Text style={styles.sectionTitle}>ROLLING RETURNS (%)</Text>
+  //         <View style={styles.chartContainer}>
+  //           <LineChart
+  //             data={chartData}
+  //             width={Dimensions.get('window').width - 40}
+  //             height={220}
+  //             chartConfig={chartConfig}
+  //             bezier
+  //             style={styles.chart}
+  //           />
+  //         </View>
+  //       </View>
+
+  //       {/* Strategy Settings */}
+  //       {performanceStats?.setting && (
+  //         <View style={styles.section}>
+  //           <Text style={styles.sectionTitle}>STRATEGY SETTINGS</Text>
+  //           <View style={styles.detailItem}>
+  //             <Text style={styles.detailLabel}>Asset Class:</Text>
+  //             <Text style={styles.detailValue}>{performanceStats.setting.assetClass.join(', ')}</Text>
+  //           </View>
+  //           <View style={styles.detailItem}>
+  //             <Text style={styles.detailLabel}>Base Currency:</Text>
+  //             <Text style={styles.detailValue}>{performanceStats.setting.BaseCurrency}</Text>
+  //           </View>
+  //           <View style={styles.detailItem}>
+  //             <Text style={styles.detailLabel}>Min Capital:</Text>
+  //             <Text style={styles.detailValue}>${performanceStats.setting.min_capital.toLocaleString()}</Text>
+  //           </View>
+  //           <View style={styles.detailItem}>
+  //             <Text style={styles.detailLabel}>Min Leverage:</Text>
+  //             <Text style={styles.detailValue}>{performanceStats.setting.min_leverage}:1</Text>
+  //           </View>
+  //           <View style={styles.detailItem}>
+  //             <Text style={styles.detailLabel}>Allow Short Sell:</Text>
+  //           </View>
+  //         </View>
+  //       )}
+
+  //       {/* Performance Metrics */}
+  //       {loadingPerformance ? (
+  //         <View style={styles.loadingContainer}>
+  //           <ActivityIndicator size="large" color="#4FC3F7" />
+  //         </View>
+  //       ) : performanceStats ? (
+  //         <View style={styles.section}>
+  //           <Text style={styles.sectionTitle}>PERFORMANCE METRICS</Text>
+  //           <View style={styles.metricsGrid}>
+  //             <View style={styles.metricItem}>
+  //               <Text style={styles.detailLabel}>Score</Text>
+  //               <Text style={styles.detailValue}>{(performanceStats.Score_Total || 0).toFixed(2)}</Text>
+  //             </View>
+  //             <View style={styles.metricItem}>
+  //               <Text style={styles.detailLabel}>Trading Days</Text>
+  //               <Text style={styles.detailValue}>{performanceStats.TradableDay|| 0}</Text>
+  //             </View>
+  //             <View style={styles.metricItem}>
+  //               <Text style={styles.detailLabel}>Sharpe Ratio</Text>
+  //               <Text style={styles.detailValue}>{(performanceStats.AnnualSharpe || performanceStats.sharpe_ratio || 0).toFixed(2)}</Text>
+  //             </View>
+  //             <View style={styles.metricItem}>
+  //               <Text style={styles.detailLabel}>Sortino Ratio Ratio</Text>
+  //               <Text style={styles.detailValue}>{(performanceStats.AnnualSortino || performanceStats.sortino_ratio || 0).toFixed(2)}</Text>
+  //             </View>
+  //             <View style={styles.metricItem}>
+  //               <Text style={styles.detailLabel}>Volatility</Text>
+  //               <Text style={styles.detailValue}>{((performanceStats.AnnualVolatility || performanceStats.volatility || 0) * 100).toFixed(1)}%</Text>
+  //             </View>
+  //             <View style={styles.metricItem}>
+  //               <Text style={styles.detailLabel}>Annualized Return</Text>
+  //               <Text style={styles.detailValue}>{((performanceStats.MeanAnnualReturn || performanceStats.annualized_return || 0) * 100).toFixed(1)}%</Text>
+  //             </View>
+  //             <View style={styles.metricItem}>
+  //               <Text style={styles.detailLabel}>Max Drawdown</Text>
+  //               <Text style={styles.detailValue}>{(performanceStats.maxDrawdown_pct * 100).toFixed(1)}%</Text>
+  //             </View>
+  //           </View>
+  //         </View>
+  //       ) : (
+  //         <View style={styles.section}>
+  //           <Text style={styles.description}>No performance data available</Text>
+  //         </View>
+  //       )}
+
+  //       <View style={styles.section}>
+  //         <Text style={styles.sectionTitle}>LAST 5 DAILY RETURNS</Text>
+  //         {loadingDailyReturns ? (
+  //           <View style={styles.loadingContainer}>
+  //             <ActivityIndicator size="large" color="#4FC3F7" />
+  //           </View>
+  //         ) : dailyReturns ? (
+  //           <View style={styles.tableContainer}>
+  //             <View style={styles.tableHeader}>
+  //               <Text style={[styles.tableHeaderText, styles.tableCell]}>Date</Text>
+  //               <Text style={[styles.tableHeaderText, styles.tableCell]}>Daily Return (%)</Text>
+  //               <Text style={[styles.tableHeaderText, styles.tableCell]}>Cumulative Return (%)</Text>
+  //             </View>
+  //             {dailyReturns.map((item, index) => (
+  //               <View key={index} style={styles.tableRow}>
+  //                 <Text style={[styles.tableCell, styles.tableText]}>{item.date}</Text>
+  //                 <Text style={[styles.tableCell, styles.tableText]}>
+  //                   {item.return > 0 ? `+${item.return.toFixed(2)}` : item.return.toFixed(2)}
+  //                 </Text>
+  //                 <Text style={[styles.tableCell, styles.tableText]}>
+  //                   {item.cumulativeReturn > 0 ? `+${item.cumulativeReturn.toFixed(2)}` : item.cumulativeReturn.toFixed(2)}
+  //                 </Text>
+  //               </View>
+  //             ))}
+  //           </View>
+  //         ) : (
+  //           <Text style={styles.description}>No daily returns available</Text>
+  //         )}
+  //       </View>
+
+  //       {/* Action Buttons */}
+  //       <View style={styles.buttonContainer}>
+  //         <TouchableOpacity
+  //           style={[styles.button, isSubscribed ? styles.unsubscribeButton : styles.subscribeButton]}
+  //           onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
+  //         >
+  //           <Text style={styles.buttonText}>
+  //             {isSubscribed ? 'UNSUBSCRIBE' : 'SUBSCRIBE'}
+  //           </Text>
+  //         </TouchableOpacity>
+  //         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+  //           <Text style={styles.closeButtonText}>CLOSE</Text>
+  //         </TouchableOpacity>
+  //       </View>
+  //     </ScrollView>
+  //   </Modal>
+  // );
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <ScrollView style={styles.container}>
+        {/* Error Message */}
+        {errorMessage && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
+
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.titleContainer}>
@@ -197,6 +360,15 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
             </View>
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Allow Short Sell:</Text>
+              <Text style={styles.detailValue}>{performanceStats.setting.allowShortSell}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Strategy Name:</Text>
+              <Text style={styles.detailValue}>{performanceStats.setting.strategyName}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Subscribed Assets:</Text>
+              <Text style={styles.detailValue}>{performanceStats.setting.subscribeList.join(', ')}</Text>
             </View>
           </View>
         )}
@@ -211,28 +383,40 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
             <Text style={styles.sectionTitle}>PERFORMANCE METRICS</Text>
             <View style={styles.metricsGrid}>
               <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Score</Text>
+                <Text style={styles.detailValue}>{(performanceStats.Score_Total || 0).toFixed(2)}</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Trading Days</Text>
+                <Text style={styles.detailValue}>{performanceStats.TradableDay || 0}</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Sharpe Ratio</Text>
+                <Text style={styles.detailValue}>{(performanceStats.AnnualSharpe || 0).toFixed(2)}</Text>
+              </View>
+              <View style={styles.metricItem}>
                 <Text style={styles.detailLabel}>Sortino Ratio</Text>
-                <Text style={styles.detailValue}>{performanceStats.AnnualSortino.toFixed(2)}</Text>
+                <Text style={styles.detailValue}>{(performanceStats.AnnualSortino || 0).toFixed(2)}</Text>
               </View>
               <View style={styles.metricItem}>
-                <Text style={styles.detailLabel}>Win Rate</Text>
-                <Text style={styles.detailValue}>{(performanceStats.WinRate * 100).toFixed(1)}%</Text>
+                <Text style={styles.detailLabel}>Volatility</Text>
+                <Text style={styles.detailValue}>{((performanceStats.PlainAnnStdDev || 0) * 100).toFixed(1)}%</Text>
               </View>
               <View style={styles.metricItem}>
-                <Text style={styles.detailLabel}>Profit Factor</Text>
-                <Text style={styles.detailValue}>{performanceStats.profit_factor.toFixed(2)}</Text>
-              </View>
-              <View style={styles.metricItem}>
-                <Text style={styles.detailLabel}>Mean Annual Return</Text>
-                <Text style={styles.detailValue}>{(performanceStats.MeanAnnualReturn * 100).toFixed(1)}%</Text>
-              </View>
-              <View style={styles.metricItem}>
-                <Text style={styles.detailLabel}>Total PnL</Text>
-                <Text style={styles.detailValue}>${performanceStats.TotalPnL.toLocaleString()}</Text>
+                <Text style={styles.detailLabel}>Annualized Return</Text>
+                <Text style={styles.detailValue}>{((performanceStats.MeanAnnualReturn || 0) * 100).toFixed(1)}%</Text>
               </View>
               <View style={styles.metricItem}>
                 <Text style={styles.detailLabel}>Max Drawdown</Text>
-                <Text style={styles.detailValue}>{(performanceStats.maxDrawdown_pct * 100).toFixed(1)}%</Text>
+                <Text style={styles.detailValue}>{((performanceStats.maxDrawdown_pct || 0) * 100).toFixed(1)}%</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Win Rate</Text>
+                <Text style={styles.detailValue}>{((performanceStats.WinRate || 0) * 100).toFixed(1)}%</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={styles.detailLabel}>Profit Factor</Text>
+                <Text style={styles.detailValue}>{(performanceStats.profit_factor || 0).toFixed(2)}</Text>
               </View>
             </View>
           </View>
@@ -242,6 +426,7 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
           </View>
         )}
 
+        {/* Daily Returns */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>LAST 5 DAILY RETURNS</Text>
           {loadingDailyReturns ? (

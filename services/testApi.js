@@ -11,6 +11,44 @@ const generateSessionId = () => {
 // Delay function for retry logic
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Log formatted strategy performance response
+const logFullApiResponse = (response) => {
+  console.log('=== FORMATTED STRATEGY RESPONSE ===');
+  
+  // Performance section
+  console.log('\nPERFORMANCE METRICS:');
+  console.log('-------------------');
+  const performance = response.performance || {};
+  for (const [key, value] of Object.entries(performance)) {
+    if (typeof value === 'number') {
+      // Format numbers nicely
+      if (key.includes('pct') || key.includes('Rate') || key.includes('ratio')) {
+        console.log(`${key}: ${(value * 100).toFixed(2)}%`);
+      } else if (Math.abs(value) < 0.01) {
+        console.log(`${key}: ${value.toExponential(4)}`);
+      } else {
+        console.log(`${key}: ${value.toLocaleString()}`);
+      }
+    } else {
+      console.log(`${key}: ${value}`);
+    }
+  }
+
+  // Settings section
+  console.log('\nSTRATEGY SETTINGS:');
+  console.log('-----------------');
+  const settings = response.setting || {};
+  for (const [key, value] of Object.entries(settings)) {
+    if (Array.isArray(value)) {
+      console.log(`${key}: [${value.join(', ')}]`);
+    } else {
+      console.log(`${key}: ${value}`);
+    }
+  }
+
+  console.log('=== END OF FORMATTED RESPONSE ===');
+};
+
 export const fetchPublicAlgos = async (retries = 1) => {
   try {
     console.log('Making API Request to /rest/v1/app_mp_topalgo');
@@ -64,18 +102,23 @@ export const fetchPublicAlgos = async (retries = 1) => {
 // Fetch trading bot performance statistics (2.2) with caching and retry
 export const fetchAlgoPerformance = async (algoId, accountingDate = null, retries = 3) => {
   try {
+    if (!algoId || typeof algoId !== 'string' || algoId.length < 10) {
+      throw new Error(`Invalid algo_id: ${algoId}`);
+    }
+
     // Check cache first
-    const cacheKey = `performance_${algoId}`;
+    const cacheKey = `performance_${algoId}_${accountingDate || 'latest'}`;
     const cachedData = await AsyncStorage.getItem(cacheKey);
     if (cachedData) {
       console.log(`Returning cached performance data for algo_id: ${algoId}`);
       return JSON.parse(cachedData);
     }
 
-    console.log(`Making API Request to /rest/v1/strategy_stats for algo_id: ${algoId}`);
+    console.log(`Making API Request to /rest/v1/strategy_stats for algo_id: ${algoId}, acdate: ${accountingDate || 'latest'}`);
     let sessionId = await AsyncStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = generateSessionId();
+      console.log(`Generated new sessionId: ${sessionId}`);
       await AsyncStorage.setItem('sessionId', sessionId);
     }
 
@@ -86,36 +129,55 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
         sid: sessionId,
         algo_id: algoId,
         acdate: accountingDate
-      }
+      },
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
-    console.log(`Raw API Response for algo_id ${algoId}:`, JSON.stringify(response, null, 2));
+    // Log raw response
+    console.log('=== FULL RAW STRATEGY RESPONSE ===');
+    console.log(JSON.stringify(response, null, 2));
+    console.log('=== END RAW RESPONSE ===');
 
-    if (!response.performance) {
+    // Validate response
+    if (!response?.performance) {
       throw new Error('Performance data not available.');
     }
 
+    // Log formatted response
+    logFullApiResponse(response);
+
     // Cache the response
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(response.performance));
+    try {
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(response.performance));
+    } catch (cacheError) {
+      console.warn(`Failed to cache performance data for algo_id ${algoId}:`, cacheError.message);
+    }
+
     return response.performance;
-    } catch (error) {
+  } catch (error) {
     console.error(`Error fetching algorithm performance for algo_id ${algoId}:`, error);
     console.error('Error details:', {
       response: error.response?.data,
       status: error.response?.status,
       request: error.request,
-      message: error.message
+      message: error.message,
     });
 
     // Handle rate limit error
-    if (error.response?.status === 400 && error.response?.data?.res?.includes('Exceed maximum access count')) {
-      if (retries > 0) {
-        console.log(`Rate limit hit. Retrying in 60 seconds... (${retries} retries left)`);
-        await delay(60000); // Wait 60 seconds
-        return fetchAlgoPerformance(algoId, accountingDate, retries - 1);
-      } else {
-        throw new Error('Rate limit exceeded. Please try again later.');
-      }
+    if (error.response?.status === 400 && error.response?.data?.res?.includes('Exceed maximum access count') && retries > 0) {
+      console.log(`Rate limit hit. Retrying in 65 seconds... (${retries} retries left)`);
+      await delay(65000); // Wait 65 seconds
+      return fetchAlgoPerformance(algoId, accountingDate, retries - 1);
+    }
+
+    // Handle invalid session
+    if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
+      console.log(`Invalid session detected. Retrying (${retries} left)...`);
+      await AsyncStorage.removeItem('sessionId');
+      await delay(500);
+      return fetchAlgoPerformance(algoId, accountingDate, retries - 1);
     }
 
     throw error;
