@@ -3,26 +3,26 @@ import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, P
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const AIPortfolioAnalysis = () => {
-    const [startDate, setStartDate] = useState(null);
-    const [endDate, setEndDate] = useState(null);
-    const [initialCapital, setInitialCapital] = useState('');
-    const [currency, setCurrency] = useState('AUD');
-    const [objective, setObjective] = useState('');
-    const [isDatePickerVisible, setDatePickerVisible] = useState(false);
-    const [isCurrencyModalVisible, setCurrencyModalVisible] = useState(false);
-    const [isObjectiveModalVisible, setObjectiveModalVisible] = useState(false);
-    const [isAssetClassModalVisible, setAssetClassModalVisible] = useState(false);
-    const [isBenchmarkModalVisible, setBenchmarkModalVisible] = useState(false);
-    const [isRebalanceModalVisible, setRebalanceModalVisible] = useState(false);
-    const [selectedField, setSelectedField] = useState('');
-    const [date, setDate] = useState(new Date());
-    const [tableData, setTableData] = useState([
-        { assetClass: '', symbol: '', holding: '' },
-        { assetClass: '', symbol: '', holding: '' },
-        { assetClass: '', symbol: '', holding: '' },
-        { assetClass: '', symbol: '', holding: '' },
-        { assetClass: '', symbol: '', holding: '' },
-    ]);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [initialCapital, setInitialCapital] = useState('');
+  const [currency, setCurrency] = useState('AUD');
+  const [objective, setObjective] = useState('');
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  const [isCurrencyModalVisible, setCurrencyModalVisible] = useState(false);
+  const [isObjectiveModalVisible, setObjectiveModalVisible] = useState(false);
+  const [isAssetClassModalVisible, setAssetClassModalVisible] = useState(false);
+  const [isBenchmarkModalVisible, setBenchmarkModalVisible] = useState(false);
+  const [isRebalanceModalVisible, setRebalanceModalVisible] = useState(false);
+  const [selectedField, setSelectedField] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [tableData, setTableData] = useState([
+    { assetClass: '', symbol: '', holding: '' },
+    { assetClass: '', symbol: '', holding: '' },
+    { assetClass: '', symbol: '', holding: '' },
+    { assetClass: '', symbol: '', holding: '' },
+    { assetClass: '', symbol: '', holding: '' },
+  ]);
 
   const [benchmark, setBenchmark] = useState('');
   const [transactionCost, setTransactionCost] = useState('0.0');
@@ -106,6 +106,7 @@ const AIPortfolioAnalysis = () => {
     if (field === 'assetClass') setAssetClassModalVisible(true);
     if (field === 'benchmark') setBenchmarkModalVisible(true);
     if (field === 'rebalanceFrequency') setRebalanceModalVisible(true);
+    console.log('Showing modal for:', field, 'with index:', index);
   };
 
   const hideModal = () => {
@@ -120,7 +121,6 @@ const AIPortfolioAnalysis = () => {
     if (selectedField === 'currency') setCurrency(option);
     if (selectedField === 'objective') {
       setObjective(option);
-      // Reset additional fields when objective changes
       setBenchmark('');
       setTransactionCost('0.0');
       setAllowShortSell(false);
@@ -132,9 +132,11 @@ const AIPortfolioAnalysis = () => {
     if (selectedField === 'benchmark') setBenchmark(option);
     if (selectedField === 'rebalanceFrequency') setRebalanceFrequency(option);
     if (selectedField === 'assetClass' && index >= 0) {
+      console.log('Selected assetClass:', option, 'at index:', index);
       const newTableData = [...tableData];
       newTableData[index].assetClass = option;
       setTableData(newTableData);
+      console.log('Updated tableData:', newTableData);
     }
     hideModal();
   };
@@ -154,10 +156,44 @@ const AIPortfolioAnalysis = () => {
     setTableData([...tableData, { assetClass: '', symbol: '', holding: '' }]);
   };
 
-  const updateNumericField = (setter, value, step, max = Infinity) => {
+  const updateNumericField = (setter, value, min, max, decimals = 1) => {
     const numValue = parseFloat(value) || 0;
-    const newValue = Math.min(max, numValue + step);
-    setter(newValue.toFixed(step === 0.1 ? 1 : 0));
+    const newValue = Math.min(max, Math.max(min, numValue));
+    setter(newValue.toFixed(decimals));
+  };
+
+  const incrementTransactionCost = () => {
+    updateNumericField(setTransactionCost, transactionCost, 0, 10, 1);
+  };
+
+  const decrementTransactionCost = () => {
+    updateNumericField(setTransactionCost, transactionCost, 0, 10, 1);
+  };
+
+  const handleCompute = async () => { 
+    try {
+      const portfolioParams = {
+        allowShortSell,
+        risk_tolerance: parseFloat(riskTolerance) / 100,
+        target_return: parseFloat(targetReturn) / 100,
+        total_portfolio_value: parseFloat(initialCapital) || 1000000,
+        basecur: currency,
+        risk_free_rate: parseFloat(riskFreeRate) / 100,
+        arrSymbol: tableData
+          .filter(row => row.symbol && row.holding)
+          .map(row => row.symbol),
+        objective: objectives.indexOf(objective),
+        group_cond: {},
+        StartDate: startDate,
+        EndDate: endDate,
+      };
+  
+      const result = await optimizePortfolio(portfolioParams);
+      console.log('Optimization Result:', result.data);
+    } catch (error) {
+      console.error('Compute failed:', error.message);
+      alert('Failed to optimize portfolio. Check console for details.');
+    }
   };
 
   return (
@@ -197,7 +233,6 @@ const AIPortfolioAnalysis = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Conditional Fields based on Objective */}
       {objective && (
         <View style={styles.conditionalFields}>
           <View style={styles.inputRow}>
@@ -211,14 +246,24 @@ const AIPortfolioAnalysis = () => {
             <>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Transaction Cost (%):</Text>
-                <TextInput
-                  style={styles.input}
-                  value={transactionCost}
-                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
-                  placeholder="0.0"
-                  placeholderTextColor="gray"
-                  keyboardType="numeric"
-                />
+                <View style={styles.inputWithArrows}>
+                  <TextInput
+                    style={styles.input}
+                    value={transactionCost}
+                    onChangeText={(value) => updateNumericField(setTransactionCost, value, 0, 10, 1)}
+                    placeholder="0.0"
+                    placeholderTextColor="gray"
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.arrowContainer}>
+                    <TouchableOpacity onPress={incrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={decrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Rebalance Frequency:</Text>
@@ -236,7 +281,7 @@ const AIPortfolioAnalysis = () => {
                 <TextInput
                   style={styles.input}
                   value={riskFreeRate}
-                  onChangeText={(value) => updateNumericField(setRiskFreeRate, value, 0.1, 10)}
+                  onChangeText={(value) => updateNumericField(setRiskFreeRate, value, 0, 10, 1)}
                   placeholder="0.0"
                   placeholderTextColor="gray"
                   keyboardType="numeric"
@@ -244,14 +289,24 @@ const AIPortfolioAnalysis = () => {
               </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Transaction Cost (%):</Text>
-                <TextInput
-                  style={styles.input}
-                  value={transactionCost}
-                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
-                  placeholder="0.0"
-                  placeholderTextColor="gray"
-                  keyboardType="numeric"
-                />
+                <View style={styles.inputWithArrows}>
+                  <TextInput
+                    style={styles.input}
+                    value={transactionCost}
+                    onChangeText={(value) => updateNumericField(setTransactionCost, value, 0, 10, 1)}
+                    placeholder="0.0"
+                    placeholderTextColor="gray"
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.arrowContainer}>
+                    <TouchableOpacity onPress={incrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={decrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Allow Short Sell:</Text>
@@ -278,7 +333,7 @@ const AIPortfolioAnalysis = () => {
                 <TextInput
                   style={styles.input}
                   value={riskTolerance}
-                  onChangeText={(value) => updateNumericField(setRiskTolerance, value, 1, 100)}
+                  onChangeText={(value) => updateNumericField(setRiskTolerance, value, 0, 100, 0)}
                   placeholder="0"
                   placeholderTextColor="gray"
                   keyboardType="numeric"
@@ -286,14 +341,24 @@ const AIPortfolioAnalysis = () => {
               </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Transaction Cost (%):</Text>
-                <TextInput
-                  style={styles.input}
-                  value={transactionCost}
-                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
-                  placeholder="0.0"
-                  placeholderTextColor="gray"
-                  keyboardType="numeric"
-                />
+                <View style={styles.inputWithArrows}>
+                  <TextInput
+                    style={styles.input}
+                    value={transactionCost}
+                    onChangeText={(value) => updateNumericField(setTransactionCost, value, 0, 10, 1)}
+                    placeholder="0.0"
+                    placeholderTextColor="gray"
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.arrowContainer}>
+                    <TouchableOpacity onPress={incrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={decrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Allow Short Sell:</Text>
@@ -320,7 +385,7 @@ const AIPortfolioAnalysis = () => {
                 <TextInput
                   style={styles.input}
                   value={targetReturn}
-                  onChangeText={(value) => updateNumericField(setTargetReturn, value, 1, 100)}
+                  onChangeText={(value) => updateNumericField(setTargetReturn, value, 0, 100, 0)}
                   placeholder="0"
                   placeholderTextColor="gray"
                   keyboardType="numeric"
@@ -328,14 +393,24 @@ const AIPortfolioAnalysis = () => {
               </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Transaction Cost (%):</Text>
-                <TextInput
-                  style={styles.input}
-                  value={transactionCost}
-                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
-                  placeholder="0.0"
-                  placeholderTextColor="gray"
-                  keyboardType="numeric"
-                />
+                <View style={styles.inputWithArrows}>
+                  <TextInput
+                    style={styles.input}
+                    value={transactionCost}
+                    onChangeText={(value) => updateNumericField(setTransactionCost, value, 0, 10, 1)}
+                    placeholder="0.0"
+                    placeholderTextColor="gray"
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.arrowContainer}>
+                    <TouchableOpacity onPress={incrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={decrementTransactionCost} style={styles.arrow}>
+                      <Text style={styles.arrowText}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Allow Short Sell:</Text>
@@ -357,7 +432,7 @@ const AIPortfolioAnalysis = () => {
         </View>
       )}
 
-      <View style={styles.table}>
+<View style={styles.table}>
         <View style={styles.tableHeader}>
           <Text style={styles.tableCellHeader}>Asset Class</Text>
           <View style={styles.verticalLine} />
@@ -408,7 +483,7 @@ const AIPortfolioAnalysis = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.computeButton}>
+      <TouchableOpacity style={styles.computeButton} onPress={handleCompute}>
         <Text style={styles.computeButtonText}>COMPUTE</Text>
       </TouchableOpacity>
 
@@ -456,17 +531,20 @@ const AIPortfolioAnalysis = () => {
 
       <Modal transparent visible={isAssetClassModalVisible} animationType="fade" onRequestClose={hideModal}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+            <View style={styles.modalContent}>
             <FlatList
-              data={assetClasses}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.modalOption} onPress={() => selectOption(item, selectedField)}>
-                  <Text style={styles.modalText}>{item}</Text>
+                data={assetClasses}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                <TouchableOpacity 
+                    style={styles.modalOption} 
+                    onPress={() => selectOption(item, tableData.findIndex(row => !row.assetClass) !== -1 ? tableData.findIndex(row => !row.assetClass) : index)}
+                >
+                    <Text style={styles.modalText}>{item}</Text>
                 </TouchableOpacity>
-              )}
+                )}
             />
-          </View>
+            </View>
         </View>
       </Modal>
 

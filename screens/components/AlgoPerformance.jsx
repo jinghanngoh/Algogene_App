@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchAlgoDailyReturns } from '../../services/testApi';
+import { fetchAlgoDailyReturns } from '../../services/MarketplaceApi';
 
 // Calculate performance score based on daily returns
 export const calculatePerformanceScore = (dailyReturns) => {

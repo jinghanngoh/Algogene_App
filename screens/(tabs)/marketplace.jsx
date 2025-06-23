@@ -4,7 +4,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { useRouter } from 'expo-router';
 import placeholder from '../../assets/img/placeholder.png';
 import TradingModal from '../components/TradingModal'; 
-import { fetchPublicAlgos } from '../../services/testApi';
+import { fetchPublicAlgos } from '../../services/MarketplaceApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-get-random-values';
 import { polyfillWebCrypto } from 'expo-standard-web-crypto'; 
