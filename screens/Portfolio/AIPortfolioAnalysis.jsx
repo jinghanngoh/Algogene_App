@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -31,6 +31,8 @@ const AIPortfolioAnalysis = () => {
   const [riskFreeRate, setRiskFreeRate] = useState('0.0');
   const [riskTolerance, setRiskTolerance] = useState('0');
   const [targetReturn, setTargetReturn] = useState('0');
+  const [assetClassOptions, setAssetClassOptions] = useState([]); 
+  const [modalIndex, setModalIndex] = useState(-1); 
 
   const assetClasses = [
     'Algo Marketplace',
@@ -75,6 +77,23 @@ const AIPortfolioAnalysis = () => {
   const benchmarks = ['AFRICA40', 'AUXAUD', 'BCOUSD', 'BTCUSD', 'BUNDEUR', 'CNXUSD', 'CORNUSD', 'ETHUSD', 'ETXEUR', 'FRXEUR', 'GRXEUR', 'HKXHKD', 'HSCEI', 'INXUSD', 'ITALY40', 'JPYPY', 'KRWKRW', 'LTUSD', 'MXCN', 'NATGASUSD', 'NKY', 'NLXEUR', 'NSXUSD', 'SGXSGD', 'SOYBNUSD', 'SPXUSD', 'SUGARUSD', 'SWISS20', 'TWSE', 'TWXUSD', 'UDXUSD', 'UKXGBP', 'US2000USD', 'US30USD', 'USTEC', 'WHEATUSD', 'XAGUSD', 'XAUUSD', 'XPDUSD', 'XPTUSD'];
   const rebalanceFrequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-annually', 'Annually', 'Auto'];
 
+  const assetClassCategories = {
+    'Commodity': ['COCOA', 'COFFEE', 'CORNUSD', 'SOYBNUSD', 'SUGARUSD', 'WHEATUSD'],
+    'Crypto': ['ETHBTC', 'ETHBTCM', 'ETHEUR', 'ETHGBP', 'ETHUSD', 'ETHUSDM' ],
+    'Energy': [], 
+    'Equity (HKEX)': [],
+    'Equity (KR)': [],
+    'Equity (SA)': [],
+    'Equity (SGX)': [],
+    'Equity (SSE)': [],
+    'Equity (SZSE)': [],
+    'Equity (TWSE)': [],
+    'Equity (TYO)': [],
+    'Equity (US)': ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'],
+    'Forex': [], 
+    // ASK BOSS FOR WHERE TO GET THIS LIST
+  }; 
+
   const showDatePicker = (field) => {
     setSelectedField(field);
     setDatePickerVisible(true);
@@ -99,11 +118,28 @@ const AIPortfolioAnalysis = () => {
     hideDatePicker();
   };
 
+//   useEffect(() => {
+//     if (selectedField === 'assetClass' && tableData.some(row => !row.assetClass)) {
+//       const firstEmptyIndex = tableData.findIndex(row => !row.assetClass);
+//       const defaultCategory = tableData[firstEmptyIndex]?.assetClass || 'Commodity';
+//       setAssetClassOptions(assetClassCategories[defaultCategory] || assetClassCategories['Commodity']);
+//     }
+//   }, [selectedField, tableData]);
+
   const showModal = (field, index = -1) => {
     setSelectedField(field);
+    setModalIndex(index); 
     if (field === 'currency') setCurrencyModalVisible(true);
     if (field === 'objective') setObjectiveModalVisible(true);
-    if (field === 'assetClass') setAssetClassModalVisible(true);
+    if (field === 'assetClass') {
+      setAssetClassModalVisible(true);
+      setAssetClassOptions(assetClasses); 
+    }
+    if (field === 'symbol') {
+      const category = tableData[index]?.assetClass || 'Commodity';
+      setAssetClassOptions(assetClassCategories[category] || assetClassCategories['Commodity']);
+      setAssetClassModalVisible(true); // Reuse asset class modal for symbols
+    }
     if (field === 'benchmark') setBenchmarkModalVisible(true);
     if (field === 'rebalanceFrequency') setRebalanceModalVisible(true);
     console.log('Showing modal for:', field, 'with index:', index);
@@ -135,6 +171,13 @@ const AIPortfolioAnalysis = () => {
       console.log('Selected assetClass:', option, 'at index:', index);
       const newTableData = [...tableData];
       newTableData[index].assetClass = option;
+      setTableData(newTableData);
+      console.log('Updated tableData:', newTableData);
+    }
+    if (selectedField === 'symbol' && index >= 0) {
+      console.log('Selected symbol:', option, 'at index:', index);
+      const newTableData = [...tableData];
+      newTableData[index].symbol = option; // Ensure update targets the correct index
       setTableData(newTableData);
       console.log('Updated tableData:', newTableData);
     }
@@ -432,56 +475,48 @@ const AIPortfolioAnalysis = () => {
         </View>
       )}
 
-<View style={styles.table}>
+     <View style={styles.table}>
         <View style={styles.tableHeader}>
-          <Text style={styles.tableCellHeader}>Asset Class</Text>
-          <View style={styles.verticalLine} />
-          <Text style={styles.tableCellHeader}>Symbol / Strategy</Text>
-          <View style={styles.verticalLine} />
-          <View style={styles.holdingColumn}>
-            <Text style={styles.tableCellHeader}>Current Holding (%)</Text>
-          </View>
-        </View>
-        {tableData.map((row, index) => (
-          <View style={styles.tableRow} key={index}>
-            <TouchableOpacity style={styles.tableInput} onPress={() => showModal('assetClass', index)}>
-              <Text style={styles.tableText}>{row.assetClass || '---'}</Text>
-            </TouchableOpacity>
+            <Text style={styles.tableCellHeader}>Asset Class</Text>
             <View style={styles.verticalLine} />
-            <TextInput
-              style={styles.tableInput}
-              value={row.symbol}
-              onChangeText={(text) => {
-                const newTableData = [...tableData];
-                newTableData[index].symbol = text;
-                setTableData(newTableData);
-              }}
-              placeholder="---"
-              placeholderTextColor="gray"
-            />
+            <Text style={styles.tableCellHeader}>Symbol / Strategy</Text>
             <View style={styles.verticalLine} />
             <View style={styles.holdingColumn}>
-              <TextInput
+            <Text style={styles.tableCellHeader}>Current Holding (%)</Text>
+            </View>
+        </View>
+        {tableData.map((row, index) => (
+            <View style={styles.tableRow} key={index}>
+            <TouchableOpacity style={styles.tableInput} onPress={() => showModal('assetClass', index)}>
+                <Text style={styles.tableText}>{row.assetClass || '---'}</Text>
+            </TouchableOpacity>
+            <View style={styles.verticalLine} />
+            <TouchableOpacity style={styles.tableInput} onPress={() => showModal('symbol', index)}>
+                <Text style={styles.tableText}>{row.symbol || '---'}</Text>
+            </TouchableOpacity>
+            <View style={styles.verticalLine} />
+            <View style={styles.holdingColumn}>
+                <TextInput
                 style={styles.tableInput}
                 value={row.holding}
                 onChangeText={(text) => updateHolding(text, index)}
                 placeholder="0"
                 placeholderTextColor="gray"
                 keyboardType="numeric"
-              />
-              <TouchableOpacity style={styles.okButton}>
+                />
+                <TouchableOpacity style={styles.okButton}>
                 <Text style={styles.okText}>Ok</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
             </View>
-          </View>
+            </View>
         ))}
         <TouchableOpacity style={styles.newAssetRow} onPress={addNewAsset}>
-          <View style={styles.logoCircle}>
+            <View style={styles.logoCircle}>
             <Text style={styles.plusSign}>+</Text>
-          </View>
-          <Text style={styles.newAssetText}>New Asset</Text>
+            </View>
+            <Text style={styles.newAssetText}>New Asset</Text>
         </TouchableOpacity>
-      </View>
+     </View>
 
       <TouchableOpacity style={styles.computeButton} onPress={handleCompute}>
         <Text style={styles.computeButtonText}>COMPUTE</Text>
@@ -533,12 +568,12 @@ const AIPortfolioAnalysis = () => {
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
             <FlatList
-                data={assetClasses}
+                data={assetClassOptions}
                 keyExtractor={(item) => item}
                 renderItem={({ item }) => (
                 <TouchableOpacity 
                     style={styles.modalOption} 
-                    onPress={() => selectOption(item, tableData.findIndex(row => !row.assetClass) !== -1 ? tableData.findIndex(row => !row.assetClass) : index)}
+                    onPress={() => selectOption(item, modalIndex)} // Use modalIndex state
                 >
                     <Text style={styles.modalText}>{item}</Text>
                 </TouchableOpacity>
