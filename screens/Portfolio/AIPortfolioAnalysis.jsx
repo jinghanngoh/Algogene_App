@@ -3,24 +3,34 @@ import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, P
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const AIPortfolioAnalysis = () => {
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-  const [initialCapital, setInitialCapital] = useState('');
-  const [currency, setCurrency] = useState('AUD');
-  const [objective, setObjective] = useState('');
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
-  const [isCurrencyModalVisible, setCurrencyModalVisible] = useState(false);
-  const [isObjectiveModalVisible, setObjectiveModalVisible] = useState(false);
-  const [isAssetClassModalVisible, setAssetClassModalVisible] = useState(false);
-  const [selectedField, setSelectedField] = useState('');
-  const [date, setDate] = useState(new Date());
-  const [tableData, setTableData] = useState([
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
-  ]);
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
+    const [initialCapital, setInitialCapital] = useState('');
+    const [currency, setCurrency] = useState('AUD');
+    const [objective, setObjective] = useState('');
+    const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+    const [isCurrencyModalVisible, setCurrencyModalVisible] = useState(false);
+    const [isObjectiveModalVisible, setObjectiveModalVisible] = useState(false);
+    const [isAssetClassModalVisible, setAssetClassModalVisible] = useState(false);
+    const [isBenchmarkModalVisible, setBenchmarkModalVisible] = useState(false);
+    const [isRebalanceModalVisible, setRebalanceModalVisible] = useState(false);
+    const [selectedField, setSelectedField] = useState('');
+    const [date, setDate] = useState(new Date());
+    const [tableData, setTableData] = useState([
+        { assetClass: '', symbol: '', holding: '' },
+        { assetClass: '', symbol: '', holding: '' },
+        { assetClass: '', symbol: '', holding: '' },
+        { assetClass: '', symbol: '', holding: '' },
+        { assetClass: '', symbol: '', holding: '' },
+    ]);
+
+  const [benchmark, setBenchmark] = useState('');
+  const [transactionCost, setTransactionCost] = useState('0.0');
+  const [allowShortSell, setAllowShortSell] = useState(false);
+  const [rebalanceFrequency, setRebalanceFrequency] = useState('');
+  const [riskFreeRate, setRiskFreeRate] = useState('0.0');
+  const [riskTolerance, setRiskTolerance] = useState('0');
+  const [targetReturn, setTargetReturn] = useState('0');
 
   const assetClasses = [
     'Algo Marketplace',
@@ -62,6 +72,9 @@ const AIPortfolioAnalysis = () => {
     'Risk Parity Diversification',
   ];
 
+  const benchmarks = ['AFRICA40', 'AUXAUD', 'BCOUSD', 'BTCUSD', 'BUNDEUR', 'CNXUSD', 'CORNUSD', 'ETHUSD', 'ETXEUR', 'FRXEUR', 'GRXEUR', 'HKXHKD', 'HSCEI', 'INXUSD', 'ITALY40', 'JPYPY', 'KRWKRW', 'LTUSD', 'MXCN', 'NATGASUSD', 'NKY', 'NLXEUR', 'NSXUSD', 'SGXSGD', 'SOYBNUSD', 'SPXUSD', 'SUGARUSD', 'SWISS20', 'TWSE', 'TWXUSD', 'UDXUSD', 'UKXGBP', 'US2000USD', 'US30USD', 'USTEC', 'WHEATUSD', 'XAGUSD', 'XAUUSD', 'XPDUSD', 'XPTUSD'];
+  const rebalanceFrequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-annually', 'Annually', 'Auto'];
+
   const showDatePicker = (field) => {
     setSelectedField(field);
     setDatePickerVisible(true);
@@ -73,6 +86,12 @@ const AIPortfolioAnalysis = () => {
 
   const handleDateChange = (event, selected) => {
     if (selected) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to midnight for comparison
+      if (selected > today) {
+        alert('End Date cannot be today or in the future.');
+        return;
+      }
       setDate(selected);
       if (selectedField === 'startDate') setStartDate(selected.toLocaleDateString('en-GB'));
       if (selectedField === 'endDate') setEndDate(selected.toLocaleDateString('en-GB'));
@@ -80,22 +99,38 @@ const AIPortfolioAnalysis = () => {
     hideDatePicker();
   };
 
-  const showModal = (field) => {
+  const showModal = (field, index = -1) => {
     setSelectedField(field);
     if (field === 'currency') setCurrencyModalVisible(true);
     if (field === 'objective') setObjectiveModalVisible(true);
     if (field === 'assetClass') setAssetClassModalVisible(true);
+    if (field === 'benchmark') setBenchmarkModalVisible(true);
+    if (field === 'rebalanceFrequency') setRebalanceModalVisible(true);
   };
 
   const hideModal = () => {
     setCurrencyModalVisible(false);
     setObjectiveModalVisible(false);
     setAssetClassModalVisible(false);
+    setBenchmarkModalVisible(false);
+    setRebalanceModalVisible(false);
   };
 
   const selectOption = (option, index = -1) => {
     if (selectedField === 'currency') setCurrency(option);
-    if (selectedField === 'objective') setObjective(option);
+    if (selectedField === 'objective') {
+      setObjective(option);
+      // Reset additional fields when objective changes
+      setBenchmark('');
+      setTransactionCost('0.0');
+      setAllowShortSell(false);
+      setRebalanceFrequency('');
+      setRiskFreeRate('0.0');
+      setRiskTolerance('0');
+      setTargetReturn('0');
+    }
+    if (selectedField === 'benchmark') setBenchmark(option);
+    if (selectedField === 'rebalanceFrequency') setRebalanceFrequency(option);
     if (selectedField === 'assetClass' && index >= 0) {
       const newTableData = [...tableData];
       newTableData[index].assetClass = option;
@@ -119,6 +154,12 @@ const AIPortfolioAnalysis = () => {
     setTableData([...tableData, { assetClass: '', symbol: '', holding: '' }]);
   };
 
+  const updateNumericField = (setter, value, step, max = Infinity) => {
+    const numValue = parseFloat(value) || 0;
+    const newValue = Math.min(max, numValue + step);
+    setter(newValue.toFixed(step === 0.1 ? 1 : 0));
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.headerTitle}>PORTFOLIO OPTIMIZER</Text>
@@ -140,7 +181,7 @@ const AIPortfolioAnalysis = () => {
           style={styles.input}
           value={initialCapital}
           onChangeText={setInitialCapital}
-          placeholder="10000"
+          placeholder="100000"
           placeholderTextColor="gray"
           keyboardType="numeric"
         />
@@ -155,6 +196,166 @@ const AIPortfolioAnalysis = () => {
           <Text style={styles.dropdownText}>{objective || '....'}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Conditional Fields based on Objective */}
+      {objective && (
+        <View style={styles.conditionalFields}>
+          <View style={styles.inputRow}>
+            <Text style={styles.label}>Benchmark:</Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => showModal('benchmark')}>
+              <Text style={styles.dropdownText}>{benchmark || 'Select Benchmark'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {['Equally Weighted', 'Global Minimum Variance', 'Global Minimum Downside Volatility', 'Global Min Conditional VaR', 'Global Min Conditional DaR', 'Risk Parity Diversification'].includes(objective) && (
+            <>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Transaction Cost (%):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={transactionCost}
+                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
+                  placeholder="0.0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Rebalance Frequency:</Text>
+                <TouchableOpacity style={styles.dropdown} onPress={() => showModal('rebalanceFrequency')}>
+                  <Text style={styles.dropdownText}>{rebalanceFrequency || 'Select Frequency'}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {['Max Sharpe Ratio'].includes(objective) && (
+            <>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Risk Free Rate (%):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={riskFreeRate}
+                  onChangeText={(value) => updateNumericField(setRiskFreeRate, value, 0.1, 10)}
+                  placeholder="0.0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Transaction Cost (%):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={transactionCost}
+                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
+                  placeholder="0.0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Allow Short Sell:</Text>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => setAllowShortSell(!allowShortSell)}
+                >
+                  <Text style={styles.dropdownText}>{allowShortSell ? 'True' : 'False'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Rebalance Frequency:</Text>
+                <TouchableOpacity style={styles.dropdown} onPress={() => showModal('rebalanceFrequency')}>
+                  <Text style={styles.dropdownText}>{rebalanceFrequency || 'Select Frequency'}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {['Max Return given Risk Tolerance', 'Min Conditional VaR given Risk Tolerance', 'Min Conditional DaR given Risk Tolerance', 'Max Sortino Ratio given Risk Tolerance'].includes(objective) && (
+            <>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Risk Tolerance (%):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={riskTolerance}
+                  onChangeText={(value) => updateNumericField(setRiskTolerance, value, 1, 100)}
+                  placeholder="0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Transaction Cost (%):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={transactionCost}
+                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
+                  placeholder="0.0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Allow Short Sell:</Text>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => setAllowShortSell(!allowShortSell)}
+                >
+                  <Text style={styles.dropdownText}>{allowShortSell ? 'True' : 'False'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Rebalance Frequency:</Text>
+                <TouchableOpacity style={styles.dropdown} onPress={() => showModal('rebalanceFrequency')}>
+                  <Text style={styles.dropdownText}>{rebalanceFrequency || 'Select Frequency'}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {['Min Volatility given Target Return', 'Max Sortino Ratio given Target Return', 'Min Conditional VaR given Target Return', 'Min Conditional DaR given Target Return'].includes(objective) && (
+            <>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Target Return (%):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={targetReturn}
+                  onChangeText={(value) => updateNumericField(setTargetReturn, value, 1, 100)}
+                  placeholder="0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Transaction Cost (%):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={transactionCost}
+                  onChangeText={(value) => updateNumericField(setTransactionCost, value, 0.1, 10)}
+                  placeholder="0.0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Allow Short Sell:</Text>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => setAllowShortSell(!allowShortSell)}
+                >
+                  <Text style={styles.dropdownText}>{allowShortSell ? 'True' : 'False'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Rebalance Frequency:</Text>
+                <TouchableOpacity style={styles.dropdown} onPress={() => showModal('rebalanceFrequency')}>
+                  <Text style={styles.dropdownText}>{rebalanceFrequency || 'Select Frequency'}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+      )}
 
       <View style={styles.table}>
         <View style={styles.tableHeader}>
@@ -261,6 +462,38 @@ const AIPortfolioAnalysis = () => {
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.modalOption} onPress={() => selectOption(item, selectedField)}>
+                  <Text style={styles.modalText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={isBenchmarkModalVisible} animationType="fade" onRequestClose={hideModal}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <FlatList
+              data={benchmarks}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.modalOption} onPress={() => selectOption(item)}>
+                  <Text style={styles.modalText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={isRebalanceModalVisible} animationType="fade" onRequestClose={hideModal}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <FlatList
+              data={rebalanceFrequencies}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.modalOption} onPress={() => selectOption(item)}>
                   <Text style={styles.modalText}>{item}</Text>
                 </TouchableOpacity>
               )}
