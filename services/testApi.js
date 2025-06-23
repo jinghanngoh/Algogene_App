@@ -250,4 +250,3 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
     throw error;
   }
 };
-
