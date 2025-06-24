@@ -17,11 +17,11 @@ const AIPortfolioAnalysis = () => {
   const [selectedField, setSelectedField] = useState('');
   const [date, setDate] = useState(new Date());
   const [tableData, setTableData] = useState([
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
-    { assetClass: '', symbol: '', holding: '' },
+    { assetClass: '', symbol: '', holding: '', isLocked: false},
+    { assetClass: '', symbol: '', holding: '', isLocked: false},
+    { assetClass: '', symbol: '', holding: '', isLocked: false},
+    { assetClass: '', symbol: '', holding: '', isLocked: false },
+    { assetClass: '', symbol: '', holding: '', isLocked: false},
   ]);
 
   const [benchmark, setBenchmark] = useState('');
@@ -108,7 +108,7 @@ const AIPortfolioAnalysis = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Set to midnight for comparison
       if (selected > today) {
-        alert('End Date cannot be today or in the future.');
+        alert('Date cannot be today or in the future.');
         return;
       }
       setDate(selected);
@@ -237,6 +237,24 @@ const AIPortfolioAnalysis = () => {
       console.error('Compute failed:', error.message);
       alert('Failed to optimize portfolio. Check console for details.');
     }
+  };
+
+  const handleOK = (index) => { 
+    console.log('OK Pressed at index:', index);
+    const newTableData = [...tableData];
+    newTableData[index].isLocked = true;
+    setTableData(newTableData);
+  };
+
+  const handleEdit = (index) => {
+    const newTableData = [...tableData];
+    newTableData[index].isLocked = false;
+    setTableData(newTableData);
+  };
+  
+  const handleDelete = (index) => {
+    const newTableData = [...tableData.filter((_, i) => i !== index)];
+    setTableData(newTableData);
   };
 
   return (
@@ -475,48 +493,72 @@ const AIPortfolioAnalysis = () => {
         </View>
       )}
 
-     <View style={styles.table}>
+      <View style={styles.table}>
         <View style={styles.tableHeader}>
-            <Text style={styles.tableCellHeader}>Asset Class</Text>
-            <View style={styles.verticalLine} />
-            <Text style={styles.tableCellHeader}>Symbol / Strategy</Text>
-            <View style={styles.verticalLine} />
-            <View style={styles.holdingColumn}>
+          <Text style={styles.tableCellHeader}>Asset Class</Text>
+          <View style={styles.verticalLine} />
+          <Text style={styles.tableCellHeader}>Symbol / Strategy</Text>
+          <View style={styles.verticalLine} />
+          <View style={styles.holdingColumn}>
             <Text style={styles.tableCellHeader}>Current Holding (%)</Text>
-            </View>
+          </View>
         </View>
         {tableData.map((row, index) => (
-            <View style={styles.tableRow} key={index}>
-            <TouchableOpacity style={styles.tableInput} onPress={() => showModal('assetClass', index)}>
-                <Text style={styles.tableText}>{row.assetClass || '---'}</Text>
+          <View style={styles.tableRow} key={index}>
+            <TouchableOpacity 
+              style={styles.tableInput} 
+              onPress={() => !row.isLocked && showModal('assetClass', index)}
+              disabled={row.isLocked}
+            >
+              <Text style={styles.tableText}>{row.assetClass || '---'}</Text>
             </TouchableOpacity>
             <View style={styles.verticalLine} />
-            <TouchableOpacity style={styles.tableInput} onPress={() => showModal('symbol', index)}>
-                <Text style={styles.tableText}>{row.symbol || '---'}</Text>
+            <TouchableOpacity 
+              style={styles.tableInput} 
+              onPress={() => !row.isLocked && showModal('symbol', index)}
+              disabled={row.isLocked}
+            >
+              <Text style={styles.tableText}>{row.symbol || '---'}</Text>
             </TouchableOpacity>
             <View style={styles.verticalLine} />
             <View style={styles.holdingColumn}>
-                <TextInput
-                style={styles.tableInput}
+              <TextInput
+                style={[styles.tableInput , { flex: 1, paddingRight: 5}]}
                 value={row.holding}
-                onChangeText={(text) => updateHolding(text, index)}
+                onChangeText={(text) => !row.isLocked && updateHolding(text, index)} // Only allow changes when unlocked
                 placeholder="0"
                 placeholderTextColor="gray"
                 keyboardType="numeric"
-                />
-                <TouchableOpacity style={styles.okButton}>
-                <Text style={styles.okText}>Ok</Text>
+                editable={!row.isLocked} // Disable editing when locked
+              />
+              {row.isLocked ? (
+                <View style={styles.iconContainer}>
+                  <TouchableOpacity style={styles.iconButton} onPress={() => handleEdit(index)}>
+                    <Text style={styles.iconText}>✏️</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.iconButton} onPress={() => handleDelete(index)}>
+                    <Text style={styles.iconText}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.okButton, !row.assetClass || !row.symbol || !row.holding ? styles.disabledOkButton : null]} 
+                  onPress={() => handleOK(index)}
+                  disabled={!row.assetClass || !row.symbol || !row.holding}
+                >
+                  <Text style={styles.okText}>Ok</Text>
                 </TouchableOpacity>
+              )}
             </View>
-            </View>
+          </View>
         ))}
         <TouchableOpacity style={styles.newAssetRow} onPress={addNewAsset}>
-            <View style={styles.logoCircle}>
+          <View style={styles.logoCircle}>
             <Text style={styles.plusSign}>+</Text>
-            </View>
-            <Text style={styles.newAssetText}>New Asset</Text>
+          </View>
+          <Text style={styles.newAssetText}>New Asset</Text>
         </TouchableOpacity>
-     </View>
+      </View>
 
       <TouchableOpacity style={styles.computeButton} onPress={handleCompute}>
         <Text style={styles.computeButtonText}>COMPUTE</Text>
@@ -702,10 +744,11 @@ const styles = StyleSheet.create({
     color: 'black',
     backgroundColor: 'white',
     borderRadius: 5,
-    padding: 5,
+    padding: 8,
     textAlign: 'left',
     minHeight: 40,
     textAlignVertical: 'center',
+    marginRight: 2, // Reduce margin to prevent overlap
   },
   tableText: {
     color: 'black',
@@ -714,10 +757,10 @@ const styles = StyleSheet.create({
   verticalLine: {
     width: 1,
     backgroundColor: '#ccc',
-    marginHorizontal: 5,
+    marginHorizontal: 2,
   },
   okButton: {
-    backgroundColor: '#333',
+    backgroundColor: '#4FC3F7',
     padding: 5,
     borderRadius: 5,
     justifyContent: 'center',
@@ -800,6 +843,20 @@ const styles = StyleSheet.create({
   datePicker: {
     width: 320,
     backgroundColor: 'white',
+  },
+  iconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 60, // Match the width of okButton
+  },
+  iconButton: {
+    padding: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 30, // Half of okButton width
+  },
+  iconText: {
+    fontSize: 16,
   },
 });
 
