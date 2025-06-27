@@ -16,27 +16,50 @@ const PortfolioResult = () => {
     assets: [],
   });
 
-  const [activeTab, setActiveTab] = useState('RESULT');
+  const [underlyingAssets, setUnderlyingAssets] = useState([]);
+  const [rebalanceStrategy, setRebalanceStrategy] = useState('None');
+  const [activeTab, setActiveTab] = useState('Result');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Raw useLocalSearchParams Output:', params);
     setIsLoading(true);
-    if (params?.resultData) {
-      try {
-        const parsedData = JSON.parse(decodeURIComponent(params.resultData));
-        console.log('Parsed Result Data:', parsedData);
+    try {
+      // Destructure specific properties from params
+      const { resultData: rawResultData, underlyingAssets: rawUnderlyingAssets, rebalanceStrategy: rawRebalanceStrategy } = params;
+  
+      // Parse resultData
+      if (rawResultData) {
+        const parsedData = JSON.parse(decodeURIComponent(rawResultData));
         if (JSON.stringify(parsedData) !== JSON.stringify(resultData)) {
           setResultData(parsedData);
         }
-      } catch (error) {
-        console.error('Error parsing resultData:', error);
+      } else {
+        console.warn('No resultData in params', { params });
       }
-    } else {
-      console.warn('No resultData in params', { params });
+  
+      // Parse underlyingAssets
+      if (rawUnderlyingAssets) {
+        const parsedAssets = JSON.parse(decodeURIComponent(rawUnderlyingAssets));
+        setUnderlyingAssets(Array.isArray(parsedAssets) ? parsedAssets : []);
+      } else {
+        console.warn('No underlyingAssets in params', { params });
+      }
+  
+      // Parse rebalanceStrategy
+      if (rawRebalanceStrategy) {
+        setRebalanceStrategy(decodeURIComponent(rawRebalanceStrategy));
+      } else {
+        console.warn('No rebalanceStrategy in params', { params });
+      }
+    } catch (error) {
+      console.error('Error parsing params:', error);
     }
     setIsLoading(false);
-  }, [params.resultData]);
+  }, [
+    params.resultData && JSON.stringify(params.resultData),
+    params.underlyingAssets && JSON.stringify(params.underlyingAssets),
+    params.rebalanceStrategy && JSON.stringify(params.rebalanceStrategy),
+  ]);
 
   const chartWidthAndHeight = 180;
   const sliceColors = ['#4FC3F7', '#FF2D55', '#5856D6', '#FF9500', '#4CD964', '#FFCC00', '#8E24AA'];
@@ -54,9 +77,11 @@ const PortfolioResult = () => {
 
   const seriesSum = seriesWithColors.reduce((sum, item) => sum + (item.value || 0), 0);
 
-  console.log('Result Data Assets:', resultData.assets);
-  console.log('Slice Colors:', sliceColors);
-  console.log('Generated Series:', seriesWithColors);
+  // console.log('Result Data Assets:', resultData.assets);
+  // console.log('Underlying Assets:', underlyingAssets);
+  // console.log('Rebalance Strategy:', rebalanceStrategy);
+  // console.log('Slice Colors:', sliceColors);
+  // console.log('Generated Series:', seriesWithColors);
 
   return (
     <ScrollView style={styles.container}>
@@ -64,17 +89,31 @@ const PortfolioResult = () => {
       <View style={styles.tabContainer}>
         <View style={styles.tabRow}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'RESULT' && styles.activeTab]}
-            onPress={() => setActiveTab('RESULT')}
+            style={[styles.tab, activeTab === 'Result' && styles.activeTab]}
+            onPress={() => setActiveTab('Result')}
           >
-            <Text style={styles.tabText}>RESULT</Text>
+            <Text style={styles.tabText}>Result</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'EF' && styles.activeTab]}
-            onPress={() => setActiveTab('EF')}
+            style={[styles.tab, activeTab === 'Performance' && styles.activeTab]}
+            onPress={() => setActiveTab('Performance')}
           >
-            <Text style={styles.tabText}>EF</Text>
+            <Text style={styles.tabText}>Performance</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Rebalancing' && styles.activeTab]}
+            onPress={() => setActiveTab('Rebalancing')}
+          >
+            <Text style={styles.tabText}>Rebalancing</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+              style={[styles.tab, activeTab === 'EF' && styles.activeTab]}
+              onPress={() => setActiveTab('EF')}
+            >
+              <Text style={styles.tabText}>EF</Text>
+            </TouchableOpacity>
         </View>
         <View style={styles.tabRow}>
           <TouchableOpacity
@@ -98,14 +137,14 @@ const PortfolioResult = () => {
         </View>
       ) : (
         <>
-          {activeTab === 'RESULT' && (
+          {activeTab === 'Result' && (
             <>
               {/* Optimal Allocation Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Optimal Allocation</Text>
                 {seriesSum > 0 && seriesWithColors.length > 0 ? (
                   <>
-                    {console.log('PieChart Props:', {
+                    {/* {console.log('PieChart Props:', {
                       data: seriesWithColors.map(item => ({
                         name: item.label || 'Unknown',
                         population: item.value || 0,
@@ -113,7 +152,7 @@ const PortfolioResult = () => {
                         legendFontColor: '#FFFFFF',
                         legendFontSize: 14,
                       })),
-                    })}
+                    })} */}
                     <PieChart
                       data={seriesWithColors.map(item => ({
                         name: item.label || 'Unknown',
@@ -180,8 +219,18 @@ const PortfolioResult = () => {
                     <Text style={styles.value}>{(resultData.cvar95 || 0).toFixed(5)}</Text>
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Cash Left</Text>
+                    <Text style={styles.label}>Cash Lefdt</Text>
                     <Text style={styles.value}>{(resultData.cashLeft || 0).toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Underlying Assets</Text>
+                    <Text style={styles.value}>
+                      {underlyingAssets.length > 0 ? underlyingAssets.join(', ') : 'None'}
+                    </Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Rebalance Strategy</Text>
+                    <Text style={styles.value}>{rebalanceStrategy}</Text>
                   </View>
                 </View>
               </View>
@@ -216,6 +265,182 @@ const PortfolioResult = () => {
               </View>
             </>
           )}
+
+          {activeTab === 'Performance' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Performance Statistics</Text>
+              <View style={styles.resultTable}>
+                <View style={styles.row}>
+                  <Text style={styles.label}>No. of Tradable Days:</Text>
+                  <Text style={styles.value}>{resultData.tradableDays || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Win Rate:</Text>
+                  <Text style={styles.value}>{(resultData.winRate * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Odd Ratio:</Text>
+                  <Text style={styles.value}>{resultData.oddRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>No. of Trades:</Text>
+                  <Text style={styles.value}>{resultData.numTrades || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Total Pnl:</Text>
+                  <Text style={styles.value}>{resultData.totalPnl?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Mean Daily Return:</Text>
+                  <Text style={styles.value}>{(resultData.meanDailyReturn * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Daily Return StdDev:</Text>
+                  <Text style={styles.value}>{(resultData.dailyReturnStdDev * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Daily Downside StdDev:</Text>
+                  <Text style={styles.value}>{(resultData.dailyDownsideStdDev * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Daily Sharpe Ratio:</Text>
+                  <Text style={styles.value}>{resultData.dailySharpeRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Daily Sortino Ratio:</Text>
+                  <Text style={styles.value}>{resultData.dailySortinoRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Max. Drawdown Duration:</Text>
+                  <Text style={styles.value}>{resultData.maxDrawdownDuration?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Jensen Alpha:</Text>
+                  <Text style={styles.value}>{resultData.jensenAlpha?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Omega Ratio:</Text>
+                  <Text style={styles.value}>{resultData.omegaRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Calmar Ratio:</Text>
+                  <Text style={styles.value}>{resultData.calmarRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>No. of Win Days:</Text>
+                  <Text style={styles.value}>{resultData.winDays || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Max. Consecutive Win Day:</Text>
+                  <Text style={styles.value}>{resultData.maxConsecutiveWinDays || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Max. Consecutive Gains:</Text>
+                  <Text style={styles.value}>{resultData.maxConsecutiveGains?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Average Consecutive Win Day:</Text>
+                  <Text style={styles.value}>{resultData.avgConsecutiveWinDays?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Average Per Trade Pnl:</Text>
+                  <Text style={styles.value}>{resultData.avgPerTradePnl?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Median Daily Return:</Text>
+                  <Text style={styles.value}>{(resultData.medianDailyReturn * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>25th percentile Daily Return:</Text>
+                  <Text style={styles.value}>{(resultData.percentile25DailyReturn * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>95% 1 day return VaR:</Text>
+                  <Text style={styles.value}>{(resultData.var95DailyReturn * 100 || 0).toFixed(2)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Annual Sharpe Ratio:</Text>
+                  <Text style={styles.value}>{resultData.annualSharpeRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Annual Sortino Ratio:</Text>
+                  <Text style={styles.value}>{resultData.annualSortinoRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Average Drawdown Duration:</Text>
+                  <Text style={styles.value}>{resultData.avgDrawdownDuration?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Beta:</Text>
+                  <Text style={styles.value}>{resultData.beta?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Treynor Ratio:</Text>
+                  <Text style={styles.value}>{resultData.treynorRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>No. of Loss Days:</Text>
+                  <Text style={styles.value}>{resultData.lossDays || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Max. Consecutive Loss Day:</Text>
+                  <Text style={styles.value}>{resultData.maxConsecutiveLossDays || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Max. Consecutive Loss:</Text>
+                  <Text style={styles.value}>{resultData.maxConsecutiveLoss?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Average Consecutive Loss Day:</Text>
+                  <Text style={styles.value}>{resultData.avgConsecutiveLossDays?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Average Per Day Pnl:</Text>
+                  <Text style={styles.value}>{resultData.avgPerDayPnl?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Mean Annual Return:</Text>
+                  <Text style={styles.value}>{(resultData.meanAnnualReturn * 100 || 0).toFixed(2)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>75th percentile Daily Return:</Text>
+                  <Text style={styles.value}>{(resultData.percentile75DailyReturn * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>99% 1 day return VaR:</Text>
+                  <Text style={styles.value}>{(resultData.var99DailyReturn * 100 || 0).toFixed(2)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Max. Drawdown Amount:</Text>
+                  <Text style={styles.value}>{resultData.maxDrawdownAmount?.toFixed(2) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Max. Drawdown Percent:</Text>
+                  <Text style={styles.value}>{(resultData.maxDrawdownPercent * 100 || 0).toFixed(4)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Annual Volatility:</Text>
+                  <Text style={styles.value}>{(resultData.annualVolatility * 100 || 0).toFixed(2)}%</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Information Ratio:</Text>
+                  <Text style={styles.value}>{resultData.informationRatio?.toFixed(4) || 0}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Tail Ratio:</Text>
+                  <Text style={styles.value}>{resultData.tailRatio?.toFixed(4) || 0}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {activeTab === 'Rebalancing' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Rebalancing</Text>
+              <Text style={styles.noDataText}>Rebalancing</Text>
+              
+            </View>
+          )}    
 
           {activeTab === 'EF' && (
             <View style={styles.section}>
@@ -255,7 +480,7 @@ const PortfolioResult = () => {
                 {Array.isArray(resultData.assets) && resultData.assets.length > 0 ? (
                   resultData.assets.map((asset, index) => {
                     if (!asset || typeof asset.id === 'undefined') {
-                      console.warn('Skipping invalid asset:', asset);
+                      // console.warn('Skipping invalid asset:', asset);
                       return null; // Skip invalid assets
                     }
                     return (
@@ -269,7 +494,7 @@ const PortfolioResult = () => {
                   <Text style={styles.noDataText}>No assets available for correlation</Text>
                 )}
              </View>
-              {console.log('Correlation Render - Assets:', resultData.assets, 'Loading:', isLoading)}
+              {/* console.log('Correlation Render - Assets:', resultData.assets, 'Loading:', isLoading) */}
             </View>
           )}
 

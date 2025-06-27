@@ -142,13 +142,6 @@ const AIPortfolioAnalysis = () => {
     }
     hideDatePicker();
   };
-//   useEffect(() => {
-//     if (selectedField === 'assetClass' && tableData.some(row => !row.assetClass)) {
-//       const firstEmptyIndex = tableData.findIndex(row => !row.assetClass);
-//       const defaultCategory = tableData[firstEmptyIndex]?.assetClass || 'Commodity';
-//       setAssetClassOptions(assetClassCategories[defaultCategory] || assetClassCategories['Commodity']);
-//     }
-//   }, [selectedField, tableData]);
 
   const showModal = (field, index = -1) => {
     setSelectedField(field);
@@ -325,35 +318,17 @@ const AIPortfolioAnalysis = () => {
 
       console.log('Result Data for Navigation:', JSON.stringify(resultData, null, 2));
 
-      // Navigate to Portfolio/PortfolioResult
-      // router.push({
-      //   pathname: 'Portfolio/PortfolioResult',
-      //   params: { resultData: JSON.stringify(resultData) },
-      // });
-
-
-      // Test navigation with simple param
-    // const navigationParams = {
-    //   pathname: 'Portfolio/PortfolioResult', 
-    //   params: { resultData: encodeURIComponent(JSON.stringify(resultData)) },
-    // };
-    // console.log('Navigation Params:', JSON.stringify(navigationParams, null, 2));
-
-
-
-
-
-
-    // Navigate to PortfolioResult
     router.push({
       pathname: 'Portfolio/PortfolioResult',
       params: {
         resultData: encodeURIComponent(JSON.stringify(resultData)),
         assetAllocate: encodeURIComponent(JSON.stringify(result.data?.asset_allocate)),
+        underlyingAssets: encodeURIComponent(JSON.stringify(apiParams.arrSymbol)), // Add Underlying Assets
+        rebalanceStrategy: encodeURIComponent(rebalanceFrequency || 'None'),
       },
     });
-      
-      
+    
+    // console.log("FULL RESPONSE XXXXXXXXXXXXXXXXX ", JSON.stringify(result))
 
       // Update tableData with allocations if present
       if (result.data.asset_allocate?.length > 0) {
