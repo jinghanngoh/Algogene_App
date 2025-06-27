@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-
-// Placeholder for pie chart (replace with react-native-pie-chart if needed)
-const PieChartPlaceholder = ({ assets }) => (
-  <View style={styles.pieChart}>
-    <Text style={styles.pieChartText}>Pie Chart (Assets: {assets.length} items)</Text>
-  </View>
-);
+import { PieChart } from 'react-native-chart-kit';
+import { Dimensions } from 'react-native';
 
 const PortfolioResult = () => {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams() || {};
   const [resultData, setResultData] = useState({
     annualizedReturn: 0,
     annualizedVolatility: 0,
@@ -27,7 +22,6 @@ const PortfolioResult = () => {
       try {
         const parsedData = JSON.parse(decodeURIComponent(params.resultData));
         console.log('Parsed Result Data:', parsedData);
-        // Only update state if parsed data is different
         if (JSON.stringify(parsedData) !== JSON.stringify(resultData)) {
           setResultData(parsedData);
         }
@@ -39,22 +33,101 @@ const PortfolioResult = () => {
     }
   }, [params.resultData]);
 
+  const chartWidthAndHeight = 180;
+  const sliceColors = ['#4FC3F7', '#FF2D55', '#5856D6', '#FF9500', '#4CD964', '#FFCC00', '#8E24AA'];
+  const seriesWithColors = (Array.isArray(resultData.assets) ? resultData.assets : [])
+    .map((asset, index) => {
+      const value = asset.optimalHolding || 0;
+      const color = sliceColors[index % sliceColors.length] || '#000000';
+      if (value > 0 && color) {
+        return { value, color, label: asset.name || `Asset ${index}` };
+      }
+      console.warn(`Invalid slice: ${JSON.stringify({ value, color, asset })}`);
+      return null;
+    })
+    .filter(Boolean);
+
+const seriesSum = seriesWithColors.reduce((sum, item) => sum + (item.value || 0), 0);
+
+  console.log('Result Data Assets:', resultData.assets);
+  console.log('Slice Colors:', sliceColors);
+  console.log('Generated Series:', seriesWithColors);
+
   return (
     <ScrollView style={styles.container}>
-      {/* Tab Buttons */}
+      {/* Tab Buttons (2x2 Grid) */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={styles.activeTab}>
-          <Text style={styles.tabText}>RESULT</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>EF</Text>
-        </TouchableOpacity>
+        <View style={styles.tabRow}>
+          <TouchableOpacity style={styles.activeTab}>
+            <Text style={styles.tabText}>RESULT</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tab}>
+            <Text style={styles.tabText}>EF</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.tabRow}>
+          <TouchableOpacity style={styles.tab}>
+            <Text style={styles.tabText}>Correlation</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tab}>
+            <Text style={styles.tabText}>Simulation</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Optimal Allocation Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Optimal Allocation</Text>
-        <PieChartPlaceholder assets={resultData.assets} />
+        {seriesSum > 0 && seriesWithColors.length > 0 ? (
+          <>
+            {console.log('PieChart Props:', {
+              data: seriesWithColors.map(item => ({
+                name: item.label || 'Unknown',
+                population: item.value || 0,
+                color: item.color || '#000000',
+                legendFontColor: '#FFFFFF',
+                legendFontSize: 14,
+              })),
+            })}
+            <PieChart
+              data={seriesWithColors.map(item => ({
+                name: item.label || 'Unknown',
+                population: item.value || 0,
+                color: item.color || '#000000',
+                legendFontColor: '#FFFFFF',
+                legendFontSize: 14,
+              }))}
+              width={Dimensions.get('window').width - 40}
+              height={chartWidthAndHeight}
+              chartConfig={{
+                backgroundColor: '#1E1E1E',
+                backgroundGradientFrom: '#1E1E1E',
+                backgroundGradientTo: '#1E1E1E',
+                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              }}
+              accessor="population"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              center={[10, 0]}
+              absolute
+            />
+            <View style={styles.legend}>
+              {resultData.assets && resultData.assets.length > 0 ? (
+                resultData.assets.map((asset, index) => (
+                  <View key={asset.id} style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: sliceColors[index % sliceColors.length] || '#000000' }]} />
+                    <Text style={styles.legendText}>{asset.name || 'N/A'}: {asset.optimalHolding || 0}%</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noDataText}>No assets available for legend</Text>
+              )}
+            </View>
+          </>
+        ) : (
+          <Text style={styles.noDataText}>No valid allocation data for pie chart</Text>
+        )}
       </View>
 
       {/* Optimal Portfolio Result Section */}
@@ -93,24 +166,24 @@ const PortfolioResult = () => {
         <Text style={styles.sectionTitle}>Asset Allocation</Text>
         <View style={styles.assetTable}>
           <View style={styles.tableHeader}>
-            <Text style={styles.headerText}>Asset</Text>
-            <Text style={styles.headerText}>Current Price</Text>
-            <Text style={styles.headerText}>Current Holding</Text>
-            <Text style={styles.headerText}>Optimal Holding</Text>
-            <Text style={styles.headerText}>Optimal Shares</Text>
-            <Text style={styles.headerText}>Change in Shares</Text>
+            <Text style={[styles.headerText, { flex: 1.5 }]}>Asset</Text>
+            <Text style={[styles.headerText, { flex: 1 }]}>Current Price</Text>
+            <Text style={[styles.headerText, { flex: 1.2 }]}>Current Holding</Text>
+            <Text style={[styles.headerText, { flex: 1.2 }]}>Optimal Holding</Text>
+            <Text style={[styles.headerText, { flex: 1 }]}>Optimal Shares</Text>
+            <Text style={[styles.headerText, { flex: 1 }]}>Change in Shares</Text>
           </View>
           {resultData.assets.length === 0 ? (
             <Text style={styles.noDataText}>No allocation data available</Text>
           ) : (
             resultData.assets.map((item) => (
               <View key={item.id} style={styles.tableRow}>
-                <Text style={styles.cell}>{item.name || 'N/A'}</Text>
-                <Text style={styles.cell}>{(item.currentPrice || 0).toFixed(2)}</Text>
-                <Text style={styles.cell}>{(item.currentHolding || 0).toFixed(2)}%</Text>
-                <Text style={styles.cell}>{(item.optimalHolding || 0).toFixed(2)}%</Text>
-                <Text style={styles.cell}>{(item.optimalShares || 0).toFixed(0)}</Text>
-                <Text style={styles.cell}>{(item.changeInShares || 0).toFixed(0)}</Text>
+                <Text style={[styles.cell, { flex: 1.5 }]}>{item.name || 'N/A'}</Text>
+                <Text style={[styles.cell, { flex: 1 }]}>{(item.currentPrice || 0).toFixed(2)}</Text>
+                <Text style={[styles.cell, { flex: 1.2 }]}>{(item.currentHolding || 0).toFixed(2)}%</Text>
+                <Text style={[styles.cell, { flex: 1.2 }]}>{(item.optimalHolding || 0).toFixed(2)}%</Text>
+                <Text style={[styles.cell, { flex: 1 }]}>{(item.optimalShares || 0).toFixed(0)}</Text>
+                <Text style={[styles.cell, { flex: 1 }]}>{(item.changeInShares || 0).toFixed(0)}</Text>
               </View>
             ))
           )}
@@ -127,24 +200,32 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     marginBottom: 20,
-    marginTop: 40, 
+    marginTop: 40,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   activeTab: {
     flex: 1,
     backgroundColor: '#4FC3F7',
-    padding: 10,
-    borderRadius: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
     alignItems: 'center',
-    marginRight: 5,
+    marginHorizontal: 5,
   },
   tab: {
     flex: 1,
     backgroundColor: '#2a2a2a',
-    padding: 10,
-    borderRadius: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
     alignItems: 'center',
+    marginHorizontal: 5,
   },
   tabText: {
     color: 'white',
@@ -152,49 +233,58 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   section: {
-    marginBottom: 25,
+    marginBottom: 30,
     backgroundColor: '#1E1E1E',
-    borderRadius: 5,
-    padding: 15,
+    borderRadius: 10,
+    padding: 20,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 15,
     color: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#444',
-    paddingBottom: 5,
+    borderBottomColor: '#555',
+    paddingBottom: 10,
   },
-  pieChart: {
-    alignItems: 'center',
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    marginBottom: 15,
-    height: 150,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 5,
+    marginTop: 10,
   },
-  pieChartText: {
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 5,
+  },
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 5,
+  },
+  legendText: {
     color: 'white',
     fontSize: 14,
   },
   resultTable: {
     backgroundColor: '#2a2a2a',
     borderRadius: 5,
-    padding: 10,
+    padding: 15,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   label: {
     fontSize: 14,
-    color: 'lightgray',
+    color: 'white',
     flex: 2,
   },
   value: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
     color: 'white',
     flex: 1,
@@ -202,42 +292,42 @@ const styles = StyleSheet.create({
   },
   assetTable: {
     backgroundColor: '#2a2a2a',
-    borderRadius: 5,
-    padding: 10,
+    borderRadius: 10,
+    padding: 15,
   },
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#444',
-    paddingBottom: 5,
-    marginBottom: 5,
+    borderBottomColor: '#555',
+    paddingBottom: 12,
+    marginBottom: 12,
   },
   headerText: {
-    flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#A0A0A0',
     textAlign: 'center',
+    paddingVertical: 10,
+    lineHeight: 18,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#444',
   },
   cell: {
-    flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     color: 'white',
     textAlign: 'center',
+    paddingVertical: 6,
   },
   noDataText: {
-    textAlign: 'center',
+    textAlign: 'square',
     padding: 20,
     color: 'lightgray',
-    fontSize: 14,
+    fontSize: 15,
   },
 });
 
 export default PortfolioResult;
-
