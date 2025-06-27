@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { PieChart } from 'react-native-chart-kit';
+import { PieChart, LineChart, BarChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 
 const PortfolioResult = () => {
@@ -16,8 +16,12 @@ const PortfolioResult = () => {
     assets: [],
   });
 
+  const [activeTab, setActiveTab] = useState('RESULT');
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     console.log('Raw useLocalSearchParams Output:', params);
+    setIsLoading(true);
     if (params?.resultData) {
       try {
         const parsedData = JSON.parse(decodeURIComponent(params.resultData));
@@ -31,6 +35,7 @@ const PortfolioResult = () => {
     } else {
       console.warn('No resultData in params', { params });
     }
+    setIsLoading(false);
   }, [params.resultData]);
 
   const chartWidthAndHeight = 180;
@@ -47,7 +52,7 @@ const PortfolioResult = () => {
     })
     .filter(Boolean);
 
-const seriesSum = seriesWithColors.reduce((sum, item) => sum + (item.value || 0), 0);
+  const seriesSum = seriesWithColors.reduce((sum, item) => sum + (item.value || 0), 0);
 
   console.log('Result Data Assets:', resultData.assets);
   console.log('Slice Colors:', sliceColors);
@@ -58,137 +63,240 @@ const seriesSum = seriesWithColors.reduce((sum, item) => sum + (item.value || 0)
       {/* Tab Buttons (2x2 Grid) */}
       <View style={styles.tabContainer}>
         <View style={styles.tabRow}>
-          <TouchableOpacity style={styles.activeTab}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'RESULT' && styles.activeTab]}
+            onPress={() => setActiveTab('RESULT')}
+          >
             <Text style={styles.tabText}>RESULT</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.tab}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'EF' && styles.activeTab]}
+            onPress={() => setActiveTab('EF')}
+          >
             <Text style={styles.tabText}>EF</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.tabRow}>
-          <TouchableOpacity style={styles.tab}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Correlation' && styles.activeTab]}
+            onPress={() => setActiveTab('Correlation')}
+          >
             <Text style={styles.tabText}>Correlation</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.tab}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Simulation' && styles.activeTab]}
+            onPress={() => setActiveTab('Simulation')}
+          >
             <Text style={styles.tabText}>Simulation</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Optimal Allocation Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Optimal Allocation</Text>
-        {seriesSum > 0 && seriesWithColors.length > 0 ? (
-          <>
-            {console.log('PieChart Props:', {
-              data: seriesWithColors.map(item => ({
-                name: item.label || 'Unknown',
-                population: item.value || 0,
-                color: item.color || '#000000',
-                legendFontColor: '#FFFFFF',
-                legendFontSize: 14,
-              })),
-            })}
-            <PieChart
-              data={seriesWithColors.map(item => ({
-                name: item.label || 'Unknown',
-                population: item.value || 0,
-                color: item.color || '#000000',
-                legendFontColor: '#FFFFFF',
-                legendFontSize: 14,
-              }))}
-              width={Dimensions.get('window').width - 40}
-              height={chartWidthAndHeight}
-              chartConfig={{
-                backgroundColor: '#1E1E1E',
-                backgroundGradientFrom: '#1E1E1E',
-                backgroundGradientTo: '#1E1E1E',
-                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-              }}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              center={[10, 0]}
-              absolute
-            />
-            <View style={styles.legend}>
-              {resultData.assets && resultData.assets.length > 0 ? (
-                resultData.assets.map((asset, index) => (
-                  <View key={asset.id} style={styles.legendItem}>
-                    <View style={[styles.legendColor, { backgroundColor: sliceColors[index % sliceColors.length] || '#000000' }]} />
-                    <Text style={styles.legendText}>{asset.name || 'N/A'}: {asset.optimalHolding || 0}%</Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.noDataText}>No assets available for legend</Text>
-              )}
-            </View>
-          </>
-        ) : (
-          <Text style={styles.noDataText}>No valid allocation data for pie chart</Text>
-        )}
-      </View>
-
-      {/* Optimal Portfolio Result Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Optimal Portfolio Result</Text>
-        <View style={styles.resultTable}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Annualized Return</Text>
-            <Text style={styles.value}>{(resultData.annualizedReturn || 0).toFixed(2)}%</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Annualized Volatility</Text>
-            <Text style={styles.value}>{(resultData.annualizedVolatility * 100 || 0).toFixed(2)}%</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Sharpe Ratio</Text>
-            <Text style={styles.value}>{(resultData.sharpeRatio || 0).toFixed(2)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>95% Value at Risk (VaR) (daily)</Text>
-            <Text style={styles.value}>{(resultData.var95 || 0).toFixed(5)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>95% Conditional VaR (daily)</Text>
-            <Text style={styles.value}>{(resultData.cvar95 || 0).toFixed(5)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Cash Left</Text>
-            <Text style={styles.value}>{(resultData.cashLeft || 0).toFixed(2)}</Text>
-          </View>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4FC3F7" />
         </View>
-      </View>
-
-      {/* Asset Allocation Table */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Asset Allocation</Text>
-        <View style={styles.assetTable}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerText, { flex: 1.5 }]}>Asset</Text>
-            <Text style={[styles.headerText, { flex: 1 }]}>Current Price</Text>
-            <Text style={[styles.headerText, { flex: 1.2 }]}>Current Holding</Text>
-            <Text style={[styles.headerText, { flex: 1.2 }]}>Optimal Holding</Text>
-            <Text style={[styles.headerText, { flex: 1 }]}>Optimal Shares</Text>
-            <Text style={[styles.headerText, { flex: 1 }]}>Change in Shares</Text>
-          </View>
-          {resultData.assets.length === 0 ? (
-            <Text style={styles.noDataText}>No allocation data available</Text>
-          ) : (
-            resultData.assets.map((item) => (
-              <View key={item.id} style={styles.tableRow}>
-                <Text style={[styles.cell, { flex: 1.5 }]}>{item.name || 'N/A'}</Text>
-                <Text style={[styles.cell, { flex: 1 }]}>{(item.currentPrice || 0).toFixed(2)}</Text>
-                <Text style={[styles.cell, { flex: 1.2 }]}>{(item.currentHolding || 0).toFixed(2)}%</Text>
-                <Text style={[styles.cell, { flex: 1.2 }]}>{(item.optimalHolding || 0).toFixed(2)}%</Text>
-                <Text style={[styles.cell, { flex: 1 }]}>{(item.optimalShares || 0).toFixed(0)}</Text>
-                <Text style={[styles.cell, { flex: 1 }]}>{(item.changeInShares || 0).toFixed(0)}</Text>
+      ) : (
+        <>
+          {activeTab === 'RESULT' && (
+            <>
+              {/* Optimal Allocation Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Optimal Allocation</Text>
+                {seriesSum > 0 && seriesWithColors.length > 0 ? (
+                  <>
+                    {console.log('PieChart Props:', {
+                      data: seriesWithColors.map(item => ({
+                        name: item.label || 'Unknown',
+                        population: item.value || 0,
+                        color: item.color || '#000000',
+                        legendFontColor: '#FFFFFF',
+                        legendFontSize: 14,
+                      })),
+                    })}
+                    <PieChart
+                      data={seriesWithColors.map(item => ({
+                        name: item.label || 'Unknown',
+                        population: item.value || 0,
+                        color: item.color || '#000000',
+                        legendFontColor: '#FFFFFF',
+                        legendFontSize: 14,
+                      }))}
+                      width={Dimensions.get('window').width - 40}
+                      height={chartWidthAndHeight}
+                      chartConfig={{
+                        backgroundColor: '#1E1E1E',
+                        backgroundGradientFrom: '#1E1E1E',
+                        backgroundGradientTo: '#1E1E1E',
+                        color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                        labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                      }}
+                      accessor="population"
+                      backgroundColor="transparent"
+                      paddingLeft="15"
+                      center={[10, 0]}
+                      absolute
+                    />
+                    <View style={styles.legend}>
+                      {resultData.assets && resultData.assets.length > 0 ? (
+                        resultData.assets.map((asset, index) => (
+                          <View key={asset.id} style={styles.legendItem}>
+                            <View style={[styles.legendColor, { backgroundColor: sliceColors[index % sliceColors.length] || '#000000' }]} />
+                            <Text style={styles.legendText}>{asset.name || 'N/A'}: {asset.optimalHolding || 0}%</Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text style={styles.noDataText}>No assets available for legend</Text>
+                      )}
+                    </View>
+                  </>
+                ) : (
+                  <Text style={styles.noDataText}>No valid allocation data for pie chart</Text>
+                )}
               </View>
-            ))
+
+              {/* Optimal Portfolio Result Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Optimal Portfolio Result</Text>
+                <View style={styles.resultTable}>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Annualized Return</Text>
+                    <Text style={styles.value}>{(resultData.annualizedReturn || 0).toFixed(2)}%</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Annualized Volatility</Text>
+                    <Text style={styles.value}>{(resultData.annualizedVolatility * 100 || 0).toFixed(2)}%</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Sharpe Ratio</Text>
+                    <Text style={styles.value}>{(resultData.sharpeRatio || 0).toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>95% Value at Risk (VaR) (daily)</Text>
+                    <Text style={styles.value}>{(resultData.var95 || 0).toFixed(5)}</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>95% Conditional VaR (daily)</Text>
+                    <Text style={styles.value}>{(resultData.cvar95 || 0).toFixed(5)}</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Cash Left</Text>
+                    <Text style={styles.value}>{(resultData.cashLeft || 0).toFixed(2)}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Asset Allocation Table */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Asset Allocation</Text>
+                <View style={styles.assetTable}>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.headerText, { flex: 1.5 }]}>Asset</Text>
+                    <Text style={[styles.headerText, { flex: 1 }]}>Current Price</Text>
+                    <Text style={[styles.headerText, { flex: 1.2 }]}>Current Holding</Text>
+                    <Text style={[styles.headerText, { flex: 1.2 }]}>Optimal Holding</Text>
+                    <Text style={[styles.headerText, { flex: 1 }]}>Optimal Shares</Text>
+                    <Text style={[styles.headerText, { flex: 1 }]}>Change in Shares</Text>
+                  </View>
+                  {resultData.assets.length === 0 ? (
+                    <Text style={styles.noDataText}>No allocation data available</Text>
+                  ) : (
+                    resultData.assets.map((item) => (
+                      <View key={item.id} style={styles.tableRow}>
+                        <Text style={[styles.cell, { flex: 1.5 }]}>{item.name || 'N/A'}</Text>
+                        <Text style={[styles.cell, { flex: 1 }]}>{(item.currentPrice || 0).toFixed(2)}</Text>
+                        <Text style={[styles.cell, { flex: 1.2 }]}>{(item.currentHolding || 0).toFixed(2)}%</Text>
+                        <Text style={[styles.cell, { flex: 1.2 }]}>{(item.optimalHolding || 0).toFixed(2)}%</Text>
+                        <Text style={[styles.cell, { flex: 1 }]}>{(item.optimalShares || 0).toFixed(0)}</Text>
+                        <Text style={[styles.cell, { flex: 1 }]}>{(item.changeInShares || 0).toFixed(0)}</Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
+            </>
           )}
-        </View>
-      </View>
+
+          {activeTab === 'EF' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Efficient Frontier</Text>
+              <Text style={styles.noDataText}>Efficient Frontier chart coming soon (e.g., risk vs. return plot)</Text>
+              <LineChart
+                data={{
+                  labels: ['Risk 1', 'Risk 2', 'Risk 3'],
+                  datasets: [{ data: [1, 2, 3] }],
+                }}
+                width={Dimensions.get('window').width - 40}
+                height={220}
+                chartConfig={{
+                  backgroundColor: '#1E1E1E',
+                  backgroundGradientFrom: '#1E1E1E',
+                  backgroundGradientTo: '#1E1E1E',
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                }}
+                bezier
+                style={{ marginVertical: 8 }}
+              />
+            </View>
+          )}
+
+          {activeTab === 'Correlation' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Correlation Matrix</Text>
+              <Text style={styles.noDataText}>Correlation matrix coming soon (e.g., heatmap of asset correlations)</Text>
+        
+              <View style={styles.assetTable}>
+              <View style={styles.tableHeader}>
+                  <Text style={[styles.headerText, { flex: 1 }]}>Asset</Text>
+                  <Text style={[styles.headerText, { flex: 1 }]}>BTCUSD</Text>
+                </View>
+                
+                {Array.isArray(resultData.assets) && resultData.assets.length > 0 ? (
+                  resultData.assets.map((asset, index) => {
+                    if (!asset || typeof asset.id === 'undefined') {
+                      console.warn('Skipping invalid asset:', asset);
+                      return null; // Skip invalid assets
+                    }
+                    return (
+                      <View key={`${asset.id}-${index}`} style={styles.tableRow}>
+                        <Text style={[styles.cell, { flex: 1 }]}>{String(asset.name || 'N/A')}</Text>
+                        <Text style={[styles.cell, { flex: 1 }]}>{String((Math.random() * 1).toFixed(2) || 'N/A')}</Text>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.noDataText}>No assets available for correlation</Text>
+                )}
+             </View>
+              {console.log('Correlation Render - Assets:', resultData.assets, 'Loading:', isLoading)}
+            </View>
+          )}
+
+          {activeTab === 'Simulation' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Simulation Results</Text>
+              <Text style={styles.noDataText}>Simulation results coming soon (e.g., Monte Carlo outcomes)</Text>
+              <BarChart
+                data={{
+                  labels: ['Sim 1', 'Sim 2', 'Sim 3'],
+                  datasets: [{ data: [1000, 1500, 1200] }],
+                }}
+                width={Dimensions.get('window').width - 40}
+                height={220}
+                chartConfig={{
+                  backgroundColor: '#1E1E1E',
+                  backgroundGradientFrom: '#1E1E1E',
+                  backgroundGradientTo: '#1E1E1E',
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                }}
+                style={{ marginVertical: 8 }}
+              />
+            </View>
+          )}
+        </>
+      )}
     </ScrollView>
   );
 };
