@@ -1,70 +1,232 @@
 import API from './api';
 import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const BASE_URL = 'https://blindly-beloved-muskox.ngrok-free.app';
+const API_KEY = '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff';
+const USER = 'AGBOT1';
 
-export const optimizePortfolio = async (params = {}, retries = 3) => {
+// Axios instance with default headers
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    user: USER,
+    api_key: API_KEY,
+  },
+});
+
+const objectiveMap = {
+  'Global Minimum Variance': 0,
+  'Max Sharpe Ratio': 1,
+  'Max Sortino Ratio': 2,
+  'Min Conditional VaR': 3,
+  'Risk Parity Diversification': 4,
+};
+
+export const optimizePortfolio = async (params = {}) => {
   try {
-    let sessionId = await AsyncStorage.getItem('sessionId');
-    if (!sessionId) {
-      sessionId = generateSessionId();
-      await AsyncStorage.setItem('sessionId', sessionId);
-    }
-
-    // Default parameters from documentation
-    const defaultParams = {
-      allowShortSell: false,
-      risk_tolerance: 0.3,
-      target_return: 0.15,
-      total_portfolio_value: 1000000,
-      basecur: 'USD',
-      risk_free_rate: 0.01,
-      arrSymbol: ['EURUSD'], // Default to a single symbol
-      objective: 0, // Default to minimize volatility
-      group_cond: {}, // Optional, empty by default
-      StartDate: '2023-12-01', // Default dates (adjustable)
-      EndDate: '2023-12-31', // Default dates (adjustable)
-      sid: sessionId,
+    const payload = {
+      StartDate: params.StartDate,
+      EndDate: params.EndDate,
+      arrSymbol: params.arrSymbol,
+      objective: objectiveMap[params.objective] !== undefined ? objectiveMap[params.objective] : 0,
+      target_return: params.target_return || 0.15,
+      risk_tolerance: params.risk_tolerance || 0.3,
+      allowShortSell: params.allowShortSell || false,
+      risk_free_rate: params.risk_free_rate || 0.01,
+      basecur: params.basecur || 'USD',
+      total_portfolio_value: params.total_portfolio_value || 1000000,
+      group_cond: params.group_cond,
     };
 
-    // Merge default params with provided params, overriding defaults
-    const requestBody = { ...defaultParams, ...params };
+    console.log('Axios Request Config:', {
+      url: '/rest/v1/app/54/asset.optimize',
+      method: 'POST',
+      headers: api.defaults.headers,
+      data: payload,
+    });
+    console.log('API Payload:', JSON.stringify(payload, null, 2));
 
-    // Validate required fields
-    if (!requestBody.arrSymbol || !Array.isArray(requestBody.arrSymbol) || requestBody.arrSymbol.length === 0) {
-      throw new Error('arrSymbol must be a non-empty array of financial instruments.');
-    }
-    if (!requestBody.StartDate || !requestBody.EndDate) {
-      throw new Error('StartDate and EndDate are required.');
+    const response = await api.post('/rest/v1/app/54/asset.optimize', payload);
+    // console.log('Raw API Response:', JSON.stringify(response.data, null, 2));
+    console.log('Raw Alloc:', response.data.res?.asset_allocate?.alloc);
+    console.log('Raw Shares:', response.data.res?.asset_allocate?.shares);
+    console.log('Raw Prices:', response.data.res?.asset_allocate?.prices);
+
+    if (!response.data?.status) {
+      throw new Error(response.data?.res || 'API request failed');
     }
 
-    const response = await API.post('/rest/v1/app/54/asset.optimize', requestBody);
+    const res = response.data.res;
 
-    if (!response?.status) {
-      throw new Error(response?.res || 'API returned false status');
+    if (typeof res === 'string') {
+      throw new Error(res);
     }
+
+    const allocations = res.asset_allocate?.alloc
+      ? Object.entries(res.asset_allocate.alloc).map(([symbol, weight]) => ({
+          symbol,
+          weight: weight / 100,
+          shares: res.asset_allocate.shares?.[symbol] || 0,
+          currentPrice: res.asset_allocate.prices?.[symbol] || 0,
+        }))
+      : [];
+
+      if (allocations.length === 0) {
+        console.warn('No allocations returned from API', {
+          symbols: params.arrSymbol,
+          alloc: res?.asset_allocate?.alloc,
+          shares: res?.asset_allocate?.shares,
+          prices: res?.asset_allocate?.prices,
+          response: res,
+        });
+      }
+
+    const metrics = {
+      annualizedReturn: res.asset_soln?.return || 0,
+      annualizedVolatility: res.asset_soln?.volatility || 0,
+      sharpeRatio: res.asset_soln?.sharpe || 0,
+      var95: res.asset_soln?.var || 0,
+      cvar95: res.asset_soln?.cvar || 0,
+      cashLeft: res.asset_allocate?.leftover || 0,
+    };
 
     return {
-      status: response.status,
-      data: response.res,
+      status: true,
+      data: {
+        asset_allocate: allocations,
+        ...metrics,
+      },
+      fullResponse: res,
     };
   } catch (error) {
-    console.error('Error optimizing portfolio:', error);
-    console.error('Error details:', {
+    console.error('API Error Details:', {
+      message: error.message,
       response: error.response?.data,
       status: error.response?.status,
-      message: error.message,
     });
-
-    // Handle invalid session
-    if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
-      console.log(`Invalid session detected. Retrying (${retries} left)...`);
-      await AsyncStorage.removeItem('sessionId');
-      await delay(500);
-      return optimizePortfolio(params, retries - 1);
-    }
-
-    throw error;
+    throw new Error(res?.err_msg || error.message || 'Optimization failed');
   }
 };
+// import axios from 'axios';
+// import { v4 as uuidv4 } from 'uuid';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// const BASE_URL = 'https://blindly-beloved-muskox.ngrok-free.app';
+// const API_KEY = '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff';
+// const USER = 'AGBOT1';
+
+// // Axios instance with default headers
+// const api = axios.create({
+//   baseURL: BASE_URL,
+//   headers: {
+//     'Content-Type': 'application/json',
+//     user: USER,
+//     api_key: API_KEY,
+//   },
+// });
+
+// const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// // Updated objective mapping (for reference, but using string directly)
+// const objectiveMap = {
+//   'Global Minimum Variance': 0,
+//   'Max Sharpe Ratio': 1,
+//   'Max Sortino Ratio': 2,
+//   'Min Conditional VaR': 3,
+//   'Risk Parity Diversification': 4,
+// };
+
+// export const optimizePortfolio = async (params = {}) => {
+//   try {
+//     // Prepare the request payload
+//     const payload = {
+//       StartDate: params.StartDate,
+//       EndDate: params.EndDate,
+//       target_return: params.target_return || 0.15,
+//       risk_tolerance: params.risk_tolerance || 0.3,
+//       allowShortSell: params.allowShortSell || false,
+//       objective: objectiveMap[params.objective] !== undefined ? objectiveMap[params.objective] : 0,
+//       total_portfolio_value: params.total_portfolio_value || 1000000,
+//       risk_free_rate: params.risk_free_rate || 0.01,
+//       basecur: params.basecur || 'USD',
+//       arrSymbol: params.arrSymbol || [],
+//       group_cond: params.group_cond || {
+//         map: params.arrSymbol?.reduce((acc, symbol, idx) => ({
+//           ...acc,
+//           [symbol]: `Group${idx + 1}`,
+//         }), {}),
+//         lower: params.arrSymbol?.reduce((acc, _, idx) => ({
+//           ...acc,
+//           [`Group${idx + 1}`]: 0.0,
+//         }), {}),
+//         upper: params.arrSymbol?.reduce((acc, _, idx) => ({
+//           ...acc,
+//           [`Group${idx + 1}`]: 1.0,
+//         }), {}),
+//       },
+//     };
+
+//     console.log('API Payload:', JSON.stringify(payload, null, 2));
+//     const response = await api.post('/rest/v1/app/54/asset.optimize', payload);
+//     console.log('Raw API Response:', JSON.stringify(response.data, null, 2));
+
+//     // Extract the 'res' object from the response
+//     const res = response.data.res;
+
+//     // Check for success
+//     if (!response.data?.status || !res) {
+//       throw new Error(response.data?.res?.err_msg || 'API request failed');
+//     }
+
+//     // Normalize allocations
+//     const allocations = res.asset_allocate?.alloc
+//     ? Object.entries(res.asset_allocate.alloc).map(([symbol, weight]) => ({
+//         symbol,
+//         weight: weight / 100,
+//         shares: res.asset_allocate.shares?.[symbol] || 0,
+//         currentPrice: res.asset_allocate.prices?.[symbol] || 0,
+//       }))
+//     : [];
+
+//     if (allocations.length === 0) {
+//       console.warn('No allocations returned from API', {
+//         symbols: params.arrSymbol,
+//         response: res,
+//       });
+//     }
+
+//     // Extract metrics from asset_soln or other relevant fields
+//     const metrics = {
+//       annualizedReturn: res.asset_soln?.return || 0,
+//       annualizedVolatility: res.asset_soln?.volatility || 0,
+//       sharpeRatio: res.asset_soln?.sharpe || 0,
+//       var95: res.asset_soln?.var || 0,
+//       cvar95: res.asset_soln?.cvar || 0,
+//       cashLeft: res.asset_allocate?.leftover || 0,
+//     };
+
+//     console.log('Normalized Allocations:', JSON.stringify(allocations, null, 2));
+//     console.log('Extracted Metrics:', JSON.stringify(metrics, null, 2));
+//     console.log('Full API Response:', JSON.stringify(response.data, null, 2));
+
+//     // Return structured response
+//     return {
+//       status: true,
+//       data: {
+//         asset_allocate: allocations,
+//         ...metrics,
+//       },
+//       fullResponse: res,
+//     };
+//   } catch (error) {
+//     console.error('API Error Details:', {
+//       message: error.message,
+//       response: error.response?.data,
+//       status: error.response?.status,
+//     });
+//     throw new Error(error.response?.data?.res?.err_msg || error.message || 'Optimization failed');
+//   }
+// };

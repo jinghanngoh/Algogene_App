@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable, 
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { login } from '../../services/auth/auth';
+import { googleLogin } from '../../services/auth/googleAuth';
 import loginImg from '../../assets/img/login.png';
 import logo_s from '../../assets/img/logo_s.png';
 import google_icon from '../../assets/img/google_icon.png';
@@ -92,6 +93,21 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error, error.stack);
       Alert.alert('Error', error.message || 'Login failed. Please try again.');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await googleLogin();
+      console.log('Google Login result:', result);
+      if (result.success) {
+        router.replace('/(tabs)/home');
+      } else {
+        Alert.alert('Google Login Failed', result.message);
+      }
+    } catch (error) {
+      console.error('Google Login error:', error);
+      Alert.alert('Error', 'Google login failed. Please try again.');
     }
   };
 
@@ -209,7 +225,7 @@ const Login = () => {
         <View style={styles.dividerLine} />
       </View>
       <View style={styles.socialContainer}>
-        <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
+        <TouchableOpacity style={[styles.socialButton, styles.googleButton]} onPress={handleGoogleLogin}>
           <Image source={google_icon} style={styles.socialIcon} />
           <Text style={styles.socialButtonText}>Sign in with Google</Text>
         </TouchableOpacity>

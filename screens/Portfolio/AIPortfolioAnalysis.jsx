@@ -1,8 +1,13 @@
-import React, { useState , useEffect} from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform, ScrollView} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { optimizePortfolio } from '../../services/PortfolioApi';
+import { useRouter } from 'expo-router';
 
+// Edit such that we cant have ending date and starting date switched 
 const AIPortfolioAnalysis = () => {
+  // const navigation = useNavigation(); // Initialize navigation
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [initialCapital, setInitialCapital] = useState('');
@@ -33,6 +38,10 @@ const AIPortfolioAnalysis = () => {
   const [targetReturn, setTargetReturn] = useState('0');
   const [assetClassOptions, setAssetClassOptions] = useState([]); 
   const [modalIndex, setModalIndex] = useState(-1); 
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showResult, setShowResult] = useState(false);
+  const router = useRouter(); 
 
   const assetClasses = [
     'Algo Marketplace',
@@ -59,7 +68,7 @@ const AIPortfolioAnalysis = () => {
   const objectives = [
     'Equally Weighted',
     'Global Minimum Variance',
-    'Max Sharpe Ration',
+    'Max Sharpe Ratio',
     'Max Return given Risk Tolerance',
     'Min Volatility given Target Return',
     'Global Minimum Downside Volatility',
@@ -79,7 +88,7 @@ const AIPortfolioAnalysis = () => {
 
   const assetClassCategories = {
     'Commodity': ['COCOA', 'COFFEE', 'CORNUSD', 'SOYBNUSD', 'SUGARUSD', 'WHEATUSD'],
-    'Crypto': ['ETHBTC', 'ETHBTCM', 'ETHEUR', 'ETHGBP', 'ETHUSD', 'ETHUSDM' ],
+    'Crypto': ["XAUUSD","BTCUSD",'ETHBTC', 'ETHBTCM', 'ETHEUR', 'ETHGBP', 'ETHUSD', 'ETHUSDM' ],
     'Energy': [], 
     'Equity (HKEX)': [],
     'Equity (KR)': [],
@@ -90,7 +99,7 @@ const AIPortfolioAnalysis = () => {
     'Equity (TWSE)': [],
     'Equity (TYO)': [],
     'Equity (US)': ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'],
-    'Forex': [], 
+    'Forex': ["EURUSD"], 
     // ASK BOSS FOR WHERE TO GET THIS LIST
   }; 
 
@@ -104,20 +113,35 @@ const AIPortfolioAnalysis = () => {
   };
 
   const handleDateChange = (event, selected) => {
+    if (event.type === 'dismissed') {
+      hideDatePicker();
+      return;
+    }
     if (selected) {
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Set to midnight for comparison
+      today.setHours(0, 0, 0, 0);
       if (selected > today) {
         alert('Date cannot be today or in the future.');
         return;
       }
-      setDate(selected);
-      if (selectedField === 'startDate') setStartDate(selected.toLocaleDateString('en-GB'));
-      if (selectedField === 'endDate') setEndDate(selected.toLocaleDateString('en-GB'));
+      const formattedDate = selected.toISOString().split('T')[0]; // YYYY-MM-DD
+      if (selectedField === 'startDate') {
+        if (endDate && new Date(formattedDate) > new Date(endDate)) {
+          alert('Start date cannot be after end date.');
+          return;
+        }
+        setStartDate(formattedDate);
+      }
+      if (selectedField === 'endDate') {
+        if (startDate && new Date(formattedDate) < new Date(startDate)) {
+          alert('End date cannot be before start date.');
+          return;
+        }
+        setEndDate(formattedDate);
+      }
     }
     hideDatePicker();
   };
-
 //   useEffect(() => {
 //     if (selectedField === 'assetClass' && tableData.some(row => !row.assetClass)) {
 //       const firstEmptyIndex = tableData.findIndex(row => !row.assetClass);
@@ -168,18 +192,14 @@ const AIPortfolioAnalysis = () => {
     if (selectedField === 'benchmark') setBenchmark(option);
     if (selectedField === 'rebalanceFrequency') setRebalanceFrequency(option);
     if (selectedField === 'assetClass' && index >= 0) {
-      console.log('Selected assetClass:', option, 'at index:', index);
       const newTableData = [...tableData];
       newTableData[index].assetClass = option;
       setTableData(newTableData);
-      console.log('Updated tableData:', newTableData);
     }
     if (selectedField === 'symbol' && index >= 0) {
-      console.log('Selected symbol:', option, 'at index:', index);
       const newTableData = [...tableData];
-      newTableData[index].symbol = option; // Ensure update targets the correct index
+      newTableData[index].symbol = option;
       setTableData(newTableData);
-      console.log('Updated tableData:', newTableData);
     }
     hideModal();
   };
@@ -206,36 +226,158 @@ const AIPortfolioAnalysis = () => {
   };
 
   const incrementTransactionCost = () => {
-    updateNumericField(setTransactionCost, transactionCost, 0, 10, 1);
+    updateNumericField(setTransactionCost, parseFloat(transactionCost) + 0.1, 0, 10, 1);
   };
 
   const decrementTransactionCost = () => {
-    updateNumericField(setTransactionCost, transactionCost, 0, 10, 1);
+    updateNumericField(setTransactionCost, parseFloat(transactionCost) - 0.1, 0, 10, 1);
   };
-
-  const handleCompute = async () => { 
+  
+  const handleCompute = async () => {
+    console.log("Compute Pressed");
     try {
-      const portfolioParams = {
-        allowShortSell,
-        risk_tolerance: parseFloat(riskTolerance) / 100,
-        target_return: parseFloat(targetReturn) / 100,
-        total_portfolio_value: parseFloat(initialCapital) || 1000000,
-        basecur: currency,
-        risk_free_rate: parseFloat(riskFreeRate) / 100,
-        arrSymbol: tableData
-          .filter(row => row.symbol && row.holding)
-          .map(row => row.symbol),
-        objective: objectives.indexOf(objective),
-        group_cond: {},
+      console.log("Router Object:", router);
+      setIsLoading(true);
+      setErrorMessage('');
+
+      // Validate inputs
+      console.log('Input Validation:', { startDate, endDate, objective, tableData });
+      if (!startDate || !endDate) throw new Error('Please select date range');
+      if (new Date(endDate) < new Date(startDate)) throw new Error('End date cannot be earlier than start date');
+      if (!objective) throw new Error('Please select an objective');
+
+      // Extract symbol strings
+      const validSymbols = tableData
+        .filter(row => row.symbol && row.holding)
+        .map(row => row.symbol);
+
+      console.log('Valid Symbols:', validSymbols);
+      if (validSymbols.length === 0) {
+        throw new Error('Please add at least one asset');
+      }
+
+      // Prepare API parameters
+      const apiParams = {
         StartDate: startDate,
         EndDate: endDate,
+        arrSymbol: validSymbols,
+        objective: objective,
+        target_return: parseFloat(targetReturn) / 100 || 0.15,
+        risk_tolerance: parseFloat(riskTolerance) / 100 || 0.3,
+        allowShortSell: allowShortSell || false,
+        risk_free_rate: parseFloat(riskFreeRate) / 100 || 0.01,
+        basecur: currency || 'USD',
+        total_portfolio_value: parseFloat(initialCapital) || 1000000,
+        group_cond: {
+          map: validSymbols.reduce((acc, symbol, idx) => ({
+            ...acc,
+            [symbol]: `Group${idx + 1}`,
+          }), {}),
+          lower: validSymbols.reduce((acc, _, idx) => ({
+            ...acc,
+            [`Group${idx + 1}`]: 0.0,
+          }), {}),
+          upper: validSymbols.reduce((acc, _, idx) => ({
+            ...acc,
+            [`Group${idx + 1}`]: 1.0,
+          }), {}),
+        },
       };
-  
-      const result = await optimizePortfolio(portfolioParams);
-      console.log('Optimization Result:', result.data);
+
+      console.log('API Parameters (Pre-Request):', JSON.stringify(apiParams, null, 2));
+
+      const result = await optimizePortfolio(apiParams);
+
+      // console.log('API Response:', JSON.stringify(result, null, 2));
+      console.log('Asset Allocate:', result.data?.asset_allocate);
+
+      if (!result.data) {
+        throw new Error('No data returned from API');
+      }
+
+      if (result.data.asset_allocate.length === 0) {
+        throw new Error('No allocations returned. Check symbol compatibility or date range.');
+      }
+
+      const resultData = {
+        annualizedReturn: result.data.annualizedReturn || 0,
+        annualizedVolatility: result.data.annualizedVolatility || 0,
+        sharpeRatio: result.data.sharpeRatio || 0,
+        var95: result.data.var95 || 0,
+        cvar95: result.data.cvar95 || 0,
+        cashLeft: result.data.cashLeft || 0,
+        assets: result.data.asset_allocate?.map((allocation, index) => {
+          const currentHolding = parseFloat(tableData.find(row => row.symbol === allocation.symbol)?.holding) || 0;
+          const currentPrice = allocation.currentPrice || 1;
+          const initialCapitalValue = parseFloat(initialCapital) || 1000000;
+          const currentShares = (currentHolding / 100) * initialCapitalValue / currentPrice;
+          return {
+            id: `${index}`,
+            name: allocation.symbol || 'UNKNOWN',
+            currentPrice,
+            currentHolding,
+            optimalHolding: Math.round(allocation.weight * 100) || 0,
+            optimalShares: allocation.shares || 0,
+            changeInShares: allocation.shares ? allocation.shares - currentShares : 0,
+          };
+        }) || [],
+      };
+
+      console.log('Result Data for Navigation:', JSON.stringify(resultData, null, 2));
+
+      // Navigate to Portfolio/PortfolioResult
+      // router.push({
+      //   pathname: 'Portfolio/PortfolioResult',
+      //   params: { resultData: JSON.stringify(resultData) },
+      // });
+
+
+      // Test navigation with simple param
+    // const navigationParams = {
+    //   pathname: 'Portfolio/PortfolioResult', 
+    //   params: { resultData: encodeURIComponent(JSON.stringify(resultData)) },
+    // };
+    // console.log('Navigation Params:', JSON.stringify(navigationParams, null, 2));
+
+
+
+
+
+
+    // Navigate to PortfolioResult
+    router.push({
+      pathname: 'Portfolio/PortfolioResult',
+      params: {
+        resultData: encodeURIComponent(JSON.stringify(resultData)),
+        assetAllocate: encodeURIComponent(JSON.stringify(result.data?.asset_allocate)),
+      },
+    });
+      
+      
+
+      // Update tableData with allocations if present
+      if (result.data.asset_allocate?.length > 0) {
+        setTableData(
+          result.data.asset_allocate.map(allocation => ({
+            assetClass: tableData.find(row => row.symbol === allocation.symbol)?.assetClass || '',
+            symbol: allocation.symbol,
+            holding: Math.round(allocation.weight * 100).toString(),
+            isLocked: true,
+          }))
+        );
+      } else {
+        console.warn('No allocation data to update tableData', {
+          asset_allocate: result.data.asset_allocate,
+          validSymbols,
+          apiParams,
+        });
+      }
     } catch (error) {
-      console.error('Compute failed:', error.message);
-      alert('Failed to optimize portfolio. Check console for details.');
+      console.error('Optimization Error:', error.message, error.stack);
+      setErrorMessage(error.message);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -258,17 +400,18 @@ const AIPortfolioAnalysis = () => {
   };
 
   return (
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
     <View style={styles.container}>
       <Text style={styles.headerTitle}>PORTFOLIO OPTIMIZER</Text>
 
       <View style={styles.inputRow}>
         <Text style={styles.label}>Data Period:</Text>
         <TouchableOpacity style={styles.dropdown} onPress={() => showDatePicker('startDate')}>
-          <Text style={styles.dropdownText}>{startDate || 'DD/MM/YYYY'}</Text>
+            <Text style={styles.dropdownText}>{startDate || 'YYYY-MM-DD'}</Text>
         </TouchableOpacity>
-        <Text style={styles.hyphen}>-</Text>
+          <Text style={styles.hyphen}>-</Text>
         <TouchableOpacity style={styles.dropdown} onPress={() => showDatePicker('endDate')}>
-          <Text style={styles.dropdownText}>{endDate || 'DD/MM/YYYY'}</Text>
+            <Text style={styles.dropdownText}>{endDate || 'YYYY-MM-DD'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -308,14 +451,18 @@ const AIPortfolioAnalysis = () => {
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Transaction Cost (%):</Text>
                 <View style={styles.inputWithArrows}>
-                  <TextInput
-                    style={styles.input}
-                    value={transactionCost}
-                    onChangeText={(value) => updateNumericField(setTransactionCost, value, 0, 10, 1)}
-                    placeholder="0.0"
-                    placeholderTextColor="gray"
-                    keyboardType="numeric"
-                  />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={transactionCost}
+                  onChangeText={(value) => {
+                    // Allow only valid numeric input with one decimal place
+                    const formattedValue = value.match(/^\d*\.?\d{0,1}$/) ? value : transactionCost;
+                    setTransactionCost(formattedValue);
+                  }}
+                  placeholder="0.0"
+                  placeholderTextColor="gray"
+                  keyboardType="numeric"
+                />
                   <View style={styles.arrowContainer}>
                     <TouchableOpacity onPress={incrementTransactionCost} style={styles.arrow}>
                       <Text style={styles.arrowText}>↑</Text>
@@ -324,8 +471,8 @@ const AIPortfolioAnalysis = () => {
                       <Text style={styles.arrowText}>↓</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
               </View>
+            </View>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Rebalance Frequency:</Text>
                 <TouchableOpacity style={styles.dropdown} onPress={() => showModal('rebalanceFrequency')}>
@@ -657,8 +804,9 @@ const AIPortfolioAnalysis = () => {
         </View>
       </Modal>
     </View>
+    </ScrollView>
   );
-};
+}; 
 
 const styles = StyleSheet.create({
   container: {
@@ -678,6 +826,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 15,
     alignItems: 'center',
+    height: 50,
+  },
+  inputWithArrows: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1, // Ensure it aligns with the label
+    backgroundColor: 'white',
+    borderRadius: 5,
+    paddingHorizontal: 5,
+    marginLeft: 10,
+    minHeight: 40, // Match the height of other inputs
+  },
+  arrowContainer: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    marginLeft: 5,
+  },
+  arrow: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  arrowText: {
+    fontSize: 16,
+    color: 'black',
   },
   label: {
     color: 'lightgray',

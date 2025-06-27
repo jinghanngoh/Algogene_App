@@ -30,6 +30,7 @@ export default function RootLayout() {
         <Stack.Screen name="Portfolio/LiveTest" />
         <Stack.Screen name="Portfolio/MyAccount" />
         <Stack.Screen name="Portfolio/RealTrade" />
+        <Stack.Screen name="Portfolio/PortfolioResult" />
       </Stack>
     </SubscriptionProvider>
   );
