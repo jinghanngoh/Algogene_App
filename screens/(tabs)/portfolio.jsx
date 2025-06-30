@@ -12,23 +12,19 @@ const Portfolio = () => {
     const { subscribedAlgorithm } = useSubscription(); 
 
     const menuItems = [
-        { id: 1, name: "My Account"},
-        { id: 2, name: "Live Test"},
-        { id: 3, name: "Real Trade"},
-        { id: 4, name: "AI Portfolio Analysis"},
+        { id: 1, name: "Account Manager"},
+        { id: 2, name: "Sub Accounts"},
+        { id: 3, name: "AI Portfolio Analysis"},
     ];
 
     const handleMenuItemPress = (itemName) => {
         switch (itemName) {
-            case "My Account":
-                router.push('/Portfolio/MyAccount');
+            case "Account Manager":
+                router.push('/Portfolio/AccountManager');
                 break; 
-            case "Live Test":
-                router.push('/Portfolio/LiveTest');
-                break; 
-            case "Real Trade":
-                router.push('/Portfolio/RealTrade');
-                break; 
+            case "Sub Accounts":
+                router.push('/Portfolio/SubAccounts');
+                break;
             case "AI Portfolio Analysis":
                 router.push('/Portfolio/AIPortfolioAnalysis');
                 break; 

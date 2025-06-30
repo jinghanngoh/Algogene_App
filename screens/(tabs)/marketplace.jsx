@@ -4,10 +4,9 @@ import { LineChart } from 'react-native-chart-kit';
 import { useRouter } from 'expo-router';
 import placeholder from '../../assets/img/placeholder.png';
 import TradingModal from '../components/TradingModal'; 
-import { fetchPublicAlgos } from '../../services/MarketplaceApi';
+import { fetchPublicAlgos, fetchAlgoPerformance, fetchAlgoDailyReturns } from '../../services/MarketplaceApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-get-random-values';
-import { polyfillWebCrypto } from 'expo-standard-web-crypto'; 
 import { debounce } from 'lodash';
 
 const Marketplace = () => {
@@ -21,43 +20,8 @@ const Marketplace = () => {
   const [algorithms, setAlgorithms] = useState([]);
   const [page, setPage] = useState(1); 
   const [hasMore, setHasMore] = useState(true); 
-  const itemsPerPage = 10; 
+  const itemsPerPage = 5; 
 
-  // const loadAlgorithms = async (retryCount = 2) => {
-  // // const loadAlgorithms = async () => {
-  //   if (isLoading || !hasMore) return;
-    
-  //   setIsLoading(true);
-  //   try {
-  //     const result = await fetchPublicAlgos();
-  //     // console.log("API Response:", result);
-      
-  //     // Check if response has the expected structure
-  //     if (!result || !result.data || !Array.isArray(result.data)) {
-  //       throw new Error('Invalid API response format');
-  //     }
-  
-  //     const startIndex = (page - 1) * itemsPerPage;
-  //     const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
-      
-  //     setAlgorithms((prev) => [...prev, ...paginatedData]);
-  //     setHasMore(result.data.length > page * itemsPerPage);
-  //     setPage(prev => prev + 1);
-  //   } catch (error) {
-  //     console.error('Error loading algorithms:', error);
-  //     if (retryCount > 0 && error.message.includes('Invalid session')) {
-  //       console.log(`Retrying loadAlgorithms (${retryCount - 1} left)...`);
-  //       await AsyncStorage.removeItem('sessionId');
-  //       setIsLoading(false);
-  //       return loadAlgorithms(retryCount - 1);
-  //     // console.error('Error loading algorithms:', error);
-  //     // Alert.alert('Error', error.message || 'Failed to load algorithms');
-  //   } 
-  //   Alert.alert('Error', error.message || 'Failed to load algorithms');
-  //   }finally {
-  //     setIsLoading(false);
-  //   }
-  // };
   const loadAlgorithms = useCallback(
     debounce(async () => {
       if (isLoading || !hasMore) return;
@@ -67,7 +31,6 @@ const Marketplace = () => {
         const sessionId = await AsyncStorage.getItem('sessionId');
         console.log('Marketplace sessionId:', sessionId);
         const result = await fetchPublicAlgos();
-        // console.log('API Response:', result);
 
         if (!result || !result.data || !Array.isArray(result.data)) {
           throw new Error('Invalid API response format');
@@ -76,7 +39,74 @@ const Marketplace = () => {
         const startIndex = (page - 1) * itemsPerPage;
         const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
 
-        setAlgorithms((prev) => [...prev, ...paginatedData]);
+        const enrichedData = await Promise.all(
+          paginatedData.map(async (algorithm) => {
+            try {
+              console.log(`Fetching performance for algo_id: ${algorithm.algo_id}`);
+              const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
+              console.log(`Performance response for algo_id ${algorithm.algo_id}:`, JSON.stringify(performanceResponse, null, 2));
+
+              console.log(`Fetching daily returns for algo_id: ${algorithm.algo_id}`);
+              const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id, null, false);
+
+              // Get start date and end date
+              const startDate = new Date(algorithm.created_at);
+              const endDate = new Date('2025-06-27'); // Current date
+              const dates = [];
+              for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                dates.push(new Date(d).toISOString().slice(0, 10));
+              }
+
+              // Map cumulative returns to dates
+              const dateToCr = new Map(dailyReturnsResponse.map(item => [item.t, item.cr * 100]));
+              const cumulativeReturns = dates.map(date => dateToCr.get(date) || 0);
+
+              // Sample data to fit chart height (max 10 points)
+              const step = Math.max(1, Math.floor(cumulativeReturns.length / 10));
+              const sampledReturns = [];
+              const sampledLabels = [];
+              for (let i = 0; i < cumulativeReturns.length; i += step) {
+                if (i < cumulativeReturns.length) {
+                  sampledReturns.push(cumulativeReturns[i]);
+                  sampledLabels.push(dates[i].slice(0, 7)); // Use YYYY-MM for labels
+                }
+              }
+
+              // Determine y-axis bounds
+              const maxAbsReturn = Math.max(...sampledReturns.map(Math.abs), 0);
+              const yAxisBound = Math.ceil(maxAbsReturn);
+
+              const chartData = sampledReturns.length > 0 ? {
+                labels: sampledLabels,
+                data: sampledReturns,
+                yAxisBound: { min: -yAxisBound, max: yAxisBound }
+              } : {
+                labels: ['No Data'],
+                data: [0],
+                yAxisBound: { min: 0, max: 0 }
+              };
+
+              console.log(`Chart data for algo_id ${algorithm.algo_id}:`, JSON.stringify(chartData, null, 2));
+
+              return {
+                ...algorithm,
+                performanceStats: performanceResponse.performance || { Score_Total: 0 },
+                setting: performanceResponse.setting || {},
+                chartData
+              };
+            } catch (error) {
+              console.error(`Error fetching data for algo_id ${algorithm.algo_id}:`, error);
+              return {
+                ...algorithm,
+                performanceStats: { Score_Total: 0 },
+                setting: {},
+                chartData: { labels: ['No Data'], data: [0], yAxisBound: { min: 0, max: 0 } }
+              };
+            }
+          })
+        );
+
+        setAlgorithms((prev) => [...prev, ...enrichedData]);
         setHasMore(result.data.length > page * itemsPerPage);
         setPage((prev) => prev + 1);
       } catch (error) {
@@ -85,77 +115,9 @@ const Marketplace = () => {
       } finally {
         setIsLoading(false);
       }
-    }, 300), // Debounce for 300ms to prevent rapid calls
+    }, 300),
     [isLoading, hasMore, page]
   );
-  // const loadAlgorithms = async () => {
-  //   if (isLoading || !hasMore) return;
-
-  //   setIsLoading(true);
-  //   try {
-  //     const sessionId = await AsyncStorage.getItem('sessionId');
-  //     console.log('Marketplace sessionId:', sessionId);
-  //     const result = await fetchPublicAlgos();
-  //     console.log('API Response:', result);
-
-  //     if (!result || !result.data || !Array.isArray(result.data)) {
-  //       throw new Error('Invalid API response format');
-  //     }
-
-  //     const startIndex = (page - 1) * itemsPerPage;
-  //     const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
-
-  //     setAlgorithms((prev) => [...prev, ...paginatedData]);
-  //     setHasMore(result.data.length > page * itemsPerPage);
-  //     setPage((prev) => prev + 1);
-  //   } catch (error) {
-  //     console.error('Error loading algorithms:', error);
-  //     Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  useEffect(() => {
-    loadAlgorithms();
-  }, []);
-
-  // useEffect(() => {
-  //   const timer = setTimeout(() => loadAlgorithms(), 1000); // Delay 1s
-  //   return () => clearTimeout(timer);
-  // }, []);
-
-  const renderFooter = () => {
-    if (!hasMore) return (
-      <Text style={styles.footerText}>No more algorithms to load</Text>
-    );
-    
-    return isLoading ? (
-      <ActivityIndicator size="small" color="#2196F3" />
-    ) : (
-      <TouchableOpacity 
-        style={styles.loadMoreButton}
-        onPress={loadAlgorithms}
-      >
-        <Text style={styles.loadMoreText}>Load More</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  // Generate random performance score (60-99) for each algorithm
-  const getRandomPerformance = () => ({
-    score: Math.floor(Math.random() * 40) + 60
-  });
-
-  // Generate chart data for visualization
-  const generateChartData = () => {
-    const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-    const baseValue = Math.floor(Math.random() * 50) + 50;
-    return {
-      labels,
-      data: labels.map((_, i) => baseValue + (i * 10) + Math.floor(Math.random() * 10))
-    };
-  };
 
   const renderContentBoxes = () => {
     if (isLoading && page === 1) {
@@ -172,110 +134,125 @@ const Marketplace = () => {
         contentContainerStyle={[styles.scrollContentContainer, { paddingTop: 50 }]}
       >
         {algorithms.length > 0 ? (
-          algorithms.map((algorithm, index) => {
-            const performance = getRandomPerformance();
-            const chartData = generateChartData();
-            
-            return (
+          algorithms.map((algorithm, index) => (
+            <TouchableOpacity
+              key={algorithm.algo_id}
+              style={[styles.contentBox, index === 0 && styles.firstContentBox]}
+              onPress={() => {
+                console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (before set)`, {
+                  performanceStats: algorithm.performanceStats,
+                  setting: algorithm.setting,
+                  chartData: algorithm.chartData
+                });
+                setSelectedStrategy(algorithm);
+                console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (after set)`, {
+                  performanceStats: selectedStrategy?.performanceStats,
+                  setting: selectedStrategy?.setting,
+                  chartData: selectedStrategy?.chartData
+                });
+                setModalVisible(true);
+              }}
+            >
+              <View
+                style={[
+                  styles.categoryLabel,
+                  { backgroundColor: ['#4FC3F7', '#81C784', '#FF8A65'][index % 3] }
+                ]}
+              >
+                <Text style={styles.categoryLabelText}>
+                  {algorithm.strategy.split(' ')[0] || 'Algorithm'}
+                </Text>
+              </View>
+
+              <View style={styles.userContainer}>
+                <Image source={placeholder} style={styles.userIcon} />
+                <Text style={styles.userName}>{algorithm.developer}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.titleContainer}>
+                <Text style={styles.titleText}>{algorithm.strategy}</Text>
+                <View style={styles.performanceScore}>
+                  <Text style={styles.performanceScoreText}>
+                    {Math.round(algorithm.performanceStats.Score_Total)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceText}>Price: {algorithm.cur} {algorithm.price}</Text>
+              </View>
+
+              <View style={styles.graphContainer}>
+                <LineChart
+                  data={{
+                    labels: algorithm.chartData.labels.length ? algorithm.chartData.labels : ['No Data'],
+                    datasets: [{
+                      data: algorithm.chartData.data.length ? algorithm.chartData.data : [0],
+                      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                      strokeWidth: 2
+                    }]
+                  }}
+                  width={Dimensions.get('window').width - 40}
+                  height={150}
+                  withDots={true}
+                  withShadow={false}
+                  withInnerLines={true}
+                  withOuterLines={true}
+                  withHorizontalLabels={true}
+                  withVerticalLabels={true}
+                  chartConfig={{
+                    backgroundColor: '#ffffff',
+                    backgroundGradientFrom: '#ffffff',
+                    backgroundGradientTo: '#ffffff',
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                      paddingRight: 10
+                    },
+                    propsForLabels: {
+                      fontSize: 8,
+                      fontWeight: 'normal'
+                    },
+                    propsForDots: {
+                      r: '2',
+                      color: 'rgba(33, 150, 243, 1)'
+                    },
+                    propsForBackgroundLines: {
+                      strokeDashArray: ''
+                    },
+                    yAxisInterval: algorithm.chartData.yAxisBound?.max / 5 || 1
+                  }}
+                  bezier
+                  style={styles.chartStyle}
+                />
+              </View>
+
               <TouchableOpacity
-                key={algorithm.algo_id}
-                style={[styles.contentBox, index === 0 && styles.firstContentBox]}
-                onPress={() => {
-                  setSelectedStrategy({
-                    ...algorithm,
-                    performance,
-                    chartData
+                style={styles.readMoreButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (Read more, before set)`, {
+                    performanceStats: algorithm.performanceStats,
+                    setting: algorithm.setting,
+                    chartData: algorithm.chartData
+                  });
+                  setSelectedStrategy(algorithm);
+                  console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (Read more, after set)`, {
+                    performanceStats: selectedStrategy?.performanceStats,
+                    setting: selectedStrategy?.setting,
+                    chartData: selectedStrategy?.chartData
                   });
                   setModalVisible(true);
                 }}
               >
-                {/* Category label - using first word of strategy name or 'Algorithm' */}
-                <View
-                  style={[
-                    styles.categoryLabel,
-                    { backgroundColor: ["#4FC3F7", "#81C784", "#FF8A65"][index % 3] }
-                  ]}
-                >
-                  <Text style={styles.categoryLabelText}>
-                    {algorithm.strategy.split(' ')[0] || 'Algorithm'}
-                  </Text>
-                </View>
-
-                {/* User info section */}
-                <View style={styles.userContainer}>
-                  <Image source={placeholder} style={styles.userIcon} />
-                  <Text style={styles.userName}>{algorithm.developer}</Text>
-                </View>
-
-                {/* Black line divider */}
-                <View style={styles.divider} />
-
-                {/* Title section */}
-                <View style={styles.titleContainer}>
-                  <Text style={styles.titleText}>{algorithm.strategy}</Text>
-                  <View style={styles.performanceScore}>
-                    <Text style={styles.performanceScoreText}>{performance.score}</Text>
-                  </View>
-                </View>
-
-                {/* Price section */}
-                <View style={styles.priceContainer}>
-                  <Text style={styles.priceText}>Price: {algorithm.cur} {algorithm.price}</Text>
-                </View>
-
-                {/* Content section */}
-                <View style={styles.graphContainer}>
-                  <LineChart
-                    data={{
-                      labels: chartData.labels,
-                      datasets: [{
-                        data: chartData.data,
-                        color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-                        strokeWidth: 2
-                      }]
-                    }}
-                    width={Dimensions.get('window').width - 70}
-                    height={120}
-                    withDots={false}
-                    withShadow={false}
-                    withInnerLines={false}
-                    withOuterLines={false}
-                    withVerticalLines={false}
-                    withHorizontalLines={false}
-                    chartConfig={{
-                      backgroundColor: '#ffffff',
-                      backgroundGradientFrom: '#ffffff',
-                      backgroundGradientTo: '#ffffff',
-                      decimalPlaces: 0,
-                      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                      labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                      propsForDots: {
-                        r: "0"
-                      }
-                    }}
-                    bezier
-                    style={styles.chartStyle}
-                  />
-                </View>
-
-                {/* Read more button */}
-                <TouchableOpacity
-                  style={styles.readMoreButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setSelectedStrategy({
-                      ...algorithm,
-                      performance,
-                      chartData
-                    });
-                    setModalVisible(true);
-                  }}
-                >
-                  <Text style={styles.readMoreText}>Read more</Text>
-                </TouchableOpacity>
+                <Text style={styles.readMoreText}>Read more</Text>
               </TouchableOpacity>
-            );
-          })
+            </TouchableOpacity>
+          ))
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
@@ -290,6 +267,26 @@ const Marketplace = () => {
     );
   };
 
+  useEffect(() => {
+    loadAlgorithms();
+  }, []);
+
+  const renderFooter = () => {
+    if (!hasMore) return (
+      <Text style={styles.footerText}>No more algorithms to load</Text>
+    );
+    
+    return isLoading ? (
+      <ActivityIndicator size="small" color="#2196F3" />
+    ) : (
+      <TouchableOpacity
+        style={styles.loadMoreButton}
+        onPress={loadAlgorithms}
+      >
+        <Text style={styles.loadMoreText}>Load More</Text>
+      </TouchableOpacity>
+    );
+  };
   return (
     <View style={styles.container}>
       {/* Content Boxes */}
@@ -509,3 +506,394 @@ const styles = StyleSheet.create({
 });
 
 export default Marketplace;
+
+
+  // const loadAlgorithms = useCallback(
+  //   debounce(async () => {
+  //     if (isLoading || !hasMore) return;
+
+  //     setIsLoading(true);
+  //     try {
+  //       const sessionId = await AsyncStorage.getItem('sessionId');
+  //       console.log('Marketplace sessionId:', sessionId);
+  //       const result = await fetchPublicAlgos();
+
+  //       if (!result || !result.data || !Array.isArray(result.data)) {
+  //         throw new Error('Invalid API response format');
+  //       }
+
+  //       const startIndex = (page - 1) * itemsPerPage;
+  //       const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
+
+  //       // Fetch performance and daily returns for each algorithm
+  //       const enrichedData = await Promise.all(
+  //         paginatedData.map(async (algorithm) => {
+  //           try {
+  //             console.log(`Fetching performance for algo_id: ${algorithm.algo_id}`);
+  //             const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
+  //             console.log(`Performance response for algo_id ${algorithm.algo_id}:`, JSON.stringify(performanceResponse, null, 2));
+              
+  //             // console.log(`Fetching daily returns for algo_id: ${algorithm.algo_id}`);
+  //             const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id, null, false);
+  //             // console.log(`Daily returns response for algo_id ${algorithm.algo_id}:`, JSON.stringify(dailyReturnsResponse, null, 2));
+              
+  //             // Get start year from created_at (assuming format "YYYY-MM-DD")
+  //             const startYear = new Date(algorithm.created_at).getFullYear();
+  //             const currentYear = 2025;
+  //             const years = Array.from(
+  //               { length: currentYear - startYear + 1 },
+  //               (_, i) => (startYear + i).toString()
+  //             );
+
+  //             // Extract cumulative returns
+  //             const cumulativeReturns = dailyReturnsResponse.map(item => item.cr * 100); // Convert to percentage
+
+  //             // Sample cumulative returns to match years
+  //             const step = Math.max(1, Math.floor(cumulativeReturns.length / years.length));
+  //             const sampledReturns = years.map((_, i) => {
+  //               const index = i * step;
+  //               return index < cumulativeReturns.length ? cumulativeReturns[index] : cumulativeReturns[cumulativeReturns.length - 1];
+  //             });
+
+  //             // Determine y-axis bounds
+  //             const maxAbsReturn = Math.max(...sampledReturns.map(Math.abs), 0);
+  //             const yAxisBound = Math.ceil(maxAbsReturn);
+
+  //             // Generate chart data
+  //             const chartData = {
+  //               labels: years,
+  //               data: sampledReturns,
+  //               yAxisBound: { min: -yAxisBound, max: yAxisBound }
+  //             };
+
+  //             return {
+  //               ...algorithm,
+  //               performanceStats: performanceResponse.performance || { Score_Total: 0 },
+  //               setting: performanceResponse.setting || {},
+  //               chartData
+  //             };
+  //           } catch (error) {
+  //             console.error(`Error fetching data for algo_id ${algorithm.algo_id}:`, error);
+  //             return {
+  //               ...algorithm,
+  //               performanceStats: { Score_Total: 0 },
+  //               setting: {},
+  //               chartData: { labels: [], data: [], yAxisBound: { min: 0, max: 0 } }
+  //             };
+  //           }
+  //         })
+  //       );
+
+  //       setAlgorithms((prev) => [...prev, ...enrichedData]);
+  //       setHasMore(result.data.length > page * itemsPerPage);
+  //       setPage((prev) => prev + 1);
+  //     } catch (error) {
+  //       console.error('Error loading algorithms:', error);
+  //       Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   }, 300),
+  //   [isLoading, hasMore, page]
+  // );
+
+
+
+  // const renderContentBoxes = () => {
+  //   if (isLoading && page === 1) {
+  //     return (
+  //       <View style={styles.loadingContainer}>
+  //         <ActivityIndicator size="large" color="#2196F3" />
+  //       </View>
+  //     );
+  //   }
+
+  //   return (
+  //     <ScrollView
+  //       style={styles.scrollContainer}
+  //       contentContainerStyle={[styles.scrollContentContainer, { paddingTop: 50 }]}
+  //     >
+  //       {algorithms.length > 0 ? (
+  //         algorithms.map((algorithm, index) => (
+  //           <TouchableOpacity
+  //             key={algorithm.algo_id}
+  //             style={[styles.contentBox, index === 0 && styles.firstContentBox]}
+  //             onPress={() => {
+  //               console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id}`, {
+  //                 performanceStats: algorithm.performanceStats,
+  //                 setting: algorithm.setting
+  //               });
+  //               setSelectedStrategy(algorithm);
+  //               setModalVisible(true);
+  //             }}
+  //           >
+  //             <View
+  //               style={[
+  //                 styles.categoryLabel,
+  //                 { backgroundColor: ["#4FC3F7", "#81C784", "#FF8A65"][index % 3] }
+  //               ]}
+  //             >
+  //               <Text style={styles.categoryLabelText}>
+  //                 {algorithm.strategy.split(' ')[0] || 'Algorithm'}
+  //               </Text>
+  //             </View>
+
+  //             <View style={styles.userContainer}>
+  //               <Image source={placeholder} style={styles.userIcon} />
+  //               <Text style={styles.userName}>{algorithm.developer}</Text>
+  //             </View>
+
+  //             <View style={styles.divider} />
+
+  //             <View style={styles.titleContainer}>
+  //               <Text style={styles.titleText}>{algorithm.strategy}</Text>
+  //               <View style={styles.performanceScore}>
+  //                 <Text style={styles.performanceScoreText}>
+  //                   {Math.round(algorithm.performanceStats.Score_Total)}
+  //                 </Text>
+  //               </View>
+  //             </View>
+
+  //             <View style={styles.priceContainer}>
+  //               <Text style={styles.priceText}>Price: {algorithm.cur} {algorithm.price}</Text>
+  //             </View>
+
+  //             <View style={styles.graphContainer}>
+  //               <LineChart
+  //                 data={{
+  //                   labels: algorithm.chartData.labels,
+  //                   datasets: [{
+  //                     data: algorithm.chartData.data,
+  //                     color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+  //                     strokeWidth: 2
+  //                   }]
+  //                 }}
+  //                 width={Dimensions.get('window').width - 70}
+  //                 height={120}
+  //                 withDots={false}
+  //                 withShadow={false}
+  //                 withInnerLines={false}
+  //                 withOuterLines={false}
+  //                 withVerticalLines={false}
+  //                 withHorizontalLines={false}
+  //                 chartConfig={{
+  //                   backgroundColor: '#ffffff',
+  //                   backgroundGradientFrom: '#ffffff',
+  //                   backgroundGradientTo: '#ffffff',
+  //                   decimalPlaces: 2,
+  //                   color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  //                   labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  //                   propsForDots: {
+  //                     r: "0"
+  //                   }
+  //                 }}
+  //                 bezier
+  //                 style={styles.chartStyle}
+  //               />
+  //             </View>
+
+  //             <TouchableOpacity
+  //               style={styles.readMoreButton}
+  //               onPress={(e) => {
+  //                 e.stopPropagation();
+  //                 console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (Read more)`, {
+  //                   performanceStats: algorithm.performanceStats,
+  //                   setting: algorithm.setting
+  //                 });
+  //                 setSelectedStrategy(algorithm);
+  //                 setModalVisible(true);
+  //               }}
+  //             >
+  //               <Text style={styles.readMoreText}>Read more</Text>
+  //             </TouchableOpacity>
+  //           </TouchableOpacity>
+  //         ))
+  //       ) : (
+  //         <View style={styles.emptyState}>
+  //           <Text style={styles.emptyStateText}>
+  //             No algorithms found. Please try refreshing.
+  //           </Text>
+  //         </View>
+  //       )}
+  //       <View style={styles.footerContainer}>
+  //         {renderFooter()}
+  //       </View>
+  //     </ScrollView>
+  //   );
+  // };
+
+
+    // const loadAlgorithms = useCallback(
+  //   debounce(async () => {
+  //     if (isLoading || !hasMore) return;
+
+  //     setIsLoading(true);
+  //     try {
+  //       const sessionId = await AsyncStorage.getItem('sessionId');
+  //       console.log('Marketplace sessionId:', sessionId);
+  //       const result = await fetchPublicAlgos();
+
+  //       if (!result || !result.data || !Array.isArray(result.data)) {
+  //         throw new Error('Invalid API response format');
+  //       }
+
+  //       const startIndex = (page - 1) * itemsPerPage;
+  //       const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
+
+  //       // Fetch performance and daily returns for each algorithm
+  //       const enrichedData = await Promise.all(
+  //         paginatedData.map(async (algorithm) => {
+  //           try {
+  //             const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
+  //             const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id, null, false);
+              
+  //             // Generate chart data from daily returns
+  //             const chartData = {
+  //               labels: dailyReturnsResponse.slice(0, 6).map(item => item.t.slice(5)), // Use date (MM-DD) as labels
+  //               data: dailyReturnsResponse.slice(0, 6).map(item => item.r * 100) // Convert returns to percentage
+  //             };
+
+  //             return {
+  //               ...algorithm,
+  //               performance: { score: performanceResponse.performance.Score_Total },
+  //               chartData
+  //             };
+  //           } catch (error) {
+  //             console.error(`Error fetching data for algo_id ${algorithm.algo_id}:`, error);
+  //             return {
+  //               ...algorithm,
+  //               performance: { score: 0 }, // Fallback score
+  //               chartData: { labels: [], data: [] } // Fallback empty chart
+  //             };
+  //           }
+  //         })
+  //       );
+
+  //       setAlgorithms((prev) => [...prev, ...enrichedData]);
+  //       setHasMore(result.data.length > page * itemsPerPage);
+  //       setPage((prev) => prev + 1);
+  //     } catch (error) {
+  //       console.error('Error loading algorithms:', error);
+  //       Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   }, 300),
+  //   [isLoading, hasMore, page]
+  // );
+
+
+  // const renderContentBoxes = () => {
+  //   if (isLoading && page === 1) {
+  //     return (
+  //       <View style={styles.loadingContainer}>
+  //         <ActivityIndicator size="large" color="#2196F3" />
+  //       </View>
+  //     );
+  //   }
+
+  //   return (
+  //     <ScrollView
+  //       style={styles.scrollContainer}
+  //       contentContainerStyle={[styles.scrollContentContainer, { paddingTop: 50 }]}
+  //     >
+  //       {algorithms.length > 0 ? (
+  //         algorithms.map((algorithm, index) => (
+  //           <TouchableOpacity
+  //             key={algorithm.algo_id}
+  //             style={[styles.contentBox, index === 0 && styles.firstContentBox]}
+  //             onPress={() => {
+  //               setSelectedStrategy(algorithm);
+  //               setModalVisible(true);
+  //             }}
+  //           >
+  //             <View
+  //               style={[
+  //                 styles.categoryLabel,
+  //                 { backgroundColor: ["#4FC3F7", "#81C784", "#FF8A65"][index % 3] }
+  //               ]}
+  //             >
+  //               <Text style={styles.categoryLabelText}>
+  //                 {algorithm.strategy.split(' ')[0] || 'Algorithm'}
+  //               </Text>
+  //             </View>
+
+  //             <View style={styles.userContainer}>
+  //               <Image source={placeholder} style={styles.userIcon} />
+  //               <Text style={styles.userName}>{algorithm.developer}</Text>
+  //             </View>
+
+  //             <View style={styles.divider} />
+
+  //             <View style={styles.titleContainer}>
+  //               <Text style={styles.titleText}>{algorithm.strategy}</Text>
+  //               <View style={styles.performanceScore}>
+  //                 <Text style={styles.performanceScoreText}>
+  //                   {Math.round(algorithm.performance.score)}
+  //                 </Text>
+  //               </View>
+  //             </View>
+
+  //             <View style={styles.priceContainer}>
+  //               <Text style={styles.priceText}>Price: {algorithm.cur} {algorithm.price}</Text>
+  //             </View>
+
+  //             <View style={styles.graphContainer}>
+  //               <LineChart
+  //                 data={{
+  //                   labels: algorithm.chartData.labels,
+  //                   datasets: [{
+  //                     data: algorithm.chartData.data,
+  //                     color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+  //                     strokeWidth: 2
+  //                   }]
+  //                 }}
+  //                 width={Dimensions.get('window').width - 70}
+  //                 height={120}
+  //                 withDots={false}
+  //                 withShadow={false}
+  //                 withInnerLines={false}
+  //                 withOuterLines={false}
+  //                 withVerticalLines={false}
+  //                 withHorizontalLines={false}
+  //                 chartConfig={{
+  //                   backgroundColor: '#ffffff',
+  //                   backgroundGradientFrom: '#ffffff',
+  //                   backgroundGradientTo: '#ffffff',
+  //                   decimalPlaces: 2,
+  //                   color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  //                   labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  //                   propsForDots: {
+  //                     r: "0"
+  //                   }
+  //                 }}
+  //                 bezier
+  //                 style={styles.chartStyle}
+  //               />
+  //             </View>
+
+  //             <TouchableOpacity
+  //               style={styles.readMoreButton}
+  //               onPress={(e) => {
+  //                 e.stopPropagation();
+  //                 setSelectedStrategy(algorithm);
+  //                 setModalVisible(true);
+  //               }}
+  //             >
+  //               <Text style={styles.readMoreText}>Read more</Text>
+  //             </TouchableOpacity>
+  //           </TouchableOpacity>
+  //         ))
+  //       ) : (
+  //         <View style={styles.emptyState}>
+  //           <Text style={styles.emptyStateText}>
+  //             No algorithms found. Please try refreshing.
+  //           </Text>
+  //         </View>
+  //       )}
+  //       <View style={styles.footerContainer}>
+  //         {renderFooter()}
+  //       </View>
+  //     </ScrollView>
+  //   );
+  // };

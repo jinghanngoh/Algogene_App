@@ -28,7 +28,7 @@ export default function RootLayout() {
         {/* Portfolio screens */}
         <Stack.Screen name="Portfolio/AIPortfolioAnalysis" />
         <Stack.Screen name="Portfolio/LiveTest" />
-        <Stack.Screen name="Portfolio/MyAccount" />
+        <Stack.Screen name="Portfolio/AccountManager" />
         <Stack.Screen name="Portfolio/RealTrade" />
         <Stack.Screen name="Portfolio/PortfolioResult" />
       </Stack>
