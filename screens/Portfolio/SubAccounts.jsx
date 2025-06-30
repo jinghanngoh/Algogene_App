@@ -189,7 +189,7 @@ const SubAccounts = () => {
                           backgroundColor:
                             account.status === 'ACTIVE'
                               ? account.brokerConnected
-                                ? '#A9A9A9'
+                                ? '#D3D3D3'
                                 : '#666666'
                               : '#666666',
                           opacity: account.status === 'ACTIVE' ? 1 : 0.5,
@@ -205,7 +205,7 @@ const SubAccounts = () => {
                       <Text style={styles.actionButtonText}>Real Trade</Text>
                     </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#1e90ff' }]}
+                    style={[styles.actionButton, { backgroundColor: '#4FC3F7' }]}
                     onPress={() => toggleStatus(account.id)}
                   >
                     <Text style={styles.actionButtonText}>
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   createButton: {
-    backgroundColor: '#1e90ff',
+    backgroundColor: '#4FC3F7',
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
