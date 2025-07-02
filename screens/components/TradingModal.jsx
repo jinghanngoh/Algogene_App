@@ -4,7 +4,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { fetchAlgoDailyReturns, fetchAlgoPerformance } from '../../services/MarketplaceApi';
 
-const TradingModal = ({ visible, onClose, strategy = null }) => {
+const TradingModal = ({ visible, onClose, strategy}) => {
   const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
   const [performanceStats, setPerformanceStats] = useState(null);
   const [dailyReturns, setDailyReturns] = useState(null);
@@ -155,12 +155,12 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>{currentStrategy.strategy}</Text>
-            <Text style={styles.developer}>By {currentStrategy.developer}</Text>
+            <Text style={styles.title}>{strategy?.strategy || 'Algorithm Details'}</Text>
+            <Text style={styles.developer}>By {strategy?.developer || 'N/A'}</Text>
           </View>
           <View style={styles.priceContainer}>
             <Text style={styles.price}>
-              {currentStrategy.price} {currentStrategy.cur}/month
+              {strategy?.price ? `${strategy.price} ${strategy.cur}/month` : 'N/A'}
             </Text>
           </View>
         </View>
@@ -168,23 +168,64 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
         {/* Description Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>DESCRIPTION</Text>
-          <Text style={styles.description}>{currentStrategy.desc}</Text>
+          <Text style={styles.description}>{strategy?.desc || 'No description available'}</Text>
         </View>
 
-        {/* Performance Chart */}
+        {/* Updated Code: Performance Chart (Rolling Returns) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>ROLLING RETURNS (%)</Text>
-          <View style={styles.chartContainer}>
+          <View style={styles.graphContainer}>
             <LineChart
-              data={chartData}
+              data={{
+                labels: strategy?.chartData?.labels?.length
+                  ? strategy.chartData.labels
+                  : ['No Data'],
+                datasets: [{
+                  data: strategy?.chartData?.data?.length
+                    ? strategy.chartData.data
+                    : [0],
+                  color: (opacity = 1) => `rgba(79, 195, 247, ${opacity})`,
+                  strokeWidth: 2
+                }]
+              }}
               width={Dimensions.get('window').width - 40}
-              height={220}
-              chartConfig={chartConfig}
+              height={150}
+              withDots={true}
+              withShadow={false}
+              withInnerLines={true}
+              withOuterLines={true}
+              withHorizontalLabels={true}
+              withVerticalLabels={true}
+              chartConfig={{
+                backgroundColor: '#1E1E1E',
+                backgroundGradientFrom: '#121212',
+                backgroundGradientTo: '#1E1E1E',
+                decimalPlaces: 1,
+                color: (opacity = 1) => `rgba(30, 30, 30, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                propsForLabels: {
+                  fontSize: 10,
+                  fontWeight: 'normal',
+                  dy: -4,
+                  dx: -10,
+                  textAnchor: 'start'
+                },
+                propsForBackgroundLines: {
+                  strokeDashArray: (value) => value === 0 ? '' : '5, 5',
+                  stroke: 'rgba(255, 255, 255, 0.1)'
+                },
+                yAxisInterval: strategy?.chartData?.yAxisBound?.max / 5 || 1
+              }}
+              yAxisLabel=""
+              yAxisSuffix="%"
+              yLabelsOffset={25}
+              xLabelsOffset={-5}
               bezier
-              style={styles.chart}
+              style={styles.chartStyle}
             />
           </View>
         </View>
+        {/* End of Updated Code */}
 
         {loadingPerformance ? (
           <View style={styles.loadingContainer}>
@@ -207,7 +248,6 @@ const TradingModal = ({ visible, onClose, strategy = null }) => {
                 <Text style={styles.detailValue}>{Number.isFinite(performanceStats.performance.AnnualSharpe) ? performanceStats.performance.AnnualSharpe.toFixed(2) : 'N/A'}</Text>
               </View>
               <View style={styles.metricItem}>
-                <Text style={styles.detailLabel}>Sortino Ratio</Text>
                 <Text style={styles.detailLabel}>Sortino Ratio</Text>
                 <Text style={styles.detailValue}>{Number.isFinite(performanceStats.performance.AnnualSortino) ? performanceStats.performance.AnnualSortino.toFixed(2) : 'N/A'}</Text>
               </View>
@@ -501,6 +541,58 @@ const styles = StyleSheet.create({
   },
   tableText: {
     fontSize: 14,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#000000', // Black background as per previous request
+    borderRadius: 10,
+    padding: 20,
+    width: Dimensions.get('window').width - 40,
+    maxHeight: Dimensions.get('window').height - 100,
+  },
+  modalTitle: {
+    color: '#ffffff', // White text for dark theme
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  sectionText: {
+    color: '#ffffff',
+    fontSize: 14,
+  },
+  graphContainer: {
+    marginBottom: 15,
+    marginTop: 15,
+    alignItems: 'center', 
+    overflow: 'hidden',
+  },
+  chartStyle: {
+    borderRadius: 5,
+  },
+  closeButton: {
+    backgroundColor: '#2196F3',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
 });
 
