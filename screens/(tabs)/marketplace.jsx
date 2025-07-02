@@ -22,72 +22,171 @@ const Marketplace = () => {
   const [hasMore, setHasMore] = useState(true); 
   const itemsPerPage = 5; 
 
+  // const loadAlgorithms = useCallback(
+  //   debounce(async () => {
+  //     if (isLoading || !hasMore) return;
+
+  //     setIsLoading(true);
+  //     try {
+  //       const sessionId = await AsyncStorage.getItem('sessionId');
+  //       console.log('Marketplace sessionId:', sessionId);
+  //       const result = await fetchPublicAlgos();
+
+  //       if (!result || !result.data || !Array.isArray(result.data)) {
+  //         throw new Error('Invalid API response format');
+  //       }
+
+  //       const startIndex = (page - 1) * itemsPerPage;
+  //       const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
+
+  //       const enrichedData = await Promise.all(
+  //         paginatedData.map(async (algorithm) => {
+  //           try {
+  //             console.log(`Fetching performance for algo_id: ${algorithm.algo_id}`);
+  //             const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
+  //             console.log(`Performance response for algo_id ${algorithm.algo_id}:`, JSON.stringify(performanceResponse, null, 2));
+
+  //             console.log(`Fetching daily returns for algo_id: ${algorithm.algo_id}`);
+  //             const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id, null, false);
+
+  //             // Get start date and end date
+  //             const startDate = new Date(algorithm.created_at);
+  //             const endDate = new Date('2025-06-27'); // Current date
+  //             const dates = [];
+  //             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+  //               dates.push(new Date(d).toISOString().slice(0, 10));
+  //             }
+
+  //             // Map cumulative returns to dates
+  //             const dateToCr = new Map(dailyReturnsResponse.map(item => [item.t, item.cr * 100]));
+  //             const cumulativeReturns = dates.map(date => dateToCr.get(date) || 0);
+
+  //             // Sample data to fit chart height (max 10 points)
+  //             const step = Math.max(1, Math.floor(cumulativeReturns.length / 10));
+  //             const sampledReturns = [];
+  //             const sampledLabels = [];
+  //             for (let i = 0; i < cumulativeReturns.length; i += step) {
+  //               if (i < cumulativeReturns.length) {
+  //                 sampledReturns.push(cumulativeReturns[i]);
+  //                 sampledLabels.push(dates[i].slice(0, 7)); // Use YYYY-MM for labels
+  //               }
+  //             }
+
+  //             // Determine y-axis bounds
+  //             const maxAbsReturn = Math.max(...sampledReturns.map(Math.abs), 0);
+  //             const yAxisBound = Math.ceil(maxAbsReturn);
+
+  //             const chartData = sampledReturns.length > 0 ? {
+  //               labels: sampledLabels,
+  //               data: sampledReturns,
+  //               yAxisBound: { min: -yAxisBound, max: yAxisBound }
+  //             } : {
+  //               labels: ['No Data'],
+  //               data: [0],
+  //               yAxisBound: { min: 0, max: 0 }
+  //             };
+
+  //             console.log(`Chart data for algo_id ${algorithm.algo_id}:`, JSON.stringify(chartData, null, 2));
+
+  //             return {
+  //               ...algorithm,
+  //               performanceStats: performanceResponse.performance || { Score_Total: 0 },
+  //               setting: performanceResponse.setting || {},
+  //               chartData
+  //             };
+  //           } catch (error) {
+  //             console.error(`Error fetching data for algo_id ${algorithm.algo_id}:`, error);
+  //             return {
+  //               ...algorithm,
+  //               performanceStats: { Score_Total: 0 },
+  //               setting: {},
+  //               chartData: { labels: ['No Data'], data: [0], yAxisBound: { min: 0, max: 0 } }
+  //             };
+  //           }
+  //         })
+  //       );
+
+  //       setAlgorithms((prev) => [...prev, ...enrichedData]);
+  //       setHasMore(result.data.length > page * itemsPerPage);
+  //       setPage((prev) => prev + 1);
+  //     } catch (error) {
+  //       console.error('Error loading algorithms:', error);
+  //       Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   }, 300),
+  //   [isLoading, hasMore, page]
+  // );
+
   const loadAlgorithms = useCallback(
     debounce(async () => {
       if (isLoading || !hasMore) return;
-
+  
       setIsLoading(true);
       try {
         const sessionId = await AsyncStorage.getItem('sessionId');
         console.log('Marketplace sessionId:', sessionId);
         const result = await fetchPublicAlgos();
-
+  
         if (!result || !result.data || !Array.isArray(result.data)) {
           throw new Error('Invalid API response format');
         }
-
+  
         const startIndex = (page - 1) * itemsPerPage;
         const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
-
+  
         const enrichedData = await Promise.all(
           paginatedData.map(async (algorithm) => {
             try {
               console.log(`Fetching performance for algo_id: ${algorithm.algo_id}`);
               const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
               console.log(`Performance response for algo_id ${algorithm.algo_id}:`, JSON.stringify(performanceResponse, null, 2));
-
+  
               console.log(`Fetching daily returns for algo_id: ${algorithm.algo_id}`);
               const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id, null, false);
-
-              // Get start date and end date
-              const startDate = new Date(algorithm.created_at);
-              const endDate = new Date('2025-06-27'); // Current date
-              const dates = [];
-              for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                dates.push(new Date(d).toISOString().slice(0, 10));
+  
+              // Get start and end years from performance settings
+              const startDate = new Date(performanceResponse.setting?.period_start || algorithm.created_at);
+              const endDate = new Date(performanceResponse.setting?.period_end || '2025-06-27');
+              const startYear = startDate.getFullYear();
+              const endYear = endDate.getFullYear();
+  
+              // Generate array of years for labels
+              const years = [];
+              for (let year = startYear; year <= endYear; year++) {
+                years.push(year.toString());
               }
-
-              // Map cumulative returns to dates
+  
+              // Map cumulative returns to years
               const dateToCr = new Map(dailyReturnsResponse.map(item => [item.t, item.cr * 100]));
-              const cumulativeReturns = dates.map(date => dateToCr.get(date) || 0);
-
-              // Sample data to fit chart height (max 10 points)
-              const step = Math.max(1, Math.floor(cumulativeReturns.length / 10));
-              const sampledReturns = [];
-              const sampledLabels = [];
-              for (let i = 0; i < cumulativeReturns.length; i += step) {
-                if (i < cumulativeReturns.length) {
-                  sampledReturns.push(cumulativeReturns[i]);
-                  sampledLabels.push(dates[i].slice(0, 7)); // Use YYYY-MM for labels
-                }
-              }
-
+              const yearlyReturns = years.map(year => {
+                // Find the last return value for the given year
+                const yearReturns = dailyReturnsResponse
+                  .filter(item => item.t.startsWith(year))
+                  .map(item => item.cr * 100);
+                // Use the last return of the year, or 0 if no data
+                return yearReturns.length > 0 ? yearReturns[yearReturns.length - 1] : 0;
+              });
+  
               // Determine y-axis bounds
-              const maxAbsReturn = Math.max(...sampledReturns.map(Math.abs), 0);
+              const maxAbsReturn = Math.max(...yearlyReturns.map(Math.abs), 0);
               const yAxisBound = Math.ceil(maxAbsReturn);
-
-              const chartData = sampledReturns.length > 0 ? {
-                labels: sampledLabels,
-                data: sampledReturns,
-                yAxisBound: { min: -yAxisBound, max: yAxisBound }
+              const yAxisMin = Math.min(-yAxisBound, 0); // Ensure 0 is included
+              const yAxisMax = Math.max(yAxisBound, 0);
+  
+              const chartData = yearlyReturns.length > 0 ? {
+                labels: years,
+                data: yearlyReturns,
+                yAxisBound: { min: yAxisMin, max: yAxisMax }
               } : {
                 labels: ['No Data'],
                 data: [0],
                 yAxisBound: { min: 0, max: 0 }
               };
-
+  
               console.log(`Chart data for algo_id ${algorithm.algo_id}:`, JSON.stringify(chartData, null, 2));
-
+  
               return {
                 ...algorithm,
                 performanceStats: performanceResponse.performance || { Score_Total: 0 },
@@ -105,7 +204,7 @@ const Marketplace = () => {
             }
           })
         );
-
+  
         setAlgorithms((prev) => [...prev, ...enrichedData]);
         setHasMore(result.data.length > page * itemsPerPage);
         setPage((prev) => prev + 1);
@@ -118,6 +217,7 @@ const Marketplace = () => {
     }, 300),
     [isLoading, hasMore, page]
   );
+
 
   const renderContentBoxes = () => {
     if (isLoading && page === 1) {
@@ -185,72 +285,71 @@ const Marketplace = () => {
               </View>
 
               <View style={styles.graphContainer}>
-                <LineChart
-                  data={{
-                    labels: algorithm.chartData.labels.length ? algorithm.chartData.labels : ['No Data'],
-                    datasets: [{
-                      data: algorithm.chartData.data.length ? algorithm.chartData.data : [0],
-                      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-                      strokeWidth: 2
-                    }]
-                  }}
-                  width={Dimensions.get('window').width - 40}
-                  height={150}
-                  withDots={true}
-                  withShadow={false}
-                  withInnerLines={true}
-                  withOuterLines={true}
-                  withHorizontalLabels={true}
-                  withVerticalLabels={true}
-                  chartConfig={{
-                    backgroundColor: '#ffffff',
-                    backgroundGradientFrom: '#ffffff',
-                    backgroundGradientTo: '#ffffff',
-                    decimalPlaces: 1,
-                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    style: {
-                      borderRadius: 16,
-                      paddingRight: 10
-                    },
-                    propsForLabels: {
-                      fontSize: 8,
-                      fontWeight: 'normal'
-                    },
-                    propsForDots: {
-                      r: '2',
-                      color: 'rgba(33, 150, 243, 1)'
-                    },
-                    propsForBackgroundLines: {
-                      strokeDashArray: ''
-                    },
-                    yAxisInterval: algorithm.chartData.yAxisBound?.max / 5 || 1
-                  }}
-                  bezier
-                  style={styles.chartStyle}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.readMoreButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (Read more, before set)`, {
-                    performanceStats: algorithm.performanceStats,
-                    setting: algorithm.setting,
-                    chartData: algorithm.chartData
-                  });
-                  setSelectedStrategy(algorithm);
-                  console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (Read more, after set)`, {
-                    performanceStats: selectedStrategy?.performanceStats,
-                    setting: selectedStrategy?.setting,
-                    chartData: selectedStrategy?.chartData
-                  });
-                  setModalVisible(true);
+              <LineChart
+                data={{
+                  labels: algorithm.chartData.labels.length ? algorithm.chartData.labels : ['No Data'],
+                  datasets: [{
+                    data: algorithm.chartData.data.length ? algorithm.chartData.data : [0],
+                    color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                    strokeWidth: 2
+                  }]
                 }}
-              >
-                <Text style={styles.readMoreText}>Read more</Text>
-              </TouchableOpacity>
+                width={Dimensions.get('window').width - 40}
+                height={160}
+                withDots={true}
+                withShadow={false}
+                withInnerLines={true}
+                withOuterLines={true}
+                withHorizontalLabels={true}
+                withVerticalLabels={true}
+                chartConfig={{
+                  backgroundColor: '#ffffff',
+                  backgroundGradientFrom: '#ffffff',
+                  backgroundGradientTo: '#ffffff',
+                  decimalPlaces: 1,
+                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  propsForLabels: {
+                    fontSize: 10,
+                    fontWeight: 'normal',
+                    dy: -4,
+                    dx: -10, 
+                    textAnchor: 'start'
+                  },
+                  propsForBackgroundLines: {
+                    strokeDashArray: (value) => value === 0 ? '' : '5, 5'
+                  },
+                  yAxisInterval: algorithm.chartData.yAxisBound?.max / 5 || 1
+                }}
+                yAxisLabel=""
+                yAxisSuffix="%"
+                yLabelsOffset={25} 
+                xLabelsOffset={-5} 
+                bezier
+                style={[styles.chartStyle, { marginLeft: -15, paddingTop: 5 }]} 
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.readMoreButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (Read more, before set)`, {
+                  performanceStats: algorithm.performanceStats,
+                  setting: algorithm.setting,
+                  chartData: algorithm.chartData
+                });
+                setSelectedStrategy(algorithm);
+                console.log(`Setting selectedStrategy for algo_id: ${algorithm.algo_id} (Read more, after set)`, {
+                  performanceStats: selectedStrategy?.performanceStats,
+                  setting: selectedStrategy?.setting,
+                  chartData: selectedStrategy?.chartData
+                });
+                setModalVisible(true);
+              }}
+            >
+              <Text style={styles.readMoreText}>Read more</Text>
+            </TouchableOpacity>
             </TouchableOpacity>
           ))
         ) : (
@@ -393,7 +492,8 @@ const styles = StyleSheet.create({
   },
   readMoreButton: {
     backgroundColor: '#222',
-    padding: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
     borderRadius: 5,
     alignItems: 'center',
   },
@@ -402,7 +502,9 @@ const styles = StyleSheet.create({
   },
   graphContainer: {
     marginBottom: 15,
-    overflow: 'hidden', 
+    marginLeft: -15, 
+    marginTop: 15, 
+    overflow: 'hidden',
   },
   performanceScore: {
     backgroundColor: '#2196F3',
