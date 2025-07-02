@@ -188,11 +188,11 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
     const cacheKey = `daily_returns_${algoId}_${accountingDate || 'latest'}_${isExtrapolate}`;
     const cachedData = await AsyncStorage.getItem(cacheKey);
     if (cachedData) {
-      console.log(`Returning cached daily returns for algo_id: ${algoId}`);
+      // console.log(`Returning cached daily returns for algo_id: ${algoId}`);
       return JSON.parse(cachedData);
     }
 
-    console.log(`Making API Request to /rest/v1/strategy_return for algo_id: ${algoId}`);
+    // console.log(`Making API Request to /rest/v1/strategy_return for algo_id: ${algoId}`);
     let sessionId = await AsyncStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = generateSessionId();

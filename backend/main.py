@@ -1,105 +1,246 @@
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from pydantic import BaseModel, validator
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
-import requests
-import uuid
-import os
+import asyncio
 import json
-import time
-from typing import Optional, List, Dict
+import logging
+import websockets
+from fastapi import WebSocket
 
-# FastAPI app
-app = FastAPI()
+# Set up logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Configuration
-BASE_URL = os.getenv("BASE_URL", "https://algogene.com")
-# BASE_URL = os.getenv("BASE_URL", "https://blindly-beloved-muskox.ngrok-free.app")
-API_KEY = os.getenv("ALGOGENE_API_KEY", "13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff")
-USER = os.getenv("ALGOGENE_USER", "AGBOT1")
-SECRET_KEY = os.getenv("SECRET_KEY", os.urandom(32).hex()) # WHATS THIS FOR
-ALGORITHM = "HS256" # WHATS THIS FOR
-ACCESS_TOKEN_EXPIRE_DAYS = 14
+class MarketDataConnection:
+    def __init__(self):
+        self.ws_url = "wss://algogene.com/ws"
+        self.subscription_msg = {
+            "msg_id": 13,
+            "user": "demo2",
+            "api_key": "4WE4Qd010AqNZc9W701ZmR0U8I1d3mHl",
+            "symbols": ["ETHUSD", "BTCUSD"],  # Updated to include both symbols
+            "broker": ""
+        }
+        self.connected_clients = set()
 
-# SQLite database setup
-DATABASE_URL = "sqlite:///./algogene_app.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+    async def connect(self):
+        """Connect to ALGOGENE WebSocket and handle messages."""
+        while True:
+            try:
+                async with websockets.connect(self.ws_url) as ws:
+                    # Send subscription message
+                    await ws.send(json.dumps(self.subscription_msg))
+                    logging.info("Subscribed to ALGOGENE WebSocket")
 
-# Database models (WHAT IS THIS FOR?)
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    username = Column(String, index=True)
-    algogene_cid = Column(String, nullable=True)  # ALGOGENE client ID
-    session_id = Column(String, nullable=True)  # ALGOGENE session ID
+                    # Start keep-alive pings
+                    async def keep_alive():
+                        while True:
+                            await asyncio.sleep(25)
+                            try:
+                                await ws.send(json.dumps({"msg_id": 0, "status": True, "msg": "client ping"}))
+                                logging.info("Sent client ping to ALGOGENE")
+                            except Exception as e:
+                                logging.error(f"Keep-alive ping failed: {e}")
+                                break
 
-class Cache(Base):
-    __tablename__ = "cache"
-    id = Column(Integer, primary_key=True, index=True)
-    key = Column(String, unique=True, index=True)
-    value = Column(Text)  # Store JSON string
-    created_at = Column(Integer)  # Unix timestamp
+                    asyncio.create_task(keep_alive())
 
-Base.metadata.create_all(bind=engine) #WHAT IS THIS FOR
+                    # Receive and broadcast messages
+                    async for message in ws:
+                        logging.info(f"Received from ALGOGENE: {message}")
+                        try:
+                            data = json.loads(message)
+                            if data.get("msg_id") == 0:
+                                # Respond to server ping
+                                await ws.send(json.dumps({"msg_id": 0, "status": True, "msg": "client pong"}))
+                                logging.info("Sent client pong to ALGOGENE")
+                            else:
+                                # Broadcast market data to connected clients
+                                for client in self.connected_clients:
+                                    try:
+                                        await client.send_text(message)
+                                    except Exception as e:
+                                        logging.error(f"Failed to send to client: {e}")
+                                        self.connected_clients.discard(client)
+                        except json.JSONDecodeError as e:
+                            logging.error(f"Failed to parse ALGOGENE message as JSON: {e}, Raw message: {message}")
+                            continue
+            except Exception as e:
+                logging.error(f"ALGOGENE WebSocket error: {e}")
+                logging.info("Reconnecting to ALGOGENE in 5 seconds...")
+                await asyncio.sleep(5)
 
-# Pydantic models
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+    async def add_client(self, websocket: WebSocket):
+        """Add a client to receive market data."""
+        await websocket.accept()
+        self.connected_clients.add(websocket)
+        logging.info("Client connected to FASTAPI WebSocket")
+        try:
+            while True:
+                await websocket.receive_text()
+        except Exception as e:
+            logging.error(f"Client WebSocket error: {e}")
+        finally:
+            self.connected_clients.discard(websocket)
+            logging.info("Client disconnected from FASTAPI WebSocket")
 
-class PortfolioParams(BaseModel):
-    StartDate: str
-    EndDate: str
-    arrSymbol: List[str]
-    objective: int = 0
-    target_return: float = 0.15
-    risk_tolerance: float = 0.3
-    allowShortSell: bool = False
-    risk_free_rate: float = 0.01
-    basecur: str = "USD"
-    total_portfolio_value: float = 1000000
-    group_cond: Optional[Dict] = None
+    def start(self):
+        """Start the ALGOGENE WebSocket connection in the background."""
+        asyncio.create_task(self.connect())
 
-    @validator("objective")
-    def validate_objective(cls, v):
-        if v not in [0, 1, 2, 3, 4]:
-            raise ValueError("Objective must be 0-4")
-        return v
 
-# Dependency to get Database session 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# import asyncio
+# import json
+# import logging
+# import requests
+# from fastapi import FastAPI, WebSocket, HTTPException
+# from fastapi.middleware.cors import CORSMiddleware
+# from pydantic import BaseModel
+# from typing import List, Dict, Optional
+# from MarketDataConnection import MarketDataConnection
+# from contextlib import asynccontextmanager
+# import uuid
 
-# JWT token creation
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+# # Set up logging
+# logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Verify JWT Token (Checking the wristband)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        user = db.query(User).filter(User.email == email).first()
-        if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
-        return user
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+# # Initialize MarketDataConnection
+# market_data = MarketDataConnection()
+
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # Startup code
+#     market_data.start()
+#     yield
+#     # Shutdown code
+#     logging.info("Shutting down ALGOGENE WebSocket")
+
+# app = FastAPI(lifespan=lifespan)
+
+# # Allow CORS for React Native frontend
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # Update with your frontend URL in production
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # In-memory storage for user settings and sessions (use a database in production)
+# user_settings: Dict[str, Dict] = {}  # { "user": { "watchlist": ["ETHUSD"], "email": "test@test.com", ... } }
+# user_sessions: Dict[str, str] = {}  # { "user": "sid" }
+
+# # Pydantic models for request validation
+# class LoginRequest(BaseModel):
+#     user: str
+#     api_key: str
+#     c_Email: str
+#     c_Pwd: str
+
+# class UserSettings(BaseModel):
+#     watchlist: List[str]
+#     email: Optional[str] = None
+
+# # ALGOGENE REST API configuration
+# BASE_URL = "https://algogene.com"
+# API_KEY = "13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff"  # Replace with your API key
+
+# @app.post("/login")
+# async def login(request: LoginRequest):
+#     """Handle user login using ALGOGENE REST API."""
+#     url = f"{BASE_URL}/rest/v1/app_userlogin"
+#     sid = str(uuid.uuid4()).replace("-", "")
+#     headers = {"Content-Type": "application/json"}
+#     payload = {
+#         "user": request.user,
+#         "api_key": request.api_key,
+#         "sid": sid,
+#         "c_Email": request.c_Email,
+#         "c_Pwd": request.c_Pwd
+#     }
+#     try:
+#         response = requests.post(url, json=payload, headers=headers)
+#         if response.status_code == 200:
+#             data = response.json()
+#             if data.get("status"):
+#                 user_sessions[request.user] = sid
+#                 user_settings[request.user] = {"watchlist": ["ETHUSD"], "email": request.c_Email}
+#                 market_data.update_sid(sid)  # Update WebSocket with sid
+#                 return {"status": True, "res": "Login successful", "sid": sid}
+#             else:
+#                 raise HTTPException(status_code=400, detail=data.get("res", "Login failed"))
+#         else:
+#             raise HTTPException(status_code=response.status_code, detail="ALGOGENE API error")
+#     except requests.RequestException as e:
+#         raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+
+# @app.post("/logout")
+# async def logout(user: str):
+#     """Handle user logout using ALGOGENE REST API."""
+#     sid = user_sessions.get(user)
+#     if not sid:
+#         raise HTTPException(status_code=400, detail="User not logged in")
+#     url = f"{BASE_URL}/rest/v1/app_userlogout"
+#     headers = {"Content-Type": "application/json"}
+#     payload = {
+#         "user": user,
+#         "api_key": API_KEY,
+#         "sid": sid,
+#         "c_Email": user_settings.get(user, {}).get("email", "")
+#     }
+#     try:
+#         response = requests.post(url, json=payload, headers=headers)
+#         if response.status_code == 200:
+#             data = response.json()
+#             if data.get("status"):
+#                 user_sessions.pop(user, None)
+#                 user_settings.pop(user, None)
+#                 market_data.update_sid("")  # Clear sid on logout
+#                 return {"status": True, "res": "Logout successful"}
+#             else:
+#                 raise HTTPException(status_code=400, detail=data.get("res", "Logout failed"))
+#         else:
+#             raise HTTPException(status_code=response.status_code, detail="ALGOGENE API error")
+#     except requests.RequestException as e:
+#         raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+
+# @app.get("/settings/{user}")
+# async def get_settings(user: str):
+#     """Retrieve user settings."""
+#     if user not in user_settings:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return user_settings[user]
+
+# @app.post("/settings/{user}")
+# async def update_settings(user: str, settings: UserSettings):
+#     """Update user settings."""
+#     if user not in user_settings:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     user_settings[user]["watchlist"] = settings.watchlist
+#     user_settings[user]["email"] = settings.email or user_settings[user]["email"]
+#     return {"status": True, "res": "Settings updated"}
+
+# @app.get("/instruments")
+# async def list_instruments(user: str):
+#     """Query ALGOGENE /list_instrument endpoint."""
+#     sid = user_sessions.get(user)
+#     if not sid:
+#         raise HTTPException(status_code=400, detail="User not logged in")
+#     url = f"{BASE_URL}/rest/v1/list_instrument"
+#     headers = {"Content-Type": "application/json"}
+#     params = {"user": user, "api_key": API_KEY, "sid": sid}
+#     try:
+#         response = requests.get(url, params=params, headers=headers)
+#         if response.status_code == 200:
+#             return response.json()
+#         else:
+#             raise HTTPException(status_code=response.status_code, detail="ALGOGENE API error")
+#     except requests.RequestException as e:
+#         raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+
+# @app.websocket("/ws/market-data")
+# async def websocket_endpoint(websocket: WebSocket):
+#     """WebSocket endpoint for market data."""
+#     await market_data.add_client(websocket)
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+

@@ -138,10 +138,6 @@ const TradingModal = ({ visible, onClose, strategy}) => {
       stroke: 'rgba(255, 255, 255, 0.1)'
     }
   };
-
-  console.log('Rendering with performanceStats:', performanceStats);
-  console.log('performanceStats.setting:', performanceStats?.setting);
-
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <ScrollView style={styles.container}>

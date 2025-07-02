@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-const BASE_URL = 'https://blindly-beloved-muskox.ngrok-free.app';
+// const BASE_URL = 'https://blindly-beloved-muskox.ngrok-free.app';
+const BASE_URL = 'https://algogene';
 const API_KEY = '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff';
 const USER = 'AGBOT1';
 
