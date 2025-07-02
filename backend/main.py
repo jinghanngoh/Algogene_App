@@ -1,89 +1,111 @@
-import asyncio
+import websocket
 import json
 import logging
-import websockets
-from fastapi import WebSocket
+import time
+import threading
+import signal
+import sys
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-class MarketDataConnection:
-    def __init__(self):
-        self.ws_url = "wss://algogene.com/ws"
-        self.subscription_msg = {
-            "msg_id": 13,
-            "user": "demo2",
-            "api_key": "4WE4Qd010AqNZc9W701ZmR0U8I1d3mHl",
-            "symbols": ["ETHUSD", "BTCUSD"],  # Updated to include both symbols
-            "broker": ""
-        }
-        self.connected_clients = set()
+# Global flag to control reconnection and ping thread
+running = True
 
-    async def connect(self):
-        """Connect to ALGOGENE WebSocket and handle messages."""
-        while True:
+def signal_handler(sig, frame):
+    """Handle Ctrl+C to exit gracefully."""
+    global running
+    logging.info("Received Ctrl+C, shutting down...")
+    running = False
+    sys.exit(0)
+
+def on_message(ws, message):
+    """Handle incoming WebSocket messages."""
+    if not running:
+        return
+    logging.info(f"Received: {message}")
+    try:
+        data = json.loads(message)
+        if data.get("msg_id") == 0:
+            # Respond to server ping with client pong
+            ws.send(json.dumps({"msg_id": 0, "status": True, "msg": "client pong"}))
+            logging.info("Sent client pong to ALGOGENE")
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse message as JSON: {e}, Raw message: {message}")
+
+def on_error(ws, error):
+    """Handle WebSocket errors."""
+    if not running:
+        return
+    logging.error(f"WebSocket error: {error}")
+
+def on_close(ws, close_status_code, close_msg):
+    """Handle WebSocket closure."""
+    if not running:
+        return
+    logging.info(f"WebSocket closed with code: {close_status_code}, message: {close_msg}")
+
+def on_open(ws):
+    """Handle WebSocket connection opening."""
+    if not running:
+        return
+    logging.info("Connected to ALGOGENE WebSocket")
+    # Send subscription message
+    msg = json.dumps({
+        "msg_id": 13,
+        "user": "demo2",
+        "api_key": "4WE4Qd010AqNZc9W701ZmR0U8I1d3mHl",
+        "symbols": ["BTCUSD", "ETHUSD"],
+        "broker": ""
+    })
+    ws.send(msg)
+    logging.info("Sent subscription message")
+
+    # Start keep-alive pings
+    def send_ping():
+        while running:
             try:
-                async with websockets.connect(self.ws_url) as ws:
-                    # Send subscription message
-                    await ws.send(json.dumps(self.subscription_msg))
-                    logging.info("Subscribed to ALGOGENE WebSocket")
-
-                    # Start keep-alive pings
-                    async def keep_alive():
-                        while True:
-                            await asyncio.sleep(25)
-                            try:
-                                await ws.send(json.dumps({"msg_id": 0, "status": True, "msg": "client ping"}))
-                                logging.info("Sent client ping to ALGOGENE")
-                            except Exception as e:
-                                logging.error(f"Keep-alive ping failed: {e}")
-                                break
-
-                    asyncio.create_task(keep_alive())
-
-                    # Receive and broadcast messages
-                    async for message in ws:
-                        logging.info(f"Received from ALGOGENE: {message}")
-                        try:
-                            data = json.loads(message)
-                            if data.get("msg_id") == 0:
-                                # Respond to server ping
-                                await ws.send(json.dumps({"msg_id": 0, "status": True, "msg": "client pong"}))
-                                logging.info("Sent client pong to ALGOGENE")
-                            else:
-                                # Broadcast market data to connected clients
-                                for client in self.connected_clients:
-                                    try:
-                                        await client.send_text(message)
-                                    except Exception as e:
-                                        logging.error(f"Failed to send to client: {e}")
-                                        self.connected_clients.discard(client)
-                        except json.JSONDecodeError as e:
-                            logging.error(f"Failed to parse ALGOGENE message as JSON: {e}, Raw message: {message}")
-                            continue
+                time.sleep(25)  # Ping every 25 seconds
+                if not running:
+                    break
+                ws.send(json.dumps({"msg_id": 0, "status": True, "msg": "client ping"}))
+                logging.info("Sent client ping to ALGOGENE")
             except Exception as e:
-                logging.error(f"ALGOGENE WebSocket error: {e}")
-                logging.info("Reconnecting to ALGOGENE in 5 seconds...")
-                await asyncio.sleep(5)
+                logging.error(f"Ping failed: {e}")
+                break
 
-    async def add_client(self, websocket: WebSocket):
-        """Add a client to receive market data."""
-        await websocket.accept()
-        self.connected_clients.add(websocket)
-        logging.info("Client connected to FASTAPI WebSocket")
+    threading.Thread(target=send_ping, daemon=True).start()
+
+def connect_websocket():
+    """Connect to ALGOGENE WebSocket with reconnection logic."""
+    global running
+    ws_url = "wss://algogene.com/ws"
+    while running:
         try:
-            while True:
-                await websocket.receive_text()
+            ws = websocket.WebSocketApp(
+                ws_url,
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close,
+                on_open=on_open
+            )
+            ws.run_forever()
         except Exception as e:
-            logging.error(f"Client WebSocket error: {e}")
-        finally:
-            self.connected_clients.discard(websocket)
-            logging.info("Client disconnected from FASTAPI WebSocket")
+            if not running:
+                break
+            logging.error(f"WebSocket connection failed: {e}")
+            logging.info("Reconnecting in 5 seconds...")
+            time.sleep(5)
+    logging.info("WebSocket client stopped.")
 
-    def start(self):
-        """Start the ALGOGENE WebSocket connection in the background."""
-        asyncio.create_task(self.connect())
-
+if __name__ == "__main__":
+    # Register signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    try:
+        connect_websocket()
+    except KeyboardInterrupt:
+        logging.info("KeyboardInterrupt received, exiting...")
+        running = False
 
 # import asyncio
 # import json

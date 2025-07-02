@@ -43,6 +43,8 @@
     "requests": "^0.3.0",
     "uuid": "^11.1.0",
     "uvicorn": "^0.0.1-security",
+    "websocket": "^1.0.35",
+    "websocket-client": "^1.0.0",
     "websockets": "^0.2.0"
   },
   "devDependencies": {
