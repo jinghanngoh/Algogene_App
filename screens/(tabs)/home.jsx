@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   ScrollView,
   View,
@@ -18,18 +18,31 @@ const newsItems = [
   { id: 3, title: "NEWS 3", heading: "Regulation Update", description: "New crypto market regulations effective next month" },
 ];
 
-const allWatchlistItems = [
-  { name: "Ethereum / USD", symbol: "ETHUSD", price: "2439.63", change: "+0.12%" },
-  { name: "Bitcoin / USD", symbol: "BTCUSD", price: "58234.10", change: "-0.25%" },
-];
-
 const Home = () => {
   const [activeNewsIndex, setActiveNewsIndex] = useState(0);
   const [selectedNews, setSelectedNews] = useState(null);
   const [newsModalVisible, setNewsModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedItems, setSelectedItems] = useState(["ETHUSD"]);
+  const [selectedItems, setSelectedItems] = useState(["BTCUSD"]);
+  const [watchlistItems, setWatchlistItems] = useState([]);
   const scrollViewRef = useRef(null);
+
+  // Fetch watchlist data from FastAPI
+  useEffect(() => {
+    const fetchWatchlist = async () => {
+      try {
+        const response = await fetch("http://10.89.8.201:8000/watchlist"); // Replace with your IP
+        const data = await response.json();
+        setWatchlistItems(data);
+      } catch (error) {
+        console.error("Error fetching watchlist data:", error);
+      }
+    };
+
+    fetchWatchlist();
+    const interval = setInterval(fetchWatchlist, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const handleNewsScroll = (event) => {
     const contentOffset = event.nativeEvent.contentOffset.x;
@@ -38,7 +51,7 @@ const Home = () => {
   };
 
   const getWatchlistItems = () => {
-    return allWatchlistItems.filter((item) => selectedItems.includes(item.symbol));
+    return watchlistItems.filter((item) => selectedItems.includes(item.symbol));
   };
 
   return (
@@ -95,37 +108,41 @@ const Home = () => {
         </TouchableOpacity>
       </View>
 
-      {getWatchlistItems().map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={styles.watchlistItem}
-          onPress={() => console.log(`${item.name} pressed`)}
-        >
-          <View style={styles.watchlistItemContent}>
-            <Text style={styles.iconPlaceholder}>{item.symbol.slice(0, 3)}</Text>
-            <View style={styles.watchlistItemText}>
-              <Text style={styles.indexName}>{item.name}</Text>
-              <Text style={styles.indexSymbol}>{item.symbol}</Text>
+      {getWatchlistItems().length === 0 ? (
+        <Text style={styles.noDataText}>No watchlist data available</Text>
+      ) : (
+        getWatchlistItems().map((item) => (
+          <TouchableOpacity
+            key={item.symbol}
+            style={styles.watchlistItem}
+            onPress={() => console.log(`${item.name} pressed`)}
+          >
+            <View style={styles.watchlistItemContent}>
+              <Text style={styles.iconPlaceholder}>{item.symbol.slice(0, 3)}</Text>
+              <View style={styles.watchlistItemText}>
+                <Text style={styles.indexName}>{item.name}</Text>
+                <Text style={styles.indexSymbol}>{item.symbol}</Text>
+              </View>
             </View>
-          </View>
-          <View>
-            <Text style={styles.indexPrice}>{item.price}</Text>
-            <Text
-              style={[
-                styles.indexChange,
-                item.change.startsWith("+") ? styles.positiveChange : styles.negativeChange,
-              ]}
-            >
-              {item.change}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ))}
+            <View>
+              <Text style={styles.indexPrice}>{item.price}</Text>
+              <Text
+                style={[
+                  styles.indexChange,
+                  item.change.startsWith("+") ? styles.positiveChange : styles.negativeChange,
+                ]}
+              >
+                {item.change}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))
+      )}
 
       <WatchlistModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        allItems={allWatchlistItems}
+        allItems={watchlistItems}
         selectedItems={selectedItems}
         setSelectedItems={setSelectedItems}
       />
