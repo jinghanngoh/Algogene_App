@@ -18,6 +18,16 @@ const newsItems = [
   { id: 3, title: "NEWS 3", heading: "Regulation Update", description: "New crypto market regulations effective next month" },
 ];
 
+// Static fallback data for BTCUSD
+const staticWatchlistData = [
+  {
+    name: "BTC / USD",
+    symbol: "BTCUSD",
+    price: "108703.00",
+    change: "+0.09%"
+  }
+];
+
 const Home = () => {
   const [activeNewsIndex, setActiveNewsIndex] = useState(0);
   const [selectedNews, setSelectedNews] = useState(null);
@@ -25,17 +35,31 @@ const Home = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItems, setSelectedItems] = useState(["BTCUSD"]);
   const [watchlistItems, setWatchlistItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef(null);
+
+  const useStaticData = true; // TOGGLE TO FALSE WHEN BACKEND IS RUNNING // SET TO TRUE FOR DEVELOPMENT WITHOUT BACKEND SERVERS
+
 
   // Fetch watchlist data from FastAPI
   useEffect(() => {
     const fetchWatchlist = async () => {
+      if (useStaticData) {
+        setWatchlistItems(staticWatchlistData);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
       try {
-        const response = await fetch("http://10.89.8.201:8000/watchlist"); // Replace with your IP
+        const response = await fetch("http://10.89.8.201:8000/watchlist"); // My IP address 
         const data = await response.json();
-        setWatchlistItems(data);
+        setWatchlistItems(data.length > 0 ? data : staticWatchlistData);
       } catch (error) {
         console.error("Error fetching watchlist data:", error);
+        setWatchlistItems(staticWatchlistData);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -108,7 +132,9 @@ const Home = () => {
         </TouchableOpacity>
       </View>
 
-      {getWatchlistItems().length === 0 ? (
+      {isLoading ? (
+        <Text style={styles.noDataText}>Loading watchlist...</Text>
+      ) : getWatchlistItems().length === 0 ? (
         <Text style={styles.noDataText}>No watchlist data available</Text>
       ) : (
         getWatchlistItems().map((item) => (
