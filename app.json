@@ -14,9 +14,17 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.algogene.app",
+      "config": {
+        "googleSignIn": {
+          "reversedClientId": "com.googleusercontent.apps.236411853963-3v3f82rb67e77qqb1hrg6shbt1000v25"
+        }
+      }
     },
     "android": {
+      "package": "com.algogene.app",
+      "versionCode": 1, 
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -27,7 +35,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      ["expo-router", { "root": "./screens" }]
+      ["expo-router", { "root": "./screens" }],
+      "expo-dev-client",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "webClientId": "236411853963-3v3f82rb67e77qqb1hrg6shbt1000v25.apps.googleusercontent.com",
+          "iosUrlScheme": "com.googleusercontent.apps.236411853963-3v3f82rb67e77qqb1hrg6shbt1000v25"
+        }
+      ]
     ]
   }
 }

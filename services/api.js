@@ -45,18 +45,6 @@ API.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Response interceptor - handles all responses
-// API.interceptors.response.use(
-//   response => response.data,
-//   error => {
-//     if (error.response?.status === 401 || error.response?.status === 400) {
-//       console.log('Auth failed, clearing session');
-//       AsyncStorage.removeItem('sessionId');
-//     }
-//     return Promise.reject(error);
-//   }
-// );
-
 API.interceptors.response.use(
   (response) => response.data || {},
   async (error) => {
@@ -68,39 +56,5 @@ API.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// export default API;
-
-// API.interceptors.response.use(
-//   async (response) => {
-//     // Extract sid from set-cookie header
-//     const setCookie = response.headers?.['set-cookie'];
-//     if (setCookie) {
-//       let sid;
-//       if (Array.isArray(setCookie)) {
-//         const sidCookie = setCookie.find((cookie) => cookie.includes('sid='));
-//         if (sidCookie) {
-//           const sidMatch = sidCookie.match(/sid=([^;]+)/);
-//           sid = sidMatch ? sidMatch[1] : null;
-//         }
-//       } else if (typeof setCookie === 'string') {
-//         const sidMatch = setCookie.match(/sid=([^;]+)/);
-//         sid = sidMatch ? sidMatch[1] : null;
-//       }
-//       if (sid) {
-//         await AsyncStorage.setItem('sessionId', sid);
-//         console.log('Updated sessionId from set-cookie:', sid);
-//       }
-//     }
-//     return response.data;
-//   },
-//   async (error) => {
-//     if (error.response?.status === 401 || (error.response?.status === 400 && error.response?.data?.res === 'Unauthorized')) {
-//       console.log('Auth failed, clearing session');
-//       await AsyncStorage.removeItem('sessionId');
-//     }
-//     return Promise.reject(error);
-//   }
-// );
 
 export default API;
