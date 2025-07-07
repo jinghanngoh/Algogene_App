@@ -38,7 +38,7 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef(null);
 
-  const useStaticData = true; // TOGGLE TO FALSE WHEN BACKEND IS RUNNING // SET TO TRUE FOR DEVELOPMENT WITHOUT BACKEND SERVERS
+  const useStaticData = false; // TOGGLE TO FALSE WHEN BACKEND IS RUNNING // SET TO TRUE FOR DEVELOPMENT WITHOUT BACKEND SERVERS
 
 
   // Fetch watchlist data from FastAPI
