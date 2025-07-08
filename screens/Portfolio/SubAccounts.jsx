@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { configureBroker } from '../../services/BrokerApi';
+import { fetchPublicAlgos } from '../../services/MarketplaceApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SubAccounts = () => {
@@ -33,6 +34,32 @@ const SubAccounts = () => {
   // Loading and error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+
+  const fetchAlgorithmDetails = async (account) => {
+    try {
+      const response = await fetchPublicAlgos();
+      if (response.status && Array.isArray(response.data)) {
+        const algoData = response.data.find(algo => algo.algo_id === account.runningScript || algo.name === account.algorithm);
+        if (algoData) {
+          setSubAccounts((prevAccounts) =>
+            prevAccounts.map((acc) =>
+              acc.id === account.id ? { ...acc, algorithm: algoData.name || acc.algorithm } : acc
+            )
+          );
+        } else {
+          console.warn(`No matching algorithm found for runningScript: ${account.runningScript}`);
+        }
+      } else {
+        console.warn('Invalid response format from fetchPublicAlgos');
+      }
+    } catch (err) {
+      console.error('Error fetching algorithm details:', err);
+    }
+  };
+
+
+
 
   // Fetch Binance sub-account details
   const fetchSubAccountDetails = async (account) => {
@@ -75,7 +102,10 @@ const SubAccounts = () => {
 
   // Fetch details on mount
   useEffect(() => {
-    subAccounts.forEach((account) => fetchSubAccountDetails(account));
+    subAccounts.forEach((account) => {
+      fetchSubAccountDetails(account);
+      fetchAlgorithmDetails(account); // Added to fetch 2.3 data
+    });
   }, []);
 
   // Function to toggle Sub Account status
@@ -329,102 +359,3 @@ const styles = StyleSheet.create({
 });
 
 export default SubAccounts;
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: 'black',
-//     padding: 20,
-//   },
-//   box: {
-//     backgroundColor: '#1a1a1a',
-//     borderRadius: 12,
-//     padding: 20,
-//     marginTop: 50,
-//   },
-//   subAccountBox: {
-//     backgroundColor: '#2a2a2a',
-//     borderRadius: 8,
-//     padding: 15,
-//     marginBottom: 10,
-//   },
-//   header: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     marginBottom: 15,
-//   },
-//   headerTitle: {
-//     fontSize: 20,
-//     color: 'white',
-//     fontWeight: 'bold',
-//   },
-//   headerStatus: {
-//     fontSize: 14,
-//     alignSelf: 'center',
-//   },
-//   sectionTitle: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     marginBottom: 15,
-//     color: 'white',
-//   },
-//   sectionSubtitle: {
-//     fontSize: 14,
-//     color: 'lightgray',
-//     marginBottom: 15,
-//   },
-//   detailsRow: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     marginBottom: 8,
-//   },
-//   detailsLabel: {
-//     color: 'lightgray',
-//     fontSize: 14,
-//   },
-//   detailsValue: {
-//     color: 'white',
-//     fontSize: 14,
-//   },
-//   backButton: {
-//     position: 'absolute',
-//     top: 40,
-//     left: 20,
-//     zIndex: 1,
-//     marginTop: 5,
-//   },
-//   createButton: {
-//     backgroundColor: '#4FC3F7',
-//     paddingVertical: 5,
-//     paddingHorizontal: 10,
-//     borderRadius: 8,
-//   },
-//   createButtonText: {
-//     color: 'white',
-//     fontSize: 14,
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//   },
-//   buttonRow: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     marginTop: 10,
-//   },
-//   actionButton: {
-//     backgroundColor: '#1e90ff',
-//     paddingVertical: 8,
-//     paddingHorizontal: 8,
-//     borderRadius: 8,
-//     marginTop: 10,
-//     flex: 1,
-//     marginHorizontal: 3,
-//   },
-//   actionButtonText: {
-//     color: 'white',
-//     fontSize: 12,
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//   },
-// });
-
-// export default SubAccounts;

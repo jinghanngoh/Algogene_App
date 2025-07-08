@@ -42,19 +42,19 @@ export const optimizePortfolio = async (params = {}) => {
       group_cond: params.group_cond,
     };
 
-    console.log('Axios Request Config:', {
-      url: '/rest/v1/app/54/asset.optimize',
-      method: 'POST',
-      headers: api.defaults.headers,
-      data: payload,
-    });
-    console.log('API Payload:', JSON.stringify(payload, null, 2));
+    // console.log('Axios Request Config:', {
+    //   url: '/rest/v1/app/54/asset.optimize',
+    //   method: 'POST',
+    //   headers: api.defaults.headers,
+    //   data: payload,
+    // });
+    // console.log('API Payload:', JSON.stringify(payload, null, 2));
 
     const response = await api.post('/rest/v1/app/54/asset.optimize', payload);
     // console.log('Raw API Response:', JSON.stringify(response.data, null, 2));
-    console.log('Raw Alloc:', response.data.res?.asset_allocate?.alloc);
-    console.log('Raw Shares:', response.data.res?.asset_allocate?.shares);
-    console.log('Raw Prices:', response.data.res?.asset_allocate?.prices);
+    // console.log('Raw Alloc:', response.data.res?.asset_allocate?.alloc);
+    // console.log('Raw Shares:', response.data.res?.asset_allocate?.shares);
+    // console.log('Raw Prices:', response.data.res?.asset_allocate?.prices);
 
     if (!response.data?.status) {
       throw new Error(response.data?.res || 'API request failed');
