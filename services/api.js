@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Pre-configured instance 
 const API = axios.create({
+  
+  // baseURL: 'https://7840b2f6f14c.ngrok-free.app',
   baseURL: 'https://blindly-beloved-muskox.ngrok-free.app',
   // baseURL: 'https://algogene.com',
     headers: {

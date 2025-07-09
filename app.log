@@ -1,0 +1,29 @@
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Received request data: {'sid': 'session123', 'user': 'AGBOT1', 'api_key': '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff', 'subAccounts': [{'id': '#1000', 'broker': 'Binance', 'availableBalance': 15000.0606}]}
+DEBUG:backend.main:Parsed data: sid=session123, user=AGBOT1, api_key=13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff, subaccounts=[{'id': '#1000', 'broker': 'Binance', 'availableBalance': 15000.0606}]
+DEBUG:backend.main:Ensured subaccounts table exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Received request data: {'sid': 'session123', 'user': 'AGBOT1', 'api_key': '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff', 'subAccounts': [{'id': '#1000', 'broker': 'Binance', 'availableBalance': 15000.0606}]}
+DEBUG:backend.main:Parsed data: sid=session123, user=AGBOT1, api_key=13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff, subaccounts=[{'id': '#1000', 'broker': 'Binance', 'availableBalance': 15000.0606}]
+DEBUG:backend.main:Ensured subaccounts table exists in request

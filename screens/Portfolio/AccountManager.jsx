@@ -97,7 +97,7 @@ const AccountManager = () => {
           </View>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('SubAccounts')}
+            onPress={() => navigation.navigate('Portfolio/SubAccounts')}
           >
             <Text style={styles.actionButtonText}>View Sub Accounts</Text>
           </TouchableOpacity>

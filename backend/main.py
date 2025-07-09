@@ -1,11 +1,31 @@
+import logging
 from fastapi import FastAPI, Request
 import json
 import os
 import sqlite3
 from fastapi.middleware.cors import CORSMiddleware
-from .MarketData_Connection import MarketDataConnection
+from contextlib import asynccontextmanager
+from backend.MarketDataConnection import MarketDataConnection
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import logging
+    logging.basicConfig(level=logging.DEBUG, filename='/Users/jinghann/Desktop/Algogene_App/app.log')  # Explicit path
+    logger = logging.getLogger(__name__)
+    logger.debug("Starting lifespan event")
+    conn = sqlite3.connect('/Users/jinghann/Desktop/Algogene_App/backend/algogene_app.db')  # Explicit path
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS subaccounts
+                     (id TEXT PRIMARY KEY, broker TEXT, algorithm TEXT, currency TEXT, leverage TEXT, subscriptionEnd TEXT, 
+                      runningScript TEXT, availableBalance REAL, cashBalance REAL, realizedPL REAL, unrealizedPL REAL, 
+                      marginUsed REAL, status TEXT, brokerConnected INTEGER, brokerApiKey TEXT, brokerSecret TEXT)''')
+    conn.commit()
+    logger.debug("Table subaccounts created or already exists")
+    conn.close()
+    yield
+    logger.debug("Shutting down lifespan event")
+
+app = FastAPI(lifespan=lifespan)
 
 # Enable CORS to allow React Native frontend to access the API
 app.add_middleware(
@@ -25,7 +45,6 @@ async def get_watchlist():
     try:
         if os.path.exists("watchlist_data.json"):
             with open("watchlist_data.json", "r") as f:
-                # Read the last line for BTCUSD
                 lines = f.readlines()
                 for line in reversed(lines):
                     entry = json.loads(line.strip())
@@ -42,34 +61,93 @@ async def get_watchlist():
         print(f"Error reading watchlist data: {e}")
     return [data for data in latest_data.values() if data]
 
-@app.get("/rest/v1/app_subaccounts")
-async def get_subaccounts(request: Request):
-    session_id = request.query_params.get("sid")
-    user = request.query_params.get("user")
-    api_key = request.query_params.get("api_key")
-    # Validate session_id, user, api_key (add your validation logic here)
-    conn = sqlite3.connect('algogene_app.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM subaccounts WHERE user = ?", (user,))
-    subaccounts = cursor.fetchall()
-    conn.close()
-    return {"status": True, "data": subaccounts}
+# @app.post("/rest/v1/app_subaccounts")
+# async def save_subaccounts(request: Request):
+#     logging.basicConfig(level=logging.DEBUG)
+#     logger = logging.getLogger(__name__)
+#     logger.debug("Received request data: %s", await request.json())
+#     data = await request.json()
+#     session_id = data.get("sid")
+#     user = data.get("user")
+#     api_key = data.get("api_key")
+#     subaccounts = data.get("subAccounts")
+#     logger.debug("Parsed data: sid=%s, user=%s, api_key=%s, subaccounts=%s", session_id, user, api_key, subaccounts)
+#     try:
+#         conn = sqlite3.connect('algogene_app.db')
+#         cursor = conn.cursor()
+#         prepared_data = [
+#             (
+#                 sub.get("id", ""),
+#                 sub.get("broker", ""),
+#                 sub.get("algorithm", ""),
+#                 sub.get("currency", ""),
+#                 sub.get("leverage", ""),
+#                 sub.get("subscriptionEnd", ""),
+#                 sub.get("runningScript", ""),
+#                 float(sub.get("availableBalance", 0)),
+#                 float(sub.get("cashBalance", 0)),
+#                 float(sub.get("realizedPL", 0)),
+#                 float(sub.get("unrealizedPL", 0)),
+#                 float(sub.get("marginUsed", 0)),
+#                 sub.get("status", ""),
+#                 int(sub.get("brokerConnected", 0)),
+#                 sub.get("brokerApiKey", ""),
+#                 sub.get("brokerSecret", "")
+#             ) for sub in subaccounts
+#         ]
+#         cursor.executemany("INSERT OR REPLACE INTO subaccounts (id, broker, algorithm, currency, leverage, subscriptionEnd, runningScript, availableBalance, cashBalance, realizedPL, unrealizedPL, marginUsed, status, brokerConnected, brokerApiKey, brokerSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", prepared_data)
+#         conn.commit()
+#     except Exception as e:
+#         logger.error("Database error: %s", str(e))
+#         raise
+#     finally:
+#         conn.close()
+#     return {"status": True}
 
 @app.post("/rest/v1/app_subaccounts")
 async def save_subaccounts(request: Request):
+    logging.basicConfig(level=logging.DEBUG, filename='/Users/jinghann/Desktop/Algogene_App/app.log')  # Explicit path
+    logger = logging.getLogger(__name__)
+    logger.debug("Received request data: %s", await request.json())
     data = await request.json()
     session_id = data.get("sid")
     user = data.get("user")
     api_key = data.get("api_key")
     subaccounts = data.get("subAccounts")
-    # Validate session_id, user, api_key (add your validation logic here)
-    conn = sqlite3.connect('algogene_app.db')
-    cursor = conn.cursor()
-    cursor.executemany("INSERT OR REPLACE INTO subaccounts (id, broker, algorithm, currency, leverage, subscriptionEnd, runningScript, availableBalance, cashBalance, realizedPL, unrealizedPL, marginUsed, status, brokerConnected, brokerApiKey, brokerSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", subaccounts)
-    conn.commit()
-    conn.close()
+    logger.debug("Parsed data: sid=%s, user=%s, api_key=%s, subaccounts=%s", session_id, user, api_key, subaccounts)
+    try:
+        conn = sqlite3.connect('/Users/jinghann/Desktop/Algogene_App/backend/algogene_app.db')  # Explicit path
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS subaccounts
+                         (id TEXT PRIMARY KEY, broker TEXT, algorithm TEXT, currency TEXT, leverage TEXT, subscriptionEnd TEXT, 
+                          runningScript TEXT, availableBalance REAL, cashBalance REAL, realizedPL REAL, unrealizedPL REAL, 
+                          marginUsed REAL, status TEXT, brokerConnected INTEGER, brokerApiKey TEXT, brokerSecret TEXT)''')
+        logger.debug("Ensured subaccounts table exists in request")
+        prepared_data = [
+            (
+                sub.get("id", ""),
+                sub.get("broker", ""),
+                sub.get("algorithm", ""),
+                sub.get("currency", ""),
+                sub.get("leverage", ""),
+                sub.get("subscriptionEnd", ""),
+                sub.get("runningScript", ""),
+                float(sub.get("availableBalance", 0)),
+                float(sub.get("cashBalance", 0)),
+                float(sub.get("realizedPL", 0)),
+                float(sub.get("unrealizedPL", 0)),
+                float(sub.get("marginUsed", 0)),
+                sub.get("status", ""),
+                int(sub.get("brokerConnected", 0)),
+                sub.get("brokerApiKey", ""),
+                sub.get("brokerSecret", "")
+            ) for sub in subaccounts
+        ]
+        cursor.executemany("INSERT OR REPLACE INTO subaccounts (id, broker, algorithm, currency, leverage, subscriptionEnd, runningScript, availableBalance, cashBalance, realizedPL, unrealizedPL, marginUsed, status, brokerConnected, brokerApiKey, brokerSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", prepared_data)
+        conn.commit()
+    except Exception as e:
+        logger.error("Database error: %s", str(e))
+        raise
+    finally:
+        conn.close()
     return {"status": True}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
