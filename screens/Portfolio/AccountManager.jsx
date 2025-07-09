@@ -3,67 +3,50 @@ import { StyleSheet, Text, View, Dimensions, TouchableOpacity, ScrollView } from
 import { BarChart } from 'react-native-chart-kit';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSubAccounts } from '../../context/SubAccountsContext';
 
 const AccountManager = () => {
+  const { subAccounts } = useSubAccounts();
+  console.log('SubAccounts:', subAccounts);
   const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
 
-  // Placeholder data for Sub Accounts (used for calculations only)
-  const subAccounts = [
-    {
-      id: '#1000',
-      broker: 'Binance',
-      algorithm: 'Momentum Strategy v1',
-      currency: 'USD',
-      leverage: '5.0',
-      subscriptionEnd: '2025-08-31 02:02:51',
-      runningScript: 'Momentum_v1',
-      availableBalance: '1000000.0',
-      cashBalance: '1000000.0',
-      realizedPL: '0.0',
-      unrealizedPL: '0.0',
-      marginUsed: '0.0',
-      status: 'INACTIVE',
-    },
-    {
-      id: '#1001',
-      broker: 'Binance',
-      algorithm: 'Trend Strategy v2',
-      currency: 'BTC',
-      leverage: '3.0',
-      subscriptionEnd: '2025-09-15 12:00:00',
-      runningScript: 'Trend_v2',
-      availableBalance: '0.5',
-      cashBalance: '0.1',
-      realizedPL: '0.02',
-      unrealizedPL: '-0.01',
-      marginUsed: '0.3',
-      status: 'ACTIVE',
-    },
-    {
-      id: '#1002',
-      broker: 'Kraken',
-      algorithm: 'Mean Reversion v1',
-      currency: 'USD',
-      leverage: '10.0',
-      subscriptionEnd: '2025-10-01 08:30:00',
-      runningScript: 'MeanRev_v1',
-      availableBalance: '500000.0',
-      cashBalance: '200000.0',
-      realizedPL: '5000.0',
-      unrealizedPL: '-2000.0',
-      marginUsed: '100000.0',
-      status: 'ACTIVE',
-    },
-  ];
+  // Fetch subAccounts from SubAccounts component state dynamically
+  // const [subAccounts, setSubAccounts] = useState([]);
+  // useEffect(() => {
+  //   // Simulate fetching subAccounts (replace with actual state sharing logic)
+  //   const fetchSubAccounts = async () => {
+  //     // This is a placeholder; in a real app, you might use a context or prop to share state
+  //     // For now, we'll use the initial state from SubAccounts as a fallback
+  //     const initialSubAccounts = [
+  //       {
+  //         id: '#1000',
+  //         broker: 'Binance',
+  //         algorithm: 'SpiderNet',
+  //         currency: 'USD',
+  //         leverage: '5.0',
+  //         subscriptionEnd: '2025-08-31 02:02:51',
+  //         runningScript: 'SpiderNet_v1',
+  //         availableBalance: '1000000.0',
+  //         cashBalance: '1000000.0',
+  //         realizedPL: '0.0',
+  //         unrealizedPL: '0.0',
+  //         marginUsed: '0.0',
+  //         status: 'INACTIVE',
+  //       },
+  //     ];
+  //     setSubAccounts(initialSubAccounts);
+  //   };
+  //   fetchSubAccounts();
+  // }, []);
 
   // Calculate Account-level metrics
-  const totalPortfolioValue = subAccounts
-    .reduce((sum, acc) => sum + parseFloat(acc.availableBalance) + parseFloat(acc.cashBalance), 0)
-    .toFixed(2);
-  const totalPL = subAccounts
-    .reduce((sum, acc) => sum + parseFloat(acc.realizedPL) + parseFloat(acc.unrealizedPL), 0)
-    .toFixed(2);
+  const totalPortfolioValue = subAccounts.length > 0
+    ? subAccounts.reduce((sum, acc) => sum + parseFloat(acc.availableBalance) + parseFloat(acc.cashBalance), 0).toFixed(2)
+    : '0.00';
+  const totalPL = subAccounts.length > 0
+    ? subAccounts.reduce((sum, acc) => sum + parseFloat(acc.realizedPL) + parseFloat(acc.unrealizedPL), 0).toFixed(2)
+    : '0.00';
   const activeSubAccounts = subAccounts.filter(acc => acc.status === 'ACTIVE').length;
 
   // Data for BarChart (total cash balance across Sub Accounts)
@@ -71,7 +54,7 @@ const AccountManager = () => {
     labels: subAccounts.map(acc => acc.id),
     datasets: [
       {
-        data: subAccounts.map(acc => parseFloat(acc.cashBalance)),
+        data: subAccounts.map(acc => parseFloat(acc.cashBalance) || 0),
       },
     ],
   };
@@ -85,7 +68,6 @@ const AccountManager = () => {
   return (
     <ScrollView>
       <View style={styles.container}>
-        {/* Back Button */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -93,7 +75,6 @@ const AccountManager = () => {
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
 
-        {/* Account Summary */}
         <View style={styles.firstbox}>
           <Text style={styles.sectionTitle}>Portfolio Overview</Text>
           <View style={styles.detailsRow}>
@@ -110,6 +91,10 @@ const AccountManager = () => {
             <Text style={styles.detailsLabel}>Active Sub Accounts:</Text>
             <Text style={styles.detailsValue}>{activeSubAccounts}</Text>
           </View>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailsLabel}>Total Sub Accounts:</Text>
+            <Text style={styles.detailsValue}>{subAccounts.length}</Text>
+          </View>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('SubAccounts')}
@@ -118,7 +103,6 @@ const AccountManager = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Cash Balance Chart */}
         <View style={styles.box}>
           <Text style={styles.sectionTitle}>Cash Balances</Text>
           <BarChart
@@ -165,7 +149,6 @@ const AccountManager = () => {
           </View>
         </View>
 
-        {/* Bank Account/Credit Card Linking */}
         <View style={styles.box}>
           <Text style={styles.sectionTitle}>Linked Accounts</Text>
           <View style={styles.detailsRow}>

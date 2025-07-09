@@ -11,44 +11,6 @@ const generateSessionId = () => {
 // Delay function for retry logic
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Log formatted strategy performance response
-// const logFullApiResponse = (response) => {
-//   console.log('=== FORMATTED STRATEGY RESPONSE ===');
-  
-//   // Performance section
-//   console.log('\nPERFORMANCE METRICS:');
-//   console.log('-------------------');
-//   const performance = response.performance || {};
-//   for (const [key, value] of Object.entries(performance)) {
-//     if (typeof value === 'number') {
-//       // Format numbers nicely
-//       if (key.includes('pct') || key.includes('Rate') || key.includes('ratio')) {
-//         console.log(`${key}: ${(value * 100).toFixed(2)}%`);
-//       } else if (Math.abs(value) < 0.01) {
-//         console.log(`${key}: ${value.toExponential(4)}`);
-//       } else {
-//         console.log(`${key}: ${value.toLocaleString()}`);
-//       }
-//     } else {
-//       console.log(`${key}: ${value}`);
-//     }
-//   }
-
-//   // Settings section
-//   console.log('\nSTRATEGY SETTINGS:');
-//   console.log('-----------------');
-//   const settings = response.setting || {};
-//   for (const [key, value] of Object.entries(settings)) {
-//     if (Array.isArray(value)) {
-//       console.log(`${key}: [${value.join(', ')}]`);
-//     } else {
-//       console.log(`${key}: ${value}`);
-//     }
-//   }
-
-//   console.log('=== END OF FORMATTED RESPONSE ===');
-// };
-
 export const fetchPublicAlgos = async (retries = 1) => {
   try {
     // console.log('Making API Request to /rest/v1/app_mp_topalgo');
@@ -250,3 +212,41 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
     throw error;
   }
 };
+
+// Log formatted strategy performance response
+// const logFullApiResponse = (response) => {
+//   console.log('=== FORMATTED STRATEGY RESPONSE ===');
+  
+//   // Performance section
+//   console.log('\nPERFORMANCE METRICS:');
+//   console.log('-------------------');
+//   const performance = response.performance || {};
+//   for (const [key, value] of Object.entries(performance)) {
+//     if (typeof value === 'number') {
+//       // Format numbers nicely
+//       if (key.includes('pct') || key.includes('Rate') || key.includes('ratio')) {
+//         console.log(`${key}: ${(value * 100).toFixed(2)}%`);
+//       } else if (Math.abs(value) < 0.01) {
+//         console.log(`${key}: ${value.toExponential(4)}`);
+//       } else {
+//         console.log(`${key}: ${value.toLocaleString()}`);
+//       }
+//     } else {
+//       console.log(`${key}: ${value}`);
+//     }
+//   }
+
+//   // Settings section
+//   console.log('\nSTRATEGY SETTINGS:');
+//   console.log('-----------------');
+//   const settings = response.setting || {};
+//   for (const [key, value] of Object.entries(settings)) {
+//     if (Array.isArray(value)) {
+//       console.log(`${key}: [${value.join(', ')}]`);
+//     } else {
+//       console.log(`${key}: ${value}`);
+//     }
+//   }
+
+//   console.log('=== END OF FORMATTED RESPONSE ===');
+// };

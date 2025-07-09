@@ -1,0 +1,18 @@
+CREATE TABLE subaccounts (
+    id TEXT,
+    broker TEXT,
+    algorithm TEXT,
+    currency TEXT,
+    leverage TEXT,
+    subscriptionEnd TEXT,
+    runningScript TEXT,
+    availableBalance TEXT,
+    cashBalance TEXT,
+    realizedPL TEXT,
+    unrealizedPL TEXT,
+    marginUsed TEXT,
+    status TEXT,
+    brokerConnected BOOLEAN,
+    brokerApiKey TEXT,
+    brokerSecret TEXT
+);

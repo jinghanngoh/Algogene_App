@@ -5,36 +5,37 @@ import { Ionicons } from '@expo/vector-icons';
 import { configureBroker } from '../../services/BrokerApi';
 import { fetchPublicAlgos } from '../../services/MarketplaceApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSubAccounts } from '../../context/SubAccountsContext';
 
 const SubAccounts = () => {
+  const { subAccounts , setSubAccounts, saveSubAccounts } = useSubAccounts(); 
   const navigation = useNavigation();
-
-  // Initial state with only #1000 for debugging
-  const [subAccounts, setSubAccounts] = useState([
-    {
-      id: '#1000',
-      broker: 'Binance',
-      algorithm: 'Momentum Strategy v1',
-      currency: 'USD',
-      leverage: '5.0',
-      subscriptionEnd: '2025-08-31 02:02:51',
-      runningScript: 'Momentum_v1',
-      availableBalance: '1000000.0',
-      cashBalance: '1000000.0',
-      realizedPL: '0.0',
-      unrealizedPL: '0.0',
-      marginUsed: '0.0',
-      status: 'INACTIVE',
-      brokerConnected: false,
-      brokerApiKey: '033ff7baad2893427dee0a7fc313a239af8ce33035d702757ca893da0fb14e85', // Hardcoded
-      brokerSecret: '1282d57b4233583b7f4e85201bb972e1d7cdc6b63822ebc0ec30bac95d78cb4b', // Hardcoded
-    },
-  ]);
 
   // Loading and error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  
+  // Initial state with only #1000 for debugging
+  // const [subAccounts, setSubAccounts] = useState([
+  //   {
+  //     id: '#1000',
+  //     broker: 'Binance',
+  //     algorithm: 'SpiderNet',
+  //     currency: 'USD',
+  //     leverage: '5.0',
+  //     subscriptionEnd: '2025-08-31 02:02:51',
+  //     runningScript: 'SpiderNet_v1',
+  //     availableBalance: '1000000.0',
+  //     cashBalance: '1000000.0',
+  //     realizedPL: '0.0',
+  //     unrealizedPL: '0.0',
+  //     marginUsed: '0.0',
+  //     status: 'INACTIVE',
+  //     brokerConnected: false,
+  //     brokerApiKey: '033ff7baad2893427dee0a7fc313a239af8ce33035d702757ca893da0fb14e85', // Hardcoded
+  //     brokerSecret: '1282d57b4233583b7f4e85201bb972e1d7cdc6b63822ebc0ec30bac95d78cb4b', // Hardcoded
+  //   },
+  // ]);
 
   const fetchAlgorithmDetails = async (account) => {
     try {
@@ -42,11 +43,11 @@ const SubAccounts = () => {
       if (response.status && Array.isArray(response.data)) {
         const algoData = response.data.find(algo => algo.algo_id === account.runningScript || algo.name === account.algorithm);
         if (algoData) {
-          setSubAccounts((prevAccounts) =>
-            prevAccounts.map((acc) =>
-              acc.id === account.id ? { ...acc, algorithm: algoData.name || acc.algorithm } : acc
-            )
+          const updatedAccounts = subAccounts.map((acc) =>
+            acc.id === account.id ? { ...acc, algorithm: algoData.name || acc.algorithm } : acc
           );
+          setSubAccounts(updatedAccounts);
+          saveSubAccounts(updatedAccounts); 
         } else {
           console.warn(`No matching algorithm found for runningScript: ${account.runningScript}`);
         }
@@ -58,9 +59,6 @@ const SubAccounts = () => {
     }
   };
 
-
-
-
   // Fetch Binance sub-account details
   const fetchSubAccountDetails = async (account) => {
     if (account.broker !== 'Binance' || !account.brokerApiKey || !account.brokerSecret) return;
@@ -69,7 +67,7 @@ const SubAccounts = () => {
       const sessionId = await AsyncStorage.getItem('sessionId');
       if (!sessionId) {
         console.log('No session ID, attempting login...');
-        await login();
+        await login(); // Defined in SubAccountsContext
       }
       console.log('Attempting to configure broker with:', {
         brokerApiKey: account.brokerApiKey,
@@ -77,19 +75,19 @@ const SubAccounts = () => {
       });
       const response = await configureBroker(account.brokerApiKey, account.brokerSecret);
       console.log('API Response:', response);
-      setSubAccounts((prevAccounts) =>
-        prevAccounts.map((acc) =>
-          acc.id === account.id
-            ? {
-                ...acc,
-                brokerConnected: response.status === true,
-                availableBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.available_Balance || acc.availableBalance,
-                cashBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cashBalance || acc.cashBalance,
-                currency: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cur || acc.currency,
-              }
-            : acc
-        )
+      const updatedAccounts = subAccounts.map((acc) =>
+        acc.id === account.id
+          ? {
+              ...acc,
+              brokerConnected: response.status === true,
+              availableBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.available_Balance || acc.availableBalance,
+              cashBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cashBalance || acc.cashBalance,
+              currency: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cur || acc.currency,
+            }
+          : acc
       );
+      setSubAccounts(updatedAccounts);
+      saveSubAccounts(updatedAccounts); // Persist to DB
       setError(null);
     } catch (err) {
       console.error(`Error fetching details for ${account.id}:`, err);
@@ -110,13 +108,13 @@ const SubAccounts = () => {
 
   // Function to toggle Sub Account status
   const toggleStatus = (id) => {
-    setSubAccounts((prevAccounts) =>
-      prevAccounts.map((account) =>
-        account.id === id
-          ? { ...account, status: account.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
-          : account
-      )
+    const updatedAccounts = subAccounts.map((account) =>
+      account.id === id
+        ? { ...account, status: account.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
+        : account
     );
+    setSubAccounts(updatedAccounts);
+    saveSubAccounts(updatedAccounts); // Persist to DB
     console.log(`Toggling ${id} to ${subAccounts.find((acc) => acc.id === id).status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}`);
     const account = subAccounts.find((acc) => acc.id === id);
     fetchSubAccountDetails(account);
@@ -125,12 +123,9 @@ const SubAccounts = () => {
   return (
     <ScrollView style={styles.scrollContainer}>
       <View style={styles.container}>
-        {/* Back Button */}
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-
-        {/* Sub Accounts List */}
         <View style={styles.box}>
           <View style={styles.header}>
             <Text style={styles.sectionTitle}>Sub Accounts</Text>

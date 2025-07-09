@@ -51,6 +51,9 @@ export default function AppNavigator() {
           <Stack.Screen name="Portfolio/MyAccount" component={MyAccount} />
           <Stack.Screen name="Portfolio/RealTrade" component={RealTrade} />
           <Stack.Screen name="Portfolio/PortfolioResult" component={PortfolioResult} />
+          <Stack.Screen name="Portfolio/AccountManager" component={AccountManager} />
+          <Stack.Screen name="Portfolio/SubAccounts" component={SubAccounts} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </SubscriptionProvider>
