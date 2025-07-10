@@ -6,36 +6,14 @@ import { configureBroker } from '../../services/BrokerApi';
 import { fetchPublicAlgos } from '../../services/MarketplaceApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubAccounts } from '../../context/SubAccountsContext';
+import SubAccountCreation from '../components/SubAccountCreationModal';
 
 const SubAccounts = () => {
-  const { subAccounts , setSubAccounts, saveSubAccounts } = useSubAccounts(); 
+  const { subAccounts, setSubAccounts, saveSubAccounts } = useSubAccounts();
   const navigation = useNavigation();
-
-  // Loading and error states
+  const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Initial state with only #1000 for debugging
-  // const [subAccounts, setSubAccounts] = useState([
-  //   {
-  //     id: '#1000',
-  //     broker: 'Binance',
-  //     algorithm: 'SpiderNet',
-  //     currency: 'USD',
-  //     leverage: '5.0',
-  //     subscriptionEnd: '2025-08-31 02:02:51',
-  //     runningScript: 'SpiderNet_v1',
-  //     availableBalance: '1000000.0',
-  //     cashBalance: '1000000.0',
-  //     realizedPL: '0.0',
-  //     unrealizedPL: '0.0',
-  //     marginUsed: '0.0',
-  //     status: 'INACTIVE',
-  //     brokerConnected: false,
-  //     brokerApiKey: '033ff7baad2893427dee0a7fc313a239af8ce33035d702757ca893da0fb14e85', // Hardcoded
-  //     brokerSecret: '1282d57b4233583b7f4e85201bb972e1d7cdc6b63822ebc0ec30bac95d78cb4b', // Hardcoded
-  //   },
-  // ]);
 
   const fetchAlgorithmDetails = async (account) => {
     try {
@@ -47,7 +25,7 @@ const SubAccounts = () => {
             acc.id === account.id ? { ...acc, algorithm: algoData.name || acc.algorithm } : acc
           );
           setSubAccounts(updatedAccounts);
-          saveSubAccounts(updatedAccounts); 
+          saveSubAccounts(updatedAccounts);
         } else {
           console.warn(`No matching algorithm found for runningScript: ${account.runningScript}`);
         }
@@ -59,7 +37,6 @@ const SubAccounts = () => {
     }
   };
 
-  // Fetch Binance sub-account details
   const fetchSubAccountDetails = async (account) => {
     if (account.broker !== 'Binance' || !account.brokerApiKey || !account.brokerSecret) return;
     setLoading(true);
@@ -67,7 +44,7 @@ const SubAccounts = () => {
       const sessionId = await AsyncStorage.getItem('sessionId');
       if (!sessionId) {
         console.log('No session ID, attempting login...');
-        await login(); // Defined in SubAccountsContext
+        await login();
       }
       console.log('Attempting to configure broker with:', {
         brokerApiKey: account.brokerApiKey,
@@ -87,7 +64,7 @@ const SubAccounts = () => {
           : acc
       );
       setSubAccounts(updatedAccounts);
-      saveSubAccounts(updatedAccounts); // Persist to DB
+      saveSubAccounts(updatedAccounts);
       setError(null);
     } catch (err) {
       console.error(`Error fetching details for ${account.id}:`, err);
@@ -98,15 +75,13 @@ const SubAccounts = () => {
     }
   };
 
-  // Fetch details on mount
   useEffect(() => {
     subAccounts.forEach((account) => {
       fetchSubAccountDetails(account);
-      fetchAlgorithmDetails(account); // Added to fetch 2.3 data
+      fetchAlgorithmDetails(account);
     });
   }, []);
 
-  // Function to toggle Sub Account status
   const toggleStatus = (id) => {
     const updatedAccounts = subAccounts.map((account) =>
       account.id === id
@@ -114,9 +89,9 @@ const SubAccounts = () => {
         : account
     );
     setSubAccounts(updatedAccounts);
-    saveSubAccounts(updatedAccounts); // Persist to DB
+    saveSubAccounts(updatedAccounts);
     console.log(`Toggling ${id} to ${subAccounts.find((acc) => acc.id === id).status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}`);
-    const account = subAccounts.find((acc) => acc.id === id);
+    const account = updatedAccounts.find((acc) => acc.id === id);
     fetchSubAccountDetails(account);
   };
 
@@ -131,7 +106,7 @@ const SubAccounts = () => {
             <Text style={styles.sectionTitle}>Sub Accounts</Text>
             <TouchableOpacity
               style={styles.createButton}
-              onPress={() => navigation.navigate('CreateSubAccount')}
+              onPress={() => setModalVisible(true)}
             >
               <Text style={styles.createButtonText}>+ Create</Text>
             </TouchableOpacity>
@@ -237,6 +212,7 @@ const SubAccounts = () => {
             ))}
           </ScrollView>
         </View>
+        <SubAccountCreation visible={modalVisible} onClose={() => setModalVisible(false)} />
       </View>
     </ScrollView>
   );
