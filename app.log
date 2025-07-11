@@ -27,3 +27,30 @@ DEBUG:backend.main:Table subaccounts created or already exists
 DEBUG:backend.main:Received request data: {'sid': 'session123', 'user': 'AGBOT1', 'api_key': '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff', 'subAccounts': [{'id': '#1000', 'broker': 'Binance', 'availableBalance': 15000.0606}]}
 DEBUG:backend.main:Parsed data: sid=session123, user=AGBOT1, api_key=13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff, subaccounts=[{'id': '#1000', 'broker': 'Binance', 'availableBalance': 15000.0606}]
 DEBUG:backend.main:Ensured subaccounts table exists in request
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+DEBUG:backend.main:Starting lifespan event
+DEBUG:backend.main:Table subaccounts created or already exists
+DEBUG:backend.main:Shutting down lifespan event
+2025-07-10 12:49:15,862 - backend.main - DEBUG - Starting lifespan event
+2025-07-10 12:49:15,862 - backend.main - DEBUG - Table subaccounts created or already exists
+2025-07-10 12:49:38,395 - backend.main - DEBUG - Shutting down lifespan event
+2025-07-10 12:49:38,905 - backend.main - DEBUG - Starting lifespan event
+2025-07-10 12:49:38,906 - backend.main - DEBUG - Table subaccounts created or already exists
+2025-07-10 12:50:02,962 - backend.main - DEBUG - Shutting down lifespan event
+2025-07-10 12:50:03,441 - backend.main - DEBUG - Starting lifespan event
+2025-07-10 12:50:03,442 - backend.main - DEBUG - Table subaccounts created or already exists
+2025-07-10 12:50:05,565 - backend.main - DEBUG - Shutting down lifespan event
+2025-07-10 12:50:05,994 - backend.main - DEBUG - Starting lifespan event
+2025-07-10 12:50:05,994 - backend.main - DEBUG - Table subaccounts created or already exists
+2025-07-10 12:50:30,954 - backend.main - DEBUG - Shutting down lifespan event
+2025-07-10 12:50:31,428 - backend.main - DEBUG - Starting lifespan event
+2025-07-10 12:50:31,429 - backend.main - DEBUG - Table subaccounts created or already exists
+2025-07-10 12:50:50,122 - backend.main - DEBUG - Shutting down lifespan event
+2025-07-10 12:50:50,559 - backend.main - DEBUG - Starting lifespan event
+2025-07-10 12:50:50,560 - backend.main - DEBUG - Table subaccounts created or already exists
+2025-07-10 12:51:00,566 - backend.main - DEBUG - Shutting down lifespan event

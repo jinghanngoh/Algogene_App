@@ -378,26 +378,80 @@ const Marketplace = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: '#121212',
   },
-  spacer: {
-    height: 20, 
+  selectionBanner: {
+    backgroundColor: '#2196F3',
+    padding: 10,
+    alignItems: 'center',
+  },
+  selectionText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 15,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#2196F3',
+  },
+  tabText: {
+    color: '#999999',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  activeTabText: {
+    color: 'white',
   },
   scrollContainer: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+  },
+  boxesContainer: {
+    flexDirection: 'column',
     width: '100%',
   },
-  scrollContentContainer: {
-    paddingHorizontal: 15,
-    paddingBottom: 20,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 200,
+    width: '100%',
+  },
+  loadingMoreContainer: {
+    width: '100%',
+    paddingVertical: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingMoreText: {
+    color: '#CCCCCC',
+    marginLeft: 10,
   },
   contentBox: {
     backgroundColor: 'white',
     marginBottom: 20,
     padding: 20,
     borderRadius: 10,
-    width: '100%',
+    width: '95%',
+    alignSelf: 'center', 
     marginTop: 10, 
+    paddingHorizontal: 30
   },
   firstContentBox:{
     marginTop: 30,
@@ -449,6 +503,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1, 
   },
+  descriptionText: {
+    color: 'black',
+    marginBottom: 15,
+    lineHeight: 20,
+  },
+  graphContainer: {
+    marginBottom: 15,
+    marginLeft: -15, 
+    marginTop: 15, 
+    overflow: 'hidden',
+  },
   graphPlaceholder: {
     backgroundColor: '#E0E0E0',
     height: 150,
@@ -458,27 +523,6 @@ const styles = StyleSheet.create({
   },
   graphLabel: {
     color: 'black',
-  },
-  descriptionText: {
-    color: 'black',
-    marginBottom: 15,
-    lineHeight: 20,
-  },
-  readMoreButton: {
-    backgroundColor: '#222',
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  readMoreText: {
-    color: 'white',
-  },
-  graphContainer: {
-    marginBottom: 15,
-    marginLeft: -15, 
-    marginTop: 15, 
-    overflow: 'hidden',
   },
   performanceScore: {
     backgroundColor: '#2196F3',
@@ -494,16 +538,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  chartStyle: {
+  readMoreButton: {
+    backgroundColor: '#222',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
     borderRadius: 5,
+    alignItems: 'center',
   },
-  starsContainer: {
-    flexDirection: 'row',
-  },
-  star: {
-    fontSize: 16,
-    color: '#FFD700',
-    marginLeft: 2,
+  readMoreText: {
+    color: 'white',
   },
   subscribedBox: {
     borderColor: '#4CAF50',
@@ -564,11 +607,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 10,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -582,4 +620,3 @@ const styles = StyleSheet.create({
 });
 
 export default Marketplace;
-

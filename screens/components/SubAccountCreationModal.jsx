@@ -1,17 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useSubAccounts } from '../../context/SubAccountsContext';
+import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import binance_icon from '../../assets/img/binance_icon.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Link } from 'expo-router';
 
 const SubAccountCreation = ({ visible, onClose }) => {
   const { subAccounts, setSubAccounts, saveSubAccounts } = useSubAccounts();
+  const navigation = useNavigation();
+  const router = useRouter(); 
   const [id, setId] = useState('');
   const [broker, setBroker] = useState('');
   const [algorithm, setAlgorithm] = useState('');
+  const [currency, setCurrency] = useState('');
   const [error, setError] = useState('');
   const [brokerPickerVisible, setBrokerPickerVisible] = useState(false);
-  const [algorithmPickerVisible, setAlgorithmPickerVisible] = useState(false);
+  const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
+
+  useEffect(() => {
+    const checkForSelectedAlgorithm = async () => {
+      try {
+        const selectedAlgoJson = await AsyncStorage.getItem('selectedAlgorithm');
+        if (selectedAlgoJson) {
+          const selectedAlgo = JSON.parse(selectedAlgoJson);
+          setAlgorithm(selectedAlgo.name || 'Selected Algorithm');
+          // Clear the stored algorithm
+          await AsyncStorage.removeItem('selectedAlgorithm');
+        }
+      } catch (error) {
+        console.error('Error retrieving selected algorithm:', error);
+      }
+    };
+    
+    // Check when the screen is focused
+    checkForSelectedAlgorithm();
+    
+  }, []);
+
 
   const handleCreate = async () => {
     if (!id || id.trim() === '') {
@@ -30,12 +58,16 @@ const SubAccountCreation = ({ visible, onClose }) => {
       setError('Algorithm is required');
       return;
     }
+    if (!currency) {
+      setError('Currency is required');
+      return;
+    }
 
     const newAccount = {
       id,
       broker,
       algorithm,
-      currency: 'USD',
+      currency,
       leverage: '5.0',
       subscriptionEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('.')[0],
       runningScript: algorithm,
@@ -56,9 +88,10 @@ const SubAccountCreation = ({ visible, onClose }) => {
     setId('');
     setBroker('');
     setAlgorithm('');
+    setCurrency('');
     setError('');
     setBrokerPickerVisible(false);
-    setAlgorithmPickerVisible(false);
+    setCurrencyPickerVisible(false);
     onClose();
   };
 
@@ -91,8 +124,15 @@ const SubAccountCreation = ({ visible, onClose }) => {
             style={styles.brokerBar}
             onPress={() => setBrokerPickerVisible(!brokerPickerVisible)}
           >
-            <Image source={binance_icon} style={styles.brokerLogo} />
-            <Text style={styles.brokerText}>{broker || 'Binance'}</Text>
+            {broker === 'Binance' && (
+              <Image source={binance_icon} style={styles.brokerLogo} />
+            )}
+            <Text style={[
+              styles.brokerText, 
+              !broker && { marginLeft: broker ? undefined : 10 }
+            ]}>
+              {broker || 'Select Broker'}
+            </Text>
             <Ionicons
               name={brokerPickerVisible ? 'chevron-up' : 'chevron-down'}
               size={20}
@@ -101,42 +141,71 @@ const SubAccountCreation = ({ visible, onClose }) => {
             />
           </TouchableOpacity>
           {brokerPickerVisible && (
-            <View style={styles.pickerContainer}>
-              <TouchableOpacity
-                style={styles.pickerItem}
-                onPress={() => {
-                  setBroker('Binance');
-                  setBrokerPickerVisible(false);
-                }}
-              >
-                <Image source={binance_icon} style={styles.pickerLogo} />
-                <Text style={styles.pickerText}>Binance</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View style={styles.pickerContainer}>
+            <TouchableOpacity
+              style={styles.pickerItem}
+              onPress={() => {
+                setBroker('Binance');
+                setBrokerPickerVisible(false);
+              }}
+            >
+              <Image source={binance_icon} style={styles.pickerLogo} />
+              <Text style={styles.pickerText}>Binance</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
           <Text style={styles.label}>Algorithm</Text>
+          <Link href="(tabs)/marketplace" asChild>
+            <TouchableOpacity
+                style={styles.brokerBar}
+                onPress={async () => {
+                // Still store the state before navigation
+                try {
+                    await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify({
+                    id,
+                    broker,
+                    currency,
+                    isCreatingSubAccount: true
+                    }));
+                    console.log("GGG");
+                } catch (error) {
+                    console.error('Error storing sub account state:', error);
+                }
+                }}
+            >
+                <Text style={styles.brokerText}>{algorithm || 'Select Algorithm'}</Text>
+                <Ionicons
+                name="chevron-forward"
+                size={20}
+                color="white"
+                style={styles.chevron}
+                />
+            </TouchableOpacity>
+         </Link>
+
+          <Text style={styles.label}>Currency</Text>
           <TouchableOpacity
             style={styles.brokerBar}
-            onPress={() => setAlgorithmPickerVisible(!algorithmPickerVisible)}
+            onPress={() => setCurrencyPickerVisible(!currencyPickerVisible)}
           >
-            <Text style={styles.brokerText}>{algorithm || 'Select Algorithm'}</Text>
+            <Text style={styles.brokerText}>{currency || 'Select Currency'}</Text>
             <Ionicons
-              name={algorithmPickerVisible ? 'chevron-up' : 'chevron-down'}
+              name={currencyPickerVisible ? 'chevron-up' : 'chevron-down'}
               size={20}
               color="white"
               style={styles.chevron}
             />
           </TouchableOpacity>
-          {algorithmPickerVisible && (
+          {currencyPickerVisible && (
             <View style={styles.pickerContainer}>
-              {['Option A', 'Option B', 'Option C'].map((option) => (
+              {['USD', 'EUR'].map((option) => (
                 <TouchableOpacity
                   key={option}
                   style={styles.pickerItem}
                   onPress={() => {
-                    setAlgorithm(option);
-                    setAlgorithmPickerVisible(false);
+                    setCurrency(option);
+                    setCurrencyPickerVisible(false);
                   }}
                 >
                   <Text style={styles.pickerText}>{option}</Text>
@@ -158,6 +227,7 @@ const SubAccountCreation = ({ visible, onClose }) => {
     </Modal>
   );
 };
+
   
 const styles = StyleSheet.create({
     modalOverlay: {
@@ -167,11 +237,12 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     modalContainer: {
-      backgroundColor: '#1a1a1a',
-      borderRadius: 12,
-      padding: 20,
-      width: '90%',
-      maxWidth: 400,
+        backgroundColor: '#1a1a1a',
+        borderRadius: 12,
+        padding: 20,
+        width: '90%',
+        maxWidth: 400,
+        minHeight: 500, 
     },
     modalTitle: {
       fontSize: 20,
