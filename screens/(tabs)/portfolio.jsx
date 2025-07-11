@@ -42,82 +42,6 @@ const Portfolio = () => {
             </View>
             
             <ScrollView style={styles.scrollContainer}>
-                {/* Subscribed Algorithm Section */}
-                {subscribedAlgorithm && (
-                    <View style={styles.subscribedContainer}>
-                        <Text style={styles.subscribedTitle}>Your Subscribed Algorithm</Text>
-                        <TouchableOpacity 
-                            style={[
-                                styles.contentBox,
-                                styles.subscribedBox
-                            ]}
-                            onPress={() => {
-                                // Optional: Add navigation to strategy details
-                            }}
-                        >
-                            <View style={styles.subscribedBadge}>
-                                <Text style={styles.subscribedText}>SUBSCRIBED</Text>
-                            </View>
-
-                            <View style={[
-                                styles.categoryLabel,
-                                { backgroundColor: getCategoryColor(subscribedAlgorithm.category) }
-                            ]}>
-                                <Text style={styles.categoryLabelText}>{subscribedAlgorithm.category}</Text>
-                            </View>
-                            
-                            <View style={styles.userContainer}>
-                                <Image source={placeholder} style={styles.userIcon} />
-                                <Text style={styles.userName}>{subscribedAlgorithm.userName}</Text>
-                            </View>
-                            
-                            <View style={styles.divider} />
-                            
-                            <View style={styles.titleContainer}>
-                                <Text style={styles.titleText}>{subscribedAlgorithm.title}</Text>
-                                <View style={styles.performanceScore}>
-                                    <Text style={styles.performanceScoreText}>
-                                        {subscribedAlgorithm.performance?.score || 'N/A'}
-                                    </Text>
-                                </View>
-                            </View>
-                            
-                            <View style={styles.graphContainer}>
-                                <LineChart
-                                    data={{
-                                        labels: subscribedAlgorithm.chartData?.labels || ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-                                        datasets: [{
-                                            data: subscribedAlgorithm.chartData?.data || [100, 110, 120, 150, 180, 210],
-                                            color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-                                            strokeWidth: 2
-                                        }]
-                                    }}
-                                    width={Dimensions.get('window').width - 70}
-                                    height={120}
-                                    withDots={false}
-                                    withShadow={false}
-                                    withInnerLines={false}
-                                    withOuterLines={false}
-                                    withVerticalLines={false}
-                                    withHorizontalLines={false}
-                                    chartConfig={{
-                                        backgroundColor: '#ffffff',
-                                        backgroundGradientFrom: '#ffffff',
-                                        backgroundGradientTo: '#ffffff',
-                                        decimalPlaces: 0,
-                                        color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                                        labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                                        propsForDots: {
-                                            r: "0"
-                                        }
-                                    }}
-                                    bezier
-                                    style={styles.chartStyle}
-                                />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                )}
 
             <View style={styles.menuContainer}>
                 {menuItems.map((item) => (
@@ -136,15 +60,6 @@ const Portfolio = () => {
             </ScrollView> 
         </View>
     );
-};
-
-const getCategoryColor = (category) => {
-    switch(category) {
-        case 'Forex': return '#4FC3F7';
-        case 'Stocks': return '#81C784';
-        case 'Crypto': return '#FF8A65';
-        default: return '#9E9E9E';
-    }
 };
 
 

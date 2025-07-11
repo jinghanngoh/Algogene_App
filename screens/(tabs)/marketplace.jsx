@@ -183,6 +183,29 @@ const Marketplace = () => {
     [isLoading, hasMore, page]
   );
 
+  const getCategoryColor = (category) => {
+    switch(category) {
+      case 'FX': return '#4FC3F7';
+      case 'Forex': return '#4FC3F7';
+      case 'IDX': return '#81C784';
+      case 'Index': return '#81C784';
+      case 'EQ': return '#FF8A65';
+      case 'Equity': return '#FF8A65';
+      case 'Crypto': return '#FFD54F';
+      case 'Stocks': return '#FF8A65';
+      default: return '#9E9E9E';
+    }
+  };
+  
+  const getFullCategoryName = (shortName) => {
+    switch(shortName) {
+      case 'FX': return 'FOREX';
+      case 'IDX': return 'INDEX';
+      case 'EQ': return 'EQUITY';
+      default: return shortName?.toUpperCase() || 'ALGORITHM';
+    }
+  };
+
     // Combined function to handle algorithm selection (both for viewing and selecting)
     const handleAlgorithmPress = async (algorithm) => {
       // Set the selected strategy regardless of mode
@@ -259,11 +282,15 @@ const Marketplace = () => {
               <View
                 style={[
                   styles.categoryLabel,
-                  { backgroundColor: ['#4FC3F7', '#81C784', '#FF8A65'][index % 3] }
+                  { backgroundColor: algorithm.setting && algorithm.setting.assetClass && algorithm.setting.assetClass.length > 0 
+                      ? getCategoryColor(algorithm.setting.assetClass[0])
+                      : '#9E9E9E' }
                 ]}
               >
                 <Text style={styles.categoryLabelText}>
-                  {algorithm.strategy.split(' ')[0] || 'Algorithm'}
+                  {algorithm.setting && algorithm.setting.assetClass && algorithm.setting.assetClass.length > 0 
+                    ? getFullCategoryName(algorithm.setting.assetClass[0])
+                    : 'ALGORITHM'}
                 </Text>
               </View>
 
@@ -379,20 +406,8 @@ const Marketplace = () => {
       </TouchableOpacity>
     );
   };
-//   return (
-//     <View style={styles.container}>
-//       {/* Content Boxes */}
-//       {renderContentBoxes()}
 
-//       {/* Trading Modal */}
-//       <TradingModal
-//         visible={modalVisible}
-//         onClose={() => setModalVisible(false)}
-//         strategy={selectedStrategy}
-//       />
-//     </View>
-//   );
-// };
+
   return (
     <View style={styles.container}>
       
