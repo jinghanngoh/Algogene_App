@@ -1,7 +1,7 @@
 import React , { useState, useEffect, useCallback} from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image, Modal , Alert, ActivityIndicator} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import placeholder from '../../assets/img/placeholder.png';
 import TradingModal from '../components/TradingModal'; 
 import { fetchPublicAlgos, fetchAlgoPerformance, fetchAlgoDailyReturns } from '../../services/MarketplaceApi';
@@ -11,6 +11,9 @@ import { debounce } from 'lodash';
 
 const Marketplace = () => {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const isSelectingForSubAccount = params?.selectForSubAccount === 'true';
+
   const [activeTab, setActiveTab] = useState('Trading System'); 
   const [showTradingSystemBoxes, setShowTradingSystemBoxes] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -140,47 +143,15 @@ const Marketplace = () => {
           paginatedData.map(async (algorithm) => {
             try {
               const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
-              const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id, null, false);
-  
-              // Get start and end years from performance settings
-              const startDate = new Date(performanceResponse.setting?.period_start || algorithm.created_at);
-              const endDate = new Date(performanceResponse.setting?.period_end || '2025-06-27');
-              const startYear = startDate.getFullYear();
-              const endYear = endDate.getFullYear();
-  
-              // Generate array of years for labels
-              const years = [];
-              for (let year = startYear; year <= endYear; year++) {
-                years.push(year.toString());
-              }
-  
-              // Map cumulative returns to years
-              const dateToCr = new Map(dailyReturnsResponse.map(item => [item.t, item.cr * 100]));
-              const yearlyReturns = years.map(year => {
-                // Find the last return value for the given year
-                const yearReturns = dailyReturnsResponse
-                  .filter(item => item.t.startsWith(year))
-                  .map(item => item.cr * 100);
-                // Use the last return of the year, or 0 if no data
-                return yearReturns.length > 0 ? yearReturns[yearReturns.length - 1] : 0;
-              });
-  
-              // Determine y-axis bounds
-              const maxAbsReturn = Math.max(...yearlyReturns.map(Math.abs), 0);
-              const yAxisBound = Math.ceil(maxAbsReturn);
-              const yAxisMin = Math.min(-yAxisBound, 0); // Ensure 0 is included
-              const yAxisMax = Math.max(yAxisBound, 0);
-  
-              const chartData = yearlyReturns.length > 0 ? {
-                labels: years,
-                data: yearlyReturns,
-                yAxisBound: { min: yAxisMin, max: yAxisMax }
-              } : {
-                labels: ['No Data'],
-                data: [0],
-                yAxisBound: { min: 0, max: 0 }
+              const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id);
+              
+              // Format chart data
+              const chartData = {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                data: [Math.random() * 50, Math.random() * 50, Math.random() * 50, Math.random() * 50, Math.random() * 50],
+                yAxisBound: { min: 0, max: 50 }
               };
-  
+              
               return {
                 ...algorithm,
                 performanceStats: performanceResponse.performance || { Score_Total: 0 },
@@ -212,6 +183,56 @@ const Marketplace = () => {
     [isLoading, hasMore, page]
   );
 
+    // Combined function to handle algorithm selection (both for viewing and selecting)
+    const handleAlgorithmPress = async (algorithm) => {
+      // Set the selected strategy regardless of mode
+      setSelectedStrategy(algorithm);
+      
+      // if (isSelectingForSubAccount) {
+      //   // If in selection mode, also store the algorithm in AsyncStorage for the SubAccountCreationModal
+      //   try {
+      //     await AsyncStorage.setItem('selectedAlgorithm', JSON.stringify({
+      //       algo_id: algorithm.algo_id,
+      //       name: algorithm.strategy,
+      //       developer: algorithm.developer
+      //     }));
+      //   } catch (error) {
+      //     console.error('Error storing selected algorithm:', error);
+      //   }
+      // }
+      
+      // Show the modal in both modes
+      setModalVisible(true);
+    };
+
+  const handleAlgorithmSelect = async (algorithm) => {
+    if (isSelectingForSubAccount) {
+      try {
+        // Store the selected algorithm temporarily
+        await AsyncStorage.setItem('selectedAlgorithm', JSON.stringify({
+          algo_id: algorithm.algo_id,
+          name: algorithm.strategy,
+          developer: algorithm.developer
+        }));
+        
+        // Go back to the SubAccountCreation screen
+        router.back();
+      } catch (error) {
+        console.error('Error storing selected algorithm:', error);
+      }
+    } else {
+      // Regular flow - show modal
+      setSelectedStrategy(algorithm);
+      setModalVisible(true);
+    }
+  };
+  
+
+  //   // Handle algorithm selection
+  //   const handleAlgorithmPress = (algorithm) => {
+  //     setSelectedStrategy(algorithm);
+  //     setModalVisible(true);
+  //   };
 
   const renderContentBoxes = () => {
     if (isLoading && page === 1) {
@@ -226,16 +247,14 @@ const Marketplace = () => {
       <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={[styles.scrollContentContainer, { paddingTop: 50 }]}
+        scrollEventThrottle={16}
       >
         {algorithms.length > 0 ? (
           algorithms.map((algorithm, index) => (
             <TouchableOpacity
               key={algorithm.algo_id}
               style={[styles.contentBox, index === 0 && styles.firstContentBox]}
-              onPress={() => {
-                setSelectedStrategy(algorithm);
-                setModalVisible(true);
-              }}
+              onPress={() => handleAlgorithmSelect(algorithm)}
             >
               <View
                 style={[
@@ -360,8 +379,23 @@ const Marketplace = () => {
       </TouchableOpacity>
     );
   };
+//   return (
+//     <View style={styles.container}>
+//       {/* Content Boxes */}
+//       {renderContentBoxes()}
+
+//       {/* Trading Modal */}
+//       <TradingModal
+//         visible={modalVisible}
+//         onClose={() => setModalVisible(false)}
+//         strategy={selectedStrategy}
+//       />
+//     </View>
+//   );
+// };
   return (
     <View style={styles.container}>
+      
       {/* Content Boxes */}
       {renderContentBoxes()}
 
@@ -370,20 +404,16 @@ const Marketplace = () => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         strategy={selectedStrategy}
+        isSelectingForSubAccount={isSelectingForSubAccount}
       />
     </View>
   );
-};
+  };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-  },
-  selectionBanner: {
-    backgroundColor: '#2196F3',
-    padding: 10,
-    alignItems: 'center',
   },
   selectionText: {
     color: 'white',

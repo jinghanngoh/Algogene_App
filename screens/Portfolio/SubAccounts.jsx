@@ -15,6 +15,38 @@ const SubAccounts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+
+  useEffect(() => {
+    const checkReopenModal = async () => {
+      try {
+        const shouldReopen = await AsyncStorage.getItem('reopenSubAccountCreationModal');
+        
+        if (shouldReopen === 'true') {
+          // Clear the flag
+          await AsyncStorage.removeItem('reopenSubAccountCreationModal');
+          
+          // Reopen the modal
+          setModalVisible(true);
+        }
+      } catch (error) {
+        console.error('Error checking modal reopen flag:', error);
+      }
+    };
+    
+    checkReopenModal();
+    
+    // Set up a focus listener to check again when the screen receives focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      checkReopenModal();
+    });
+  
+    return unsubscribe;
+  }, [navigation]);
+
+
+
+
+
   const fetchAlgorithmDetails = async (account) => {
     try {
       const response = await fetchPublicAlgos();
@@ -212,7 +244,10 @@ const SubAccounts = () => {
             ))}
           </ScrollView>
         </View>
-        <SubAccountCreation visible={modalVisible} onClose={() => setModalVisible(false)} />
+        <SubAccountCreation 
+          visible={modalVisible} 
+          onClose={() => setModalVisible(false)} 
+        />
       </View>
     </ScrollView>
   );

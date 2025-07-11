@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import binance_icon from '../../assets/img/binance_icon.png';
+import kucoin_icon from '../../assets/img/kucoin_icon.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link } from 'expo-router';
 
@@ -19,104 +20,152 @@ const SubAccountCreation = ({ visible, onClose }) => {
   const [error, setError] = useState('');
   const [brokerPickerVisible, setBrokerPickerVisible] = useState(false);
   const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
+  const [algorithmSelected, setAlgorithmSelected] = useState(false);
+ 
+  const saveFormState = async () => {
+    try {
+      await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify({
+        id,
+        broker,
+        algorithm,
+        currency,
+        algorithmSelected,
+        brokerManuallySelected: broker !== '' // Add this flag
+      }));
+    } catch (error) {
+      console.error('Error saving form state:', error);
+    }
+  };
 
   useEffect(() => {
-    const checkForSelectedAlgorithm = async () => {
-      try {
-        const selectedAlgoJson = await AsyncStorage.getItem('selectedAlgorithm');
-        if (selectedAlgoJson) {
-          const selectedAlgo = JSON.parse(selectedAlgoJson);
-          setAlgorithm(selectedAlgo.name || 'Selected Algorithm');
-          // Clear the stored algorithm
-          await AsyncStorage.removeItem('selectedAlgorithm');
+    if (visible) {
+      const loadFormState = async () => {
+        try {
+          const formStateJson = await AsyncStorage.getItem('pendingSubAccountData');
+          console.log('Loaded form state:', formStateJson); // Add this debug line
+          if (formStateJson) {
+            const formState = JSON.parse(formStateJson);
+            console.log('Parsed form state:', formState); // Add this debug line
+            setId(formState.id || '');
+            setBroker(formState.broker || ''); // Make sure this is setting to empty string as fallback
+            setAlgorithm(formState.algorithm || '');
+            setCurrency(formState.currency || '');
+            setAlgorithmSelected(!!formState.algorithm);
+
+            if (formState.hasOwnProperty('broker') && formState.broker && 
+            (formState.brokerManuallySelected === true)) {
+              setBroker(formState.broker);
+            } else {
+              setBroker('');
+            }
+
+          } else {
+            // Reset all fields when no stored data is found
+            setBroker(''); // Explicitly reset to empty 
+            setAlgorithmSelected(false);
+          }
+        } catch (error) {
+          console.error('Error loading form state:', error);
+          // Reset fields on error
+          setId('');
+          setBroker(''); // Explicitly reset to empty
+          setAlgorithm('');
+          setCurrency('');
+          setAlgorithmSelected(false);
         }
-      } catch (error) {
-        console.error('Error retrieving selected algorithm:', error);
-      }
+      };
+      
+      loadFormState();
+    }
+  }, [visible]);
+
+
+    const handleBrokerSelect = async () => {
+      // Save current form state before navigating
+      await saveFormState();
+      
+      // Navigate to marketplace with broker selection flag
+      router.push({
+        pathname: '/(tabs)/marketplace',
+        params: { selectBrokerForSubAccount: 'true' }
+      });
+    };
+
+    // Handle opening algorithm selection
+    const handleAlgorithmSelect = async () => {
+      // Save current form state before navigating
+      await saveFormState();
+      
+      // Navigate to marketplace with selection flag
+      router.push({
+        pathname: '/(tabs)/marketplace',
+        params: { selectForSubAccount: 'true' }
+      });
     };
     
-    // Check when the screen is focused
-    checkForSelectedAlgorithm();
-    
-  }, []);
-
-
+    // Handle modal close with cleanup
+    const handleClose = () => {
+      // Clear stored form data when explicitly closing
+      AsyncStorage.removeItem('pendingSubAccountData');
+      // Reset all form fields
+      setId('');
+      setBroker('');
+      setAlgorithm('');
+      setCurrency('');
+      setAlgorithmSelected(false);
+      onClose();
+    };
   const handleCreate = async () => {
-    if (!id || id.trim() === '') {
-      setError('Sub-account ID is required');
+    // Validation logic
+    if (!id || !broker || !algorithm || !currency) {
+      Alert.alert('Error', 'Please fill all fields');
       return;
     }
-    if (subAccounts.some(account => account.id === id)) {
-      setError('Sub-account ID already exists');
-      return;
-    }
-    if (!broker) {
-      setError('Broker is required');
-      return;
-    }
-    if (!algorithm) {
-      setError('Algorithm is required');
-      return;
-    }
-    if (!currency) {
-      setError('Currency is required');
-      return;
-    }
-
+    
+    // Create new sub-account
     const newAccount = {
       id,
       broker,
       algorithm,
       currency,
-      leverage: '5.0',
-      subscriptionEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('.')[0],
-      runningScript: algorithm,
-      availableBalance: '1000000.0',
-      cashBalance: '1000000.0',
-      realizedPL: '0.0',
-      unrealizedPL: '0.0',
-      marginUsed: '0.0',
-      status: 'INACTIVE',
-      brokerConnected: false,
-      brokerApiKey: '',
-      brokerSecret: '',
+      status: 'Inactive',
+      createdAt: new Date().toISOString()
     };
-
+    
     const updatedAccounts = [...subAccounts, newAccount];
     setSubAccounts(updatedAccounts);
     await saveSubAccounts(updatedAccounts);
-    setId('');
-    setBroker('');
-    setAlgorithm('');
-    setCurrency('');
-    setError('');
-    setBrokerPickerVisible(false);
-    setCurrencyPickerVisible(false);
+    
+    // Clear stored form data
+    AsyncStorage.removeItem('pendingSubAccountData');
+    
+    // Close modal
     onClose();
   };
 
   return (
     <Modal
       animationType="slide"
-      transparent={false}
+      transparent={true}
       visible={visible}
-      onRequestClose={onClose}
+      // onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <Text style={styles.modalTitle}>Create Sub-Account</Text>
+
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <Ionicons name="close" size={24} color="white" />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Create Sub-Account</Text>
-          {error && <Text style={styles.errorText}>{error}</Text>}
 
-          <Text style={styles.label}>Sub-Account ID</Text>
+          <Text style={styles.label}>ID</Text>
           <TextInput
             style={styles.input}
+            placeholder="Enter ID"
+            placeholderTextColor="#999"
             value={id}
             onChangeText={setId}
-            placeholder="Enter unique ID (e.g., #1001)"
-            placeholderTextColor="#666"
           />
 
           <Text style={styles.label}>Broker</Text>
@@ -126,6 +175,9 @@ const SubAccountCreation = ({ visible, onClose }) => {
           >
             {broker === 'Binance' && (
               <Image source={binance_icon} style={styles.brokerLogo} />
+            )}
+            {broker === 'Kucoin' && (
+              <Image source={kucoin_icon} style={styles.brokerLogo} />
             )}
             <Text style={[
               styles.brokerText, 
@@ -140,49 +192,58 @@ const SubAccountCreation = ({ visible, onClose }) => {
               style={styles.chevron}
             />
           </TouchableOpacity>
+          
           {brokerPickerVisible && (
-          <View style={styles.pickerContainer}>
-            <TouchableOpacity
-              style={styles.pickerItem}
-              onPress={() => {
-                setBroker('Binance');
-                setBrokerPickerVisible(false);
-              }}
-            >
-              <Image source={binance_icon} style={styles.pickerLogo} />
-              <Text style={styles.pickerText}>Binance</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+            <View style={styles.pickerContainer}>
+              <TouchableOpacity
+                style={styles.pickerItem}
+                onPress={() => {
+                  setBroker('Binance');
+                  setBrokerPickerVisible(false);
+                }}
+              >
+                <Image source={binance_icon} style={styles.pickerLogo} />
+                <Text style={styles.pickerText}>Binance</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.pickerItem}
+                onPress={() => {
+                  setBroker('Kucoin');
+                  setBrokerPickerVisible(false);
+                }}
+              >
+                <Image source={kucoin_icon} style={styles.pickerLogo} />
+                <Text style={styles.pickerText}>Kucoin</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <Text style={styles.label}>Algorithm</Text>
-          <Link href="(tabs)/marketplace" asChild>
+            {algorithmSelected ? (
+              <View style={[styles.brokerBar, { backgroundColor: '#444' }]}>
+                <Text style={styles.brokerText}>{algorithm}</Text>
+                {/* <TouchableOpacity onPress={() => {
+                  setAlgorithm('');
+                  setAlgorithmSelected(false);
+                }}>
+                  <Ionicons name="close-circle" size={20} color="white" />
+                </TouchableOpacity> */}
+              </View>
+            ) : (
             <TouchableOpacity
-                style={styles.brokerBar}
-                onPress={async () => {
-                // Still store the state before navigation
-                try {
-                    await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify({
-                    id,
-                    broker,
-                    currency,
-                    isCreatingSubAccount: true
-                    }));
-                    console.log("GGG");
-                } catch (error) {
-                    console.error('Error storing sub account state:', error);
-                }
-                }}
+              style={styles.brokerBar}
+              onPress={handleAlgorithmSelect}
             >
-                <Text style={styles.brokerText}>{algorithm || 'Select Algorithm'}</Text>
-                <Ionicons
+              <Text style={styles.brokerText}>Select Algorithm</Text>
+              <Ionicons
                 name="chevron-forward"
                 size={20}
                 color="white"
                 style={styles.chevron}
-                />
+              />
             </TouchableOpacity>
-         </Link>
+          )}
 
           <Text style={styles.label}>Currency</Text>
           <TouchableOpacity

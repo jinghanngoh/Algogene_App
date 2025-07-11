@@ -3,8 +3,11 @@ import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { fetchAlgoDailyReturns, fetchAlgoPerformance } from '../../services/MarketplaceApi';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const TradingModal = ({ visible, onClose, strategy}) => {
+const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = false}) => {
+  const router = useRouter();
   const { subscribedAlgorithm, subscribeToAlgorithm, unsubscribeFromAlgorithm } = useSubscription();
   const [performanceStats, setPerformanceStats] = useState(null);
   const [dailyReturns, setDailyReturns] = useState(null);
@@ -13,7 +16,7 @@ const TradingModal = ({ visible, onClose, strategy}) => {
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
-    console.log('Strategy:', strategy);
+    // console.log('Strategy:', strategy);
     if (strategy?.algo_id) {
       fetchPerformanceStats(strategy.algo_id);
       fetchDailyReturnsData(strategy.algo_id);
@@ -25,7 +28,7 @@ const TradingModal = ({ visible, onClose, strategy}) => {
     setErrorMessage(null);
     try {
       const response = await fetchAlgoPerformance(algoId);
-      console.log('Fetched performanceStats:', response);
+      // console.log('Fetched performanceStats:', response);
       setPerformanceStats(response);
     } catch (error) {
       console.error('Error fetching performance data:', error);
@@ -54,6 +57,70 @@ const TradingModal = ({ visible, onClose, strategy}) => {
     }
   };
 
+  const handleSelectForSubAccount = async () => {
+    if (!strategy) return;
+    
+    try {
+      // Get any existing form data
+      const pendingDataJson = await AsyncStorage.getItem('pendingSubAccountData');
+      let pendingData = {};
+      
+      if (pendingDataJson) {
+        pendingData = JSON.parse(pendingDataJson);
+      }
+      
+      // Update with the selected algorithm
+      pendingData.algorithm = strategy.strategy;
+      pendingData.algorithmId = strategy.algo_id;
+      pendingData.developer = strategy.developer;
+      
+      // Store the updated data
+      await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify(pendingData));
+      
+      // Set a flag to reopen the SubAccountCreationModal in SubAccounts.jsx
+      await AsyncStorage.setItem('reopenSubAccountCreationModal', 'true');
+      
+      // Close the modal
+      onClose();
+      
+      // Navigate to the SubAccounts screen
+      router.push('/Portfolio/SubAccounts');
+    } catch (error) {
+      console.error('Error storing selected algorithm:', error);
+      Alert.alert('Error', 'Failed to select algorithm. Please try again.');
+    }
+  };
+
+  // Render the bottom action buttons based on the context
+  // const renderActionButtons = () => {
+  //   if (isSelectingForSubAccount) {
+  //     // When selecting for a sub-account, show blue "SUBSCRIBE" button
+  //     return (
+  //       <View style={styles.buttonContainer}>
+  //         <TouchableOpacity
+  //           style={styles.subscribeButton}
+  //           onPress={handleSelectForSubAccount}
+  //         >
+  //           <Text style={styles.buttonText}>SUBSCRIBE TO ALGORITHM</Text>
+  //         </TouchableOpacity>
+          
+  //         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+  //           <Text style={styles.closeButtonText}>CLOSE</Text>
+  //         </TouchableOpacity>
+  //       </View>
+  //     );
+  //   } else {
+  //     // When viewed normally from Marketplace, only show Close button
+  //     return (
+  //       <View style={styles.buttonContainer}>
+  //         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+  //           <Text style={styles.closeButtonText}>CLOSE</Text>
+  //         </TouchableOpacity>
+  //       </View>
+  //     );
+  //   }
+  // };
+
   const currentStrategy = strategy || {
     algo_id: 'default-strategy',
     strategy: 'Unnamed Strategy',
@@ -66,37 +133,37 @@ const TradingModal = ({ visible, onClose, strategy}) => {
 
   const isSubscribed = subscribedAlgorithm?.algo_id === currentStrategy.algo_id;
 
-    // In TradingModal.jsx
-    const handleSubscribe = () => {
-      if (subscribedAlgorithm && subscribedAlgorithm.algo_id !== currentStrategy.algo_id) {
-        Alert.alert(
-          'Subscription Conflict',
-          "You're already subscribed to another algorithm. Please unsubscribe first.",
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-      subscribeToAlgorithm(currentStrategy);
-      onClose();
-    };
+  //   // In TradingModal.jsx
+  //   const handleSubscribe = () => {
+  //     if (subscribedAlgorithm && subscribedAlgorithm.algo_id !== currentStrategy.algo_id) {
+  //       Alert.alert(
+  //         'Subscription Conflict',
+  //         "You're already subscribed to another algorithm. Please unsubscribe first.",
+  //         [{ text: 'OK' }]
+  //       );
+  //       return;
+  //     }
+  //     subscribeToAlgorithm(currentStrategy);
+  //     onClose();
+  //   };
 
-  const handleUnsubscribe = () => {
-    Alert.alert(
-      'Confirm Unsubscribe',
-      'Are you sure you want to unsubscribe from this strategy?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unsubscribe',
-          onPress: () => {
-            unsubscribeFromAlgorithm();
-            onClose();
-          },
-          style: 'destructive'
-        }
-      ]
-    );
-  };
+  // const handleUnsubscribe = () => {
+  //   Alert.alert(
+  //     'Confirm Unsubscribe',
+  //     'Are you sure you want to unsubscribe from this strategy?',
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       {
+  //         text: 'Unsubscribe',
+  //         onPress: () => {
+  //           unsubscribeFromAlgorithm();
+  //           onClose();
+  //         },
+  //         style: 'destructive'
+  //       }
+  //     ]
+  //   );
+  // };
 
   const chartData = performanceStats ? {
     labels: ['7d', '30d', '90d', '180d', '365d'],
@@ -138,8 +205,15 @@ const TradingModal = ({ visible, onClose, strategy}) => {
       stroke: 'rgba(255, 255, 255, 0.1)'
     }
   };
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      
       <ScrollView style={styles.container}>
         {/* Error Message */}
         {errorMessage && (
@@ -344,16 +418,22 @@ const TradingModal = ({ visible, onClose, strategy}) => {
           )}
         </View>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Modified as per request */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, isSubscribed ? styles.unsubscribeButton : styles.subscribeButton]}
-            onPress={isSubscribed ? handleUnsubscribe : handleSubscribe}
-          >
-            <Text style={styles.buttonText}>
-              {isSubscribed ? 'UNSUBSCRIBE' : 'SUBSCRIBE'}
-            </Text>
-          </TouchableOpacity>
+          {/* Only show SUBSCRIBE button when accessed from SubAccountCreationModal */}
+          {isSelectingForSubAccount ? (
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={handleSelectForSubAccount}
+            >
+              <Text style={styles.buttonText}>SUBSCRIBE</Text>
+            </TouchableOpacity>
+          ) : (
+            // Only show the CLOSE button when accessed directly from Marketplace
+            // The regular subscribe/unsubscribe buttons are removed
+            null
+          )}
+          
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeButtonText}>CLOSE</Text>
           </TouchableOpacity>
@@ -362,6 +442,45 @@ const TradingModal = ({ visible, onClose, strategy}) => {
     </Modal>
   );
 };
+
+        {/* Action Buttons - different buttons based on mode
+        <View style={styles.buttonContainer}>
+          {isSelectingForSubAccount ? (
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={handleSelectForSubAccount}
+            >
+              <Text style={styles.buttonText}>SUBSCRIBE</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.button,
+                subscribedAlgorithm?.algo_id === strategy?.algo_id ? styles.unsubscribeButton : styles.subscribeButton
+              ]}
+              onPress={() => {
+                if (subscribedAlgorithm?.algo_id === strategy?.algo_id) {
+                  unsubscribeFromAlgorithm();
+                } else {
+                  subscribeToAlgorithm(strategy);
+                }
+                onClose();
+              }}
+            >
+              <Text style={styles.buttonText}>
+                {subscribedAlgorithm?.algo_id === strategy?.algo_id ? 'UNSUBSCRIBE' : 'SUBSCRIBE'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Text style={styles.closeButtonText}>CLOSE</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </Modal>
+  );
+}; */}
 
 const styles = StyleSheet.create({
   container: {
@@ -488,6 +607,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  selectButton: {
+    backgroundColor: '#4FC3F7',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 10,
   },
   closeButton: {
     padding: 16,
