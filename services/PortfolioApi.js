@@ -41,15 +41,7 @@ export const optimizePortfolio = async (params = {}) => {
       total_portfolio_value: params.total_portfolio_value || 1000000,
       group_cond: params.group_cond,
     };
-
-    // console.log('Axios Request Config:', {
-    //   url: '/rest/v1/app/54/asset.optimize',
-    //   method: 'POST',
-    //   headers: api.defaults.headers,
-    //   data: payload,
-    // });
-    // console.log('API Payload:', JSON.stringify(payload, null, 2));
-
+    
     const response = await api.post('/rest/v1/app/54/asset.optimize', payload);
     // console.log('Raw API Response:', JSON.stringify(response.data, null, 2));
     // console.log('Raw Alloc:', response.data.res?.asset_allocate?.alloc);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { configureBroker } from '../../services/BrokerApi';
@@ -7,7 +7,7 @@ import { fetchPublicAlgos } from '../../services/MarketplaceApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubAccounts } from '../../context/SubAccountsContext';
 import SubAccountCreation from '../components/SubAccountCreationModal';
-
+import { startAlgo, stopAlgo } from '../../services/TradingApi';
 
 const SubAccounts = () => {
   const { subAccounts, setSubAccounts, saveSubAccounts } = useSubAccounts();
@@ -16,13 +16,11 @@ const SubAccounts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-
   useEffect(() => {
     const checkReopenModal = async () => {
       try {
         const shouldReopen = await AsyncStorage.getItem('reopenSubAccountCreationModal');
         if (shouldReopen === 'true') {
-          // Clear the flag
           await AsyncStorage.removeItem('reopenSubAccountCreationModal');
           setModalVisible(true);
         }
@@ -118,7 +116,7 @@ const SubAccounts = () => {
         account.broker.toLowerCase(),
         account.brokerApiKey,
         account.brokerSecret,
-        account.brokerPassphrase // Passphrase for KuCoin
+        account.brokerPassphrase
       );
       console.log('API Response:', response);
       // Dynamically use the account_id from response.account_map
@@ -153,18 +151,84 @@ const SubAccounts = () => {
     });
   }, []);
 
-  const toggleStatus = (id) => {
-    const updatedAccounts = subAccounts.map((account) =>
-      account.id === id
-        ? { ...account, status: account.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
-        : account
-    );
-    setSubAccounts(updatedAccounts);
-    saveSubAccounts(updatedAccounts);
-    console.log(`Toggling ${id} to ${subAccounts.find((acc) => acc.id === id).status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}`);
-    const account = updatedAccounts.find((acc) => acc.id === id);
-    fetchSubAccountDetails(account);
+  const toggleStatus = async (id) => {
+    const account = subAccounts.find((acc) => acc.id === id);
+    if (!account) return;
+  
+    setLoading((prev) => ({ ...prev, [id]: true }));
+    setError(null);
+  
+    try {
+      const algoId = account.runningScript || account.algorithm || 'live5_qrwkynfz_6194'; // Fallback to test algo_id
+      const updatedAccounts = subAccounts.map((acc) =>
+        acc.id === id
+          ? { ...acc, status: acc.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
+          : acc
+      );
+      setSubAccounts(updatedAccounts);
+      saveSubAccounts(updatedAccounts);
+  
+      if (account.status === 'ACTIVE') {
+        // Pause (Stop Algo)
+        await stopAlgo(account.id, algoId);
+        console.log(`Stopped algo for ${id} with algo_id: ${algoId}`);
+      } else {
+        // Resume (Start Algo)
+        await startAlgo(account.id, algoId);
+        console.log(`Started algo for ${id} with algo_id: ${algoId}`);
+      }
+    } catch (err) {
+      console.error(`Error toggling status for ${id}:`, err);
+      setError(`Failed to ${account.status === 'ACTIVE' ? 'pause' : 'resume'} ${id}: ${err.message}`);
+      // Revert status on error
+      const revertedAccounts = subAccounts.map((acc) =>
+        acc.id === id ? { ...acc, status: account.status } : acc
+      );
+      setSubAccounts(revertedAccounts);
+      saveSubAccounts(revertedAccounts);
+    } finally {
+      setLoading((prev) => ({ ...prev, [id]: false }));
+    }
   };
+  
+  // const toggleStatus = async (id) => {
+  //   const account = subAccounts.find((acc) => acc.id === id);
+  //   if (!account) return;
+
+  //   setLoading((prev) => ({ ...prev, [id]: true }));
+  //   setError(null);
+
+  //   try {
+  //     const updatedAccounts = subAccounts.map((acc) =>
+  //       acc.id === id
+  //         ? { ...acc, status: acc.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
+  //         : acc
+  //     );
+  //     setSubAccounts(updatedAccounts);
+  //     saveSubAccounts(updatedAccounts);
+
+  //     if (account.status === 'ACTIVE') {
+  //       // Pause (Stop Algo)
+  //       await stopAlgo(account.id);
+  //       console.log(`Stopped algo for ${id}`);
+  //     } else {
+  //       // Resume (Start Algo)
+  //       await startAlgo(account.id);
+  //       console.log(`Started algo for ${id}`);
+  //     }
+  //   } catch (err) {
+  //     console.error(`Error toggling status for ${id}:`, err);
+  //     setError(`Failed to ${account.status === 'ACTIVE' ? 'pause' : 'resume'} ${id}: ${err.message}`);
+  //     // Revert status on error
+  //     const revertedAccounts = subAccounts.map((acc) =>
+  //       acc.id === id ? { ...acc, status: account.status } : acc
+  //     );
+  //     setSubAccounts(revertedAccounts);
+  //     saveSubAccounts(revertedAccounts);
+  //   } finally {
+  //     setLoading((prev) => ({ ...prev, [id]: false }));
+  //   }
+  // };
 
   return (
     <ScrollView style={styles.scrollContainer}>
@@ -273,10 +337,15 @@ const SubAccounts = () => {
                   <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: '#4FC3F7' }]}
                     onPress={() => toggleStatus(account.id)}
+                    disabled={loading[account.id]}
                   >
-                    <Text style={styles.actionButtonText}>
-                      {account.status === 'ACTIVE' ? 'Pause' : 'Resume'}
-                    </Text>
+                    {loading[account.id] ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Text style={styles.actionButtonText}>
+                        {account.status === 'ACTIVE' ? 'Pause' : 'Resume'}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>

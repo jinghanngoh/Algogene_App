@@ -267,7 +267,7 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
   }
 };
 
-
+// 3.4) CHECK PAYMENT STATUS (PRIVATE)
 export const checkPaymentStatus = async (ticketId, email, retries = 3) => {
   try {
     if (!ticketId || !email) {
