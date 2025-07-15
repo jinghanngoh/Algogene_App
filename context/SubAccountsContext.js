@@ -8,8 +8,7 @@ const SubAccountsContext = createContext();
 export const SubAccountsProvider = ({ children }) => {
   console.log('SubAccountsProvider rendering');
   const [subAccounts, setSubAccounts] = useState([
-    // Hardcoded initial state for development/testing
-    {
+    { // Hardcoded Binance
       id: '#1000',
       broker: 'Binance',
       algorithm: 'SpiderNet',
@@ -27,6 +26,25 @@ export const SubAccountsProvider = ({ children }) => {
       brokerApiKey: '033ff7baad2893427dee0a7fc313a239af8ce33035d702757ca893da0fb14e85',
       brokerSecret: '1282d57b4233583b7f4e85201bb972e1d7cdc6b63822ebc0ec30bac95d78cb4b',
     },
+    { // Hardcoded Kucoin
+      id: '#1001',
+      broker: 'Kucoin',
+      algorithm: 'DeepNet',
+      currency: 'USD',
+      leverage: '5.0',
+      subscriptionEnd: '2025-06-31 02:02:51',
+      runningScript: 'DeepNet_v1',
+      availableBalance: '2000000000.0',
+      cashBalance: '100000000.0',
+      realizedPL: '0.0',
+      unrealizedPL: '0.0',
+      marginUsed: '0.0',
+      status: 'INACTIVE',
+      brokerConnected: false,
+      brokerApiKey: '6874c2742301b10001e7a4b4',
+      brokerSecret: '96db4b1f-0984-43cb-85a5-509b050a0318', 
+      brokerPassphrase: 'G3a8wj8P', 
+    }
   ]);
 
   useEffect(() => {
@@ -49,7 +67,6 @@ export const SubAccountsProvider = ({ children }) => {
         console.error('Error fetching initial subAccounts:', err);
       }
     };
-
     fetchInitialSubAccounts();
   }, []); // Empty dependency array ensures this runs once on mount
 

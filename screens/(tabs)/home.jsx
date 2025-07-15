@@ -126,7 +126,7 @@ const Home = () => {
       <View style={styles.sectionDivider} />
 
       <View style={styles.watchlistHeader}>
-        <Text style={styles.watchListText}>Crypto Watchlist</Text>
+        <Text style={styles.watchListText}>My Watchlist</Text>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
           <Text style={styles.addButton}>+</Text>
         </TouchableOpacity>

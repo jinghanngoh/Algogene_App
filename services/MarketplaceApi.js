@@ -1,4 +1,5 @@
 // Test out the public marketplace endpoint 
+// MarketplaceApi.js
 import API from './api';
 import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +12,7 @@ const generateSessionId = () => {
 // Delay function for retry logic
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// 3.1) QUERY LIST OF TRADING BOTS (PUBLIC)
 export const fetchPublicAlgos = async (retries = 1) => {
   try {
     // console.log('Making API Request to /rest/v1/app_mp_topalgo');
@@ -63,7 +65,7 @@ export const fetchPublicAlgos = async (retries = 1) => {
   }
 };
 
-// Fetch trading bot performance statistics (2.2) with caching and retry
+// 3.2) QUERY TRADING BOT DETAILS: PERFORMANCE STATISTICS (PUBLIC)
 export const fetchAlgoPerformance = async (algoId, accountingDate = null, retries = 3) => {
   try {
     if (!algoId || typeof algoId !== 'string' || algoId.length < 10) {
@@ -143,7 +145,7 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
   }
 };
 
-// Fetch trading bot daily returns (2.3)
+// 3.3) QUERY TRADING BOT DETAILS : DAILY RETURN (PUBLIC)
 export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExtrapolate = false, retries = 3) => {
   try {
     // Check cache first
@@ -212,6 +214,116 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
     throw error;
   }
 };
+
+// 3.4) SUBSCRIBE TRADING BOT (PRIVATE)
+export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
+  try {
+    if (!algoId || !accountId || !email) {
+      throw new Error('Missing required parameters: algoId, accountId, or email');
+    }
+
+    let sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      sessionId = generateSessionId();
+      await AsyncStorage.setItem('sessionId', sessionId);
+    }
+
+    const response = await API.post('/rest/v1/app_subscribe_strategy/', {
+      api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+      user: 'AGBOT1',
+      sid: sessionId,
+      c_Email: email,
+      algo_id : 'jjvp5_qrwkyntz_6194', // algo_id: algoId,
+      account_id: accountId,
+    });
+
+    if (!response.data?.status) {
+      throw new Error(response.data?.res || 'Subscription failed');
+    }
+
+    return {
+      status: response.data.status,
+      paymentLink: response.data.res,
+      ticketId: response.data.tid,
+    };
+  } catch (error) {
+    if (!(error.response?.status === 400 && error.response?.data?.res === 'Invalid session!')) {
+      console.error('Error subscribing to algorithm:', error);
+      console.error('Error details:', {
+        response: error.response?.data,
+        status: error.response?.status,
+        message: error.message,
+      });
+    }
+
+    if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
+      console.log(`Invalid session detected. Retrying (${retries} left)...`);
+      await AsyncStorage.removeItem('sessionId');
+      await delay(500);
+      return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
+    }
+
+    throw error;
+  }
+};
+
+
+export const checkPaymentStatus = async (ticketId, email, retries = 3) => {
+  try {
+    if (!ticketId || !email) {
+      throw new Error('Missing required parameters: ticketId or email');
+    }
+
+    let sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      sessionId = generateSessionId();
+      await AsyncStorage.setItem('sessionId', sessionId);
+    }
+
+    const response = await API.get('/rest/v1/app_payment_status', {
+      params: {
+        app_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+        user: 'AGBOT1',
+        wid: sessionId,
+        email: email,
+        tid: ticketId,
+      },
+    });
+
+    if (!response.data?.status) {
+      throw new Error(response.data?.res || 'Payment status check failed');
+    }
+
+    return {
+      status: response.data.status,
+      paymentStatus: response.data.yes?.status,
+      currency: response.data.yes?.cur,
+      amount: response.data.yes?.amt,
+      settleTime: response.data.yes?.settle_time,
+      ticketId: response.data.yes?.tid,
+    };
+  } catch (error) {
+    if (!(error.response?.status === 400 && error.response?.data?.res === 'Invalid session!')) {
+      console.error('Error checking payment status:', error);
+      console.error('Error details:', {
+        response: error.response?.data,
+        status: error.response?.status,
+        message: error.message,
+      });
+    }
+
+    if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
+      console.log(`Invalid session detected. Retrying (${retries} left)...`);
+      await AsyncStorage.removeItem('sessionId');
+      await delay(500);
+      return checkPaymentStatus(ticketId, email, retries - 1);
+    }
+
+    throw error;
+  }
+};
+
+
 
 // Log formatted strategy performance response
 // const logFullApiResponse = (response) => {

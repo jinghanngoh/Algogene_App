@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSubAccounts } from '../../context/SubAccountsContext';
 import SubAccountCreation from '../components/SubAccountCreationModal';
 
+
 const SubAccounts = () => {
   const { subAccounts, setSubAccounts, saveSubAccounts } = useSubAccounts();
   const navigation = useNavigation();
@@ -20,31 +21,22 @@ const SubAccounts = () => {
     const checkReopenModal = async () => {
       try {
         const shouldReopen = await AsyncStorage.getItem('reopenSubAccountCreationModal');
-        
         if (shouldReopen === 'true') {
           // Clear the flag
           await AsyncStorage.removeItem('reopenSubAccountCreationModal');
-          
-          // Reopen the modal
           setModalVisible(true);
         }
       } catch (error) {
         console.error('Error checking modal reopen flag:', error);
       }
     };
-    
     checkReopenModal();
-    
-    // Set up a focus listener to check again when the screen receives focus
     const unsubscribe = navigation.addListener('focus', () => {
       checkReopenModal();
     });
   
     return unsubscribe;
   }, [navigation]);
-
-
-
 
 
   const fetchAlgorithmDetails = async (account) => {
@@ -69,8 +61,46 @@ const SubAccounts = () => {
     }
   };
 
+  // const fetchSubAccountDetails = async (account) => {
+  //   if (account.broker !== 'Binance' || !account.brokerApiKey || !account.brokerSecret) return;
+  //   setLoading(true);
+  //   try {
+  //     const sessionId = await AsyncStorage.getItem('sessionId');
+  //     if (!sessionId) {
+  //       console.log('No session ID, attempting login...');
+  //       await login();
+  //     }
+  //     console.log('Attempting to configure broker with:', {
+  //       brokerApiKey: account.brokerApiKey,
+  //       brokerSecret: account.brokerSecret,
+  //     });
+  //     const response = await configureBroker(account.brokerApiKey, account.brokerSecret);
+  //     console.log('API Response:', response);
+  //     const updatedAccounts = subAccounts.map((acc) =>
+  //       acc.id === account.id
+  //         ? {
+  //             ...acc,
+  //             brokerConnected: response.status === true,
+  //             availableBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.available_Balance || acc.availableBalance,
+  //             cashBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cashBalance || acc.cashBalance,
+  //             currency: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cur || acc.currency,
+  //           }
+  //         : acc
+  //     );
+  //     setSubAccounts(updatedAccounts);
+  //     saveSubAccounts(updatedAccounts);
+  //     setError(null);
+  //   } catch (err) {
+  //     console.error(`Error fetching details for ${account.id}:`, err);
+  //     console.log('Full Error Response:', err.response?.data);
+  //     setError(`Failed to connect to ${account.broker}: ${err.message}`);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchSubAccountDetails = async (account) => {
-    if (account.broker !== 'Binance' || !account.brokerApiKey || !account.brokerSecret) return;
+    if (!account.brokerApiKey || !account.brokerSecret) return;
     setLoading(true);
     try {
       const sessionId = await AsyncStorage.getItem('sessionId');
@@ -79,19 +109,28 @@ const SubAccounts = () => {
         await login();
       }
       console.log('Attempting to configure broker with:', {
+        broker: account.broker,
         brokerApiKey: account.brokerApiKey,
         brokerSecret: account.brokerSecret,
+        brokerPassphrase: account.brokerPassphrase,
       });
-      const response = await configureBroker(account.brokerApiKey, account.brokerSecret);
+      const response = await configureBroker(
+        account.broker.toLowerCase(),
+        account.brokerApiKey,
+        account.brokerSecret,
+        account.brokerPassphrase // Passphrase for KuCoin
+      );
       console.log('API Response:', response);
+      // Dynamically use the account_id from response.account_map
+      const accountId = response.account_map?.[0]?.[0] || account.id; // Handle nested array format
       const updatedAccounts = subAccounts.map((acc) =>
         acc.id === account.id
           ? {
               ...acc,
               brokerConnected: response.status === true,
-              availableBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.available_Balance || acc.availableBalance,
-              cashBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cashBalance || acc.cashBalance,
-              currency: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cur || acc.currency,
+              availableBalance: response.broker_accountinfo?.[accountId]?.available_Balance || acc.availableBalance,
+              cashBalance: response.broker_accountinfo?.[accountId]?.NAV || acc.cashBalance,
+              currency: response.broker_accountinfo?.[accountId]?.cur || acc.currency,
             }
           : acc
       );

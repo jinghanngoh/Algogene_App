@@ -57,37 +57,98 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     }
   };
 
-  const handleSelectForSubAccount = async () => {
-    if (!strategy) return;
+  // const handleSelectForSubAccount = async () => {
+  //   if (!strategy) return;
     
+  //   try {
+  //     // Get any existing form data
+  //     const pendingDataJson = await AsyncStorage.getItem('pendingSubAccountData');
+  //     let pendingData = {};
+      
+  //     if (pendingDataJson) {
+  //       pendingData = JSON.parse(pendingDataJson);
+  //     }
+      
+  //     // Update with the selected algorithm
+  //     pendingData.algorithm = strategy.strategy;
+  //     pendingData.algorithmId = strategy.algo_id;
+  //     pendingData.developer = strategy.developer;
+      
+  //     // Store the updated data
+  //     await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify(pendingData));
+      
+  //     // Set a flag to reopen the SubAccountCreationModal in SubAccounts.jsx
+  //     await AsyncStorage.setItem('reopenSubAccountCreationModal', 'true');
+      
+  //     // Close the modal
+  //     onClose();
+      
+  //     // Navigate to the SubAccounts screen
+  //     router.push('/Portfolio/SubAccounts');
+  //   } catch (error) {
+  //     console.error('Error storing selected algorithm:', error);
+  //     Alert.alert('Error', 'Failed to select algorithm. Please try again.');
+  //   }
+  // };
+  const handleSelectForSubAccount = async (account) => {
+    setLoading(true);
+    setError(null);
     try {
-      // Get any existing form data
-      const pendingDataJson = await AsyncStorage.getItem('pendingSubAccountData');
-      let pendingData = {};
-      
-      if (pendingDataJson) {
-        pendingData = JSON.parse(pendingDataJson);
+      // Step 1: Subscribe to the algorithm
+      const { status, paymentLink, ticketId } = await subscribeToAlgorithm(
+        'live5_qrwkynfz_6194', // Test algo_id
+        account.id === '#1000' ? 'GLKPZPXmtwmMP_qrwkyntz_6195' : 'kucoin_account_id_from_response', // Dynamic account_id
+        'thegohrilla@gmail.com'
+      );
+  
+      if (!status) {
+        throw new Error('Subscription request failed');
       }
-      
-      // Update with the selected algorithm
-      pendingData.algorithm = strategy.strategy;
-      pendingData.algorithmId = strategy.algo_id;
-      pendingData.developer = strategy.developer;
-      
-      // Store the updated data
-      await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify(pendingData));
-      
-      // Set a flag to reopen the SubAccountCreationModal in SubAccounts.jsx
-      await AsyncStorage.setItem('reopenSubAccountCreationModal', 'true');
-      
-      // Close the modal
-      onClose();
-      
-      // Navigate to the SubAccounts screen
-      router.push('/Portfolio/SubAccounts');
+  
+      // Step 2: Start polling for payment status
+      const maxDurationMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+      const pollIntervalMs = 10 * 1000; // 10 seconds
+      let elapsedTimeMs = 0;
+  
+      const pollPaymentStatus = async () => {
+        try {
+          const response = await checkPaymentStatus(ticketId, 'thegohrilla@gmail.com');
+          if (response.paymentStatus === 'completed') {
+            clearInterval(pollInterval);
+            setLoading(false);
+            navigation.navigate('AlgoActive', { account, ticketId }); // Redirect to a success page
+            return;
+          }
+          elapsedTimeMs += pollIntervalMs;
+          if (elapsedTimeMs >= maxDurationMs) {
+            clearInterval(pollInterval);
+            setLoading(false);
+            setError('Payment not completed within 15 minutes. Please try again.');
+            navigation.navigate('SubscriptionPage'); // Redirect back to subscription page
+          }
+        } catch (error) {
+          console.error('Error polling payment status:', error);
+          clearInterval(pollInterval);
+          setLoading(false);
+          setError('Error checking payment status. Please try again.');
+          navigation.navigate('SubscriptionPage');
+        }
+      };
+  
+      // Start the polling
+      const pollInterval = setInterval(pollPaymentStatus, pollIntervalMs);
+  
+      // Step 3: Redirect to Stripe payment link
+      if (paymentLink) {
+        // Open the URL in an in-app browser or external browser
+        Linking.openURL(paymentLink).catch(err =>
+          console.error('Failed to open payment link:', err)
+        );
+      }
     } catch (error) {
-      console.error('Error storing selected algorithm:', error);
-      Alert.alert('Error', 'Failed to select algorithm. Please try again.');
+      console.error('Error in subscription process:', error);
+      setLoading(false);
+      setError('Failed to initiate subscription. Please try again.');
     }
   };
 
