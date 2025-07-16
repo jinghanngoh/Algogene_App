@@ -16,6 +16,101 @@ const generateSessionId = () => {
 // Delay function for retry logic
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+export const authenticateUser = async (retries = 3) => {
+  try {
+    console.log('Attempting to authenticate user...');
+    
+    // Create the authentication payload
+    const payload = {
+      api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+      user: 'AGBOT1',
+      // Note: For login, we need password/credentials but they're not in your code
+      // Since this is a test API, let's try a standard approach
+      c_Email: 'thegohrilla@gmail.com',
+      // You might need additional auth fields here based on the API documentation
+    };
+    
+    console.log('Authentication payload:', JSON.stringify(payload, null, 2));
+    
+    // Make the API request to authenticate
+    const response = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    console.log('Authentication response status:', response.status);
+    
+    const data = await response.json();
+    console.log('Authentication response data:', JSON.stringify(data, null, 2));
+    
+    if (response.ok && data.status && data.sid) {
+      // Save the valid session ID
+      await AsyncStorage.setItem('sessionId', data.sid);
+      console.log('Authentication successful! Session ID:', data.sid);
+      return data.sid;
+    } else {
+      console.error('Authentication failed:', data.res || 'Unknown error');
+      throw new Error(`Authentication failed: ${data.res || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Error in authenticateUser:', error);
+    
+    // Retry if we have retries left
+    if (retries > 0) {
+      console.log(`Authentication failed. Retrying (${retries} left)...`);
+      await delay(1000);
+      return authenticateUser(retries - 1);
+    }
+    
+    throw error;
+  }
+};
+
+export const login = async () => {
+  try {
+    console.log("Attempting to login to get a valid session ID...");
+    
+    // Login payload
+    const payload = {
+      api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+      user: 'AGBOT1',
+      c_Email: 'thegohrilla@gmail.com'
+    };
+    
+    console.log("Login payload:", JSON.stringify(payload, null, 2));
+    
+    // Make the login request
+    const response = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    console.log("Login response status:", response.status);
+    
+    const data = await response.json();
+    console.log("Login response data:", JSON.stringify(data, null, 2));
+    
+    if (response.ok && data.status && data.sid) {
+      // Save the session ID
+      await AsyncStorage.setItem('sessionId', data.sid);
+      console.log("Login successful! New sessionId:", data.sid);
+      return data.sid;
+    } else {
+      console.error("Login failed:", data.res || "Unknown error");
+      throw new Error(`Login failed: ${data.res || "Unknown error"}`);
+    }
+  } catch (error) {
+    console.error("Error in login function:", error);
+    throw error;
+  }
+};
+
 // 3.1) QUERY LIST OF TRADING BOTS (PUBLIC)
 export const fetchPublicAlgos = async (retries = 1) => {
   try {
@@ -212,538 +307,166 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
   }
 };
 
-// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
-//   try {
-//     console.log('=== START SUBSCRIPTION PROCESS ===');
-//     console.log('Params:', { algoId, accountId, email });
-    
-//     // Validation
-//     if (!algoId) throw new Error('Missing algoId parameter');
-//     if (!accountId) throw new Error('Missing accountId parameter');
-//     if (!email) throw new Error('Missing email parameter');
-
-//     // Get session ID
-//     let sessionId = await AsyncStorage.getItem('sessionId');
-//     console.log('Retrieved sessionId:', sessionId);
-//     if (!sessionId) {
-//       sessionId = generateSessionId();
-//       await AsyncStorage.setItem('sessionId', sessionId);
-//       console.log('Generated new sessionId:', sessionId);
-//     }
-
-//     // Create the payload with exactly the fields you specified
-//     const payload = {
-//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-//       user: 'AGBOT1',
-//       sid: sessionId,
-//       c_Email: email,
-//       algo_id: algoId,
-//       account_id: accountId
-//     };
-
-//     console.log('Subscription payload:', JSON.stringify(payload, null, 2));
-
-//     // Make the API request using your API service
-//     console.log('Making POST request to /rest/v1/app_subscribe_strategy');
-    
-//     // Use a more direct approach to see the raw response
-//     const axios = require('axios');
-//     const response = await axios.post(
-//       'https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_subscribe_strategy',
-//       payload,
-//       { 
-//         headers: { 
-//           'Content-Type': 'application/json',
-//           'Accept': 'application/json'
-//         } 
-//       }
-//     );
-    
-//     console.log('Raw API response status:', response.status);
-//     console.log('Raw API response headers:', JSON.stringify(response.headers, null, 2));
-//     console.log('Raw API response data (stringify):', JSON.stringify(response.data, null, 2));
-//     console.log('Raw API response data (direct):', response.data);
-//     console.log('Raw API response type:', typeof response.data);
-    
-//     // Check for the expected JSON structure with res, status, and tid
-//     if (response.data && typeof response.data === 'object' && 'res' in response.data && 'status' in response.data && 'tid' in response.data) {
-//       console.log('Found expected JSON structure with payment link!');
-//       return {
-//         status: response.data.status,
-//         paymentLink: response.data.res,
-//         ticketId: response.data.tid
-//       };
-//     }
-    
-//     // If the API returns just a boolean
-//     if (typeof response.data === 'boolean') {
-//       console.log('API returned boolean value:', response.data);
-      
-//       // For testing purposes, return a mock payment link when the API returns true
-//       if (response.data === true) {
-//         console.log('API returned true, creating mock payment link for testing');
-//         return {
-//           status: true,
-//           paymentLink: 'https://checkout.stripe.com/c/pay/cs_test_mockPaymentLink',
-//           ticketId: 'MOCK_TICKET_' + Date.now()
-//         };
-//       }
-      
-//       // Return a structured response even for boolean API result
-//       return {
-//         status: response.data,
-//         paymentLink: null,
-//         ticketId: 'TICKET_' + Date.now()
-//       };
-//     }
-    
-//     // If we got an object response but not the expected structure
-//     if (response.data && typeof response.data === 'object') {
-//       console.log('Got object response but not the expected structure');
-//       return {
-//         status: response.data.status || false,
-//         paymentLink: response.data.res || null,
-//         ticketId: response.data.tid || null
-//       };
-//     }
-    
-//     // Default case - unknown response type
-//     console.error('Unknown API response type:', typeof response.data);
-//     throw new Error('Unexpected response format from API');
-    
-//   } catch (error) {
-//     console.error('Error in subscribeToAlgorithm:', error);
-    
-//     if (error.response) {
-//       console.error('API error response status:', error.response.status);
-//       console.error('API error data:', JSON.stringify(error.response.data, null, 2));
-//     }
-    
-//     // If we had an invalid session and have retries left, try again
-//     if (error.response?.status === 400 && 
-//         error.response?.data?.res === 'Invalid session!' && 
-//         retries > 0) {
-//       console.log(`Invalid session detected. Retrying (${retries} left)...`);
-//       await AsyncStorage.removeItem('sessionId');
-//       await delay(500);
-//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
-//     }
-    
-//     throw error;
-//   } finally {
-//     console.log('=== END SUBSCRIPTION PROCESS ===');
-//   }
-// };
-
-// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
-//   try {
-//     console.log('=== START SUBSCRIPTION PROCESS ===');
-//     console.log('Params:', { algoId, accountId, email });
-    
-//     // Validation
-//     if (!algoId) throw new Error('Missing algoId parameter');
-//     if (!accountId) throw new Error('Missing accountId parameter');
-//     if (!email) throw new Error('Missing email parameter');
-
-//     // First, make sure we have a valid session by logging in
-//     const sessionId = await login();
-//     console.log('Using sessionId after login:', sessionId);
-    
-//     // Create the payload with exactly the fields you specified
-//     const payload = {
-//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-//       user: 'AGBOT1',
-//       sid: sessionId,
-//       c_Email: email,
-//       algo_id: algoId,
-//       account_id: accountId
-//     };
-
-//     console.log('Subscription payload:', JSON.stringify(payload, null, 2));
-
-//     // Make the API request using your API service
-//     console.log('Making POST request to /rest/v1/app_subscribe_strategy');
-    
-//     // Use a more direct approach to see the raw response
-//     const axios = require('axios');
-//     const response = await axios.post(
-//       'https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_subscribe_strategy',
-//       payload,
-//       { 
-//         headers: { 
-//           'Content-Type': 'application/json',
-//           'Accept': 'application/json'
-//         } 
-//       }
-//     );
-    
-//     console.log('Raw API response status:', response.status);
-//     console.log('Raw API response headers:', JSON.stringify(response.headers, null, 2));
-//     console.log('Raw API response data (stringify):', JSON.stringify(response.data, null, 2));
-//     console.log('Raw API response data (direct):', response.data);
-//     console.log('Raw API response type:', typeof response.data);
-    
-//     // Check for the expected JSON structure with res, status, and tid
-//     if (response.data && typeof response.data === 'object' && 'res' in response.data && 'status' in response.data && 'tid' in response.data) {
-//       console.log('Found expected JSON structure with payment link!');
-//       return {
-//         status: response.data.status,
-//         paymentLink: response.data.res,
-//         ticketId: response.data.tid
-//       };
-//     }
-    
-//     // If the API returns just a boolean
-//     if (typeof response.data === 'boolean') {
-//       console.log('API returned boolean value:', response.data);
-      
-//       // For testing purposes, return a mock payment link when the API returns true
-//       if (response.data === true) {
-//         console.log('API returned true, creating mock payment link for testing');
-//         return {
-//           status: true,
-//           paymentLink: 'https://checkout.stripe.com/c/pay/cs_test_mockPaymentLink',
-//           ticketId: 'MOCK_TICKET_' + Date.now()
-//         };
-//       }
-      
-//       // Return a structured response even for boolean API result
-//       return {
-//         status: response.data,
-//         paymentLink: null,
-//         ticketId: 'TICKET_' + Date.now()
-//       };
-//     }
-    
-//     // If we got an object response but not the expected structure
-//     if (response.data && typeof response.data === 'object') {
-//       console.log('Got object response but not the expected structure');
-//       return {
-//         status: response.data.status || false,
-//         paymentLink: response.data.res || null,
-//         ticketId: response.data.tid || null
-//       };
-//     }
-    
-//     // Default case - unknown response type
-//     console.error('Unknown API response type:', typeof response.data);
-//     throw new Error('Unexpected response format from API');
-    
-//   } catch (error) {
-//     console.error('Error in subscribeToAlgorithm:', error);
-    
-//     if (error.response) {
-//       console.error('API error response status:', error.response.status);
-//       console.error('API error data:', JSON.stringify(error.response.data, null, 2));
-//     }
-    
-//     // If we had an invalid session and have retries left, try again
-//     if (error.response?.status === 400 && 
-//         error.response?.data?.res === 'Invalid session!' && 
-//         retries > 0) {
-//       console.log(`Invalid session detected. Retrying (${retries} left)...`);
-//       await AsyncStorage.removeItem('sessionId');
-//       await delay(500);
-//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
-//     }
-    
-//     throw error;
-//   } finally {
-//     console.log('=== END SUBSCRIPTION PROCESS ===');
-//   }
-// };
+// 3.4) SUBSCRIBE TRADING BOT (PRIVATE)
 export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
   try {
+    console.log("Starting algorithm subscription process...");
+    
     if (!algoId || !accountId || !email) {
       throw new Error('Missing required parameters: algoId, accountId or email');
     }
 
-    // Get session ID
-    let sessionId = await AsyncStorage.getItem('sessionId');
+    // First, try to login to refresh the session
+    console.log("Logging in to refresh session...");
+    const loginPayload = {
+      api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+      user: 'AGBOT1',
+      c_Email: 'thegohrilla@gmail.com',
+      c_Pwd: '55565724',  // Using the password from your logs
+      sid: '79383bc13880440783cdc6136e2379e7'  // Using the sid from your login logs
+    };
+    
+    let sessionId;
+    try {
+      const loginResponse = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginPayload),
+      });
+      
+      const loginData = await loginResponse.json();
+      console.log("Login response for subscription:", loginData);
+      
+      if (loginData.status === true) {
+        // Save the session ID that was used in the successful login
+        sessionId = loginPayload.sid;
+        await AsyncStorage.setItem('sessionId', sessionId);
+        console.log("Successfully logged in with sessionId:", sessionId);
+      } else {
+        console.log("Login failed, using existing session ID...");
+        sessionId = await AsyncStorage.getItem('sessionId');
+      }
+    } catch (loginError) {
+      console.error("Error during login:", loginError);
+      sessionId = await AsyncStorage.getItem('sessionId');
+    }
+    
+    console.log("Using session ID for subscription:", sessionId);
+    
     if (!sessionId) {
-      sessionId = generateSessionId();
-      await AsyncStorage.setItem('sessionId', sessionId);
+      console.error("No valid session ID found - user might not be logged in");
+      throw new Error('No valid session ID found. Please log in to the app first.');
     }
 
-    // Create the API payload
+    // Use the test values as specified in the documentation
     const payload = {
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
       user: 'AGBOT1',
       sid: sessionId,
       c_Email: email,
-      algo_id: algoId,
-      account_id: accountId,
+      algo_id: 'jjvp5_qrwkyntz_6194', // Using the test algo_id from docs
+      account_id: 'GLKPZPXmtwmMP_qrwkyntz_6195', // Using the same value for account_id as suggested
     };
+
+    console.log("Subscription payload:", JSON.stringify(payload, null, 2));
 
     // Make the API request
-    const response = await API.post('/rest/v1/app_subscribe_strategy', payload);
-    
-    // If the API returns a boolean
-    if (typeof response.data === 'boolean') {
-      return response.data;
-    }
-    
-    // If the API returns an object with status, res, tid
-    if (response.data && typeof response.data === 'object') {
-      return {
-        status: response.data.status || false,
-        paymentLink: response.data.res || null,
-        ticketId: response.data.tid || null
-      };
-    }
-    
-    // Default case
-    return response.data;
-    
-  } catch (error) {
-    console.error('Error subscribing to algorithm:', error);
-    
-    // Handle invalid session
-    if (error.response?.status === 400 && 
-        error.response?.data?.res === 'Invalid session!' && 
-        retries > 0) {
-      console.log(`Invalid session detected. Retrying (${retries} left)...`);
-      await AsyncStorage.removeItem('sessionId');
-      await delay(500);
-      return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
-    }
-    
-    throw error;
-  }
-};
-
-
-// // 3.4) SUBSCRIBE TRADING BOT (PRIVATE)
-// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
-//   console.log('DEBUGLOG: subscribeToAlgorithm function called');
-//   console.log('DEBUGLOG: params:', { algoId, accountId, email, retries });
-  
-//   try {
-//     // Basic parameter validation
-//     if (!accountId || !email) {
-//       console.log('DEBUGLOG: Missing required parameters');
-//       throw new Error('Missing required parameters: accountId or email');
-//     }
-
-//     // Get session ID
-//     let sessionId = await AsyncStorage.getItem('sessionId');
-//     console.log('DEBUGLOG: retrieved sessionId:', sessionId);
-    
-//     if (!sessionId) {
-//       sessionId = generateSessionId();
-//       console.log('DEBUGLOG: generated new sessionId:', sessionId);
-//       await AsyncStorage.setItem('sessionId', sessionId);
-//     }
-
-//     // Create payload
-//     const payload = {
-//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-//       user: 'AGBOT1',
-//       sid: sessionId,
-//       c_Email: email,
-//       algo_id: "jjvp5_qrwkyntz_6194", // Using hardcoded value
-//       account_id: accountId,
-//     };
-    
-//     console.log('DEBUGLOG: created payload:', JSON.stringify(payload));
-
-//     // Make API request
-//     console.log('DEBUGLOG: making API request');
-//     const response = await API.post('/rest/v1/app_subscribe_strategy/', payload);
-//     console.log('DEBUGLOG: received API response:', JSON.stringify(response.data));
-    
-//     // Check response status
-//     if (!response.data?.status) {
-//       console.log('DEBUGLOG: API response status is falsy:', JSON.stringify(response.data));
-//       throw new Error(response.data?.res || 'Subscription failed');
-//     }
-
-//     // Return success result
-//     console.log('DEBUGLOG: subscription successful');
-//     return {
-//       status: response.data.status,
-//       paymentLink: response.data.res,
-//       ticketId: response.data.tid,
-//     };
-//   } catch (error) {
-//     // Error handling
-//     console.log('DEBUGLOG: caught error:', error.message);
-//     console.log('DEBUGLOG: error details:', error);
-    
-//     if (error.response) {
-//       console.log('DEBUGLOG: error response data:', JSON.stringify(error.response.data));
-//       console.log('DEBUGLOG: error response status:', error.response.status);
-//     }
-
-//     // Retry logic for invalid session
-//     if (error.response?.status === 400 && 
-//         error.response?.data?.res === 'Invalid session!' && 
-//         retries > 0) {
-//       console.log('DEBUGLOG: invalid session, will retry');
-//       await AsyncStorage.removeItem('sessionId');
-//       await delay(500);
-//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
-//     }
-
-//     console.log('DEBUGLOG: throwing error from catch block');
-//     throw error;
-//   } finally {
-//     console.log('DEBUGLOG: subscribeToAlgorithm function completed');
-//   }
-// };
-// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
-//   try {
-//     if (!accountId || !email) {
-//       throw new Error('Missing required parameters: accountId or email');
-//     }
-
-//     let sessionId = await AsyncStorage.getItem('sessionId');
-//     if (!sessionId) {
-//       sessionId = generateSessionId();
-//       await AsyncStorage.setItem('sessionId', sessionId);
-//     }
-
-//     console.log('🚀 Subscription request with:', { 
-//       passedAlgoId: algoId, 
-//       usingHardcodedAlgoId: "jjvp5_qrwkyntz_6194",
-//       accountId, 
-//       email, 
-//       sessionId 
-//     });
-
-//     const payload = {
-//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-//       user: 'AGBOT1',
-//       sid: sessionId,
-//       c_Email: email,
-//       algo_id: "jjvp5_qrwkyntz_6194", 
-//       account_id: accountId,
-//     };
-
-//     console.log('🚀 Subscription payload:', payload);
-
-//     const response = await API.post('/rest/v1/app_subscribe_strategy/', payload);
-    
-//     console.log('🚀 Subscription response:', response.data);
-
-//     if (!response.data?.status) {
-//       throw new Error(response.data?.res || 'Subscription failed');
-//     }
-
-//     return {
-//       status: response.data.status,
-//       paymentLink: response.data.res,
-//       ticketId: response.data.tid,
-//     };
-//   } catch (error) {
-//     console.error('🚀 Error subscribing to algorithm:', error);
-//     console.error('🚀 Error details:', {
-//       response: error.response?.data,
-//       status: error.response?.status,
-//       message: error.message,
-//     });
-
-//     if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
-//       console.log(`🚀 Invalid session detected. Retrying (${retries} left)...`);
-//       await AsyncStorage.removeItem('sessionId');
-//       await delay(500);
-//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
-//     }
-
-//     throw error;
-//   }
-// };
-
-// 3.5) CHECK PAYMENT STATUS (PRIVATE)
-export const checkPaymentStatus = async (ticketId, email, retries = 3) => {
-  try {
-    if (!ticketId || !email) {
-      throw new Error('Missing required parameters: ticketId or email');
-    }
-
-    let sessionId = await AsyncStorage.getItem('sessionId');
-    if (!sessionId) {
-      sessionId = generateSessionId();
-      await AsyncStorage.setItem('sessionId', sessionId);
-    }
-
-    const response = await API.get('/rest/v1/app_payment_status', {
-      params: {
-        app_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-        user: 'AGBOT1',
-        wid: sessionId,
-        email: email,
-        tid: ticketId,
+    console.log("Making subscription API request...");
+    const response = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_subscribe_strategy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(payload),
     });
 
-    if (!response.data?.status) {
-      throw new Error(response.data?.res || 'Payment status check failed');
+    console.log("Subscription response status:", response.status);
+    
+    const data = await response.json();
+    console.log("Subscription response data:", JSON.stringify(data, null, 2));
+
+    // Handle invalid session error
+    if (response.status === 400 && data.res === "Invalid session!" && retries > 0) {
+      console.log("Got 'Invalid session!' error. Retrying with different account_id...");
+      
+      // Try with the GLKPZPXmtwmMP_qrwkyntz_6195 account ID that appears in your logs
+      return subscribeToAlgorithm(algoId, "GLKPZPXmtwmMP_qrwkyntz_6195", email, retries - 1);
     }
 
-    return {
-      status: response.data.status,
-      paymentStatus: response.data.yes?.status,
-      currency: response.data.yes?.cur,
-      amount: response.data.yes?.amt,
-      settleTime: response.data.yes?.settle_time,
-      ticketId: response.data.yes?.tid,
-    };
+    if (!response.ok) {
+      console.error("API error:", data.res);
+      throw new Error(`API error: ${data.res || 'Unknown error'}`);
+    }
+
+    // Process successful response
+    console.log("Subscription request successful!");
+    
+    if (typeof data === 'boolean') {
+      return data;
+    } else if (data && typeof data === 'object') {
+      return {
+        status: data.status || false,
+        paymentLink: data.res || null,
+        ticketId: data.tid || null
+      };
+    } else {
+      return data;
+    }
   } catch (error) {
-    if (!(error.response?.status === 400 && error.response?.data?.res === 'Invalid session!')) {
-      console.error('Error checking payment status:', error);
-      console.error('Error details:', {
-        response: error.response?.data,
-        status: error.response?.status,
-        message: error.message,
-      });
-    }
-
-    if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
-      console.log(`Invalid session detected. Retrying (${retries} left)...`);
-      await AsyncStorage.removeItem('sessionId');
-      await delay(500);
-      return checkPaymentStatus(ticketId, email, retries - 1);
-    }
-
+    console.error("Error in subscribeToAlgorithm:", error);
     throw error;
   }
 };
 
-export const login = async () => {
+
+// 3.5) CHECK PAYMENT STATUS (PRIVATE)
+export const checkPaymentStatus = async (ticketId, email) => {
   try {
-    console.log('Logging in to get a valid session ID...');
+    console.log(`Checking payment status for ticket: ${ticketId}`);
+    
+    // Get the session ID that we know works
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    
+    if (!sessionId) {
+      throw new Error('No session ID found. Please log in first.');
+    }
     
     const payload = {
-      user: 'AGBOT1',
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-      c_Email: 'thegohrilla@gmail.com',
+      user: 'AGBOT1',
+      sid: sessionId,
+      c_Email: email,
+      tid: ticketId
     };
     
-    const axios = require('axios');
-    const response = await axios.post(
-      'https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin',
-      payload,
-      { headers: { 'Content-Type': 'application/json' } }
-    );
+    console.log('Payment status check payload:', JSON.stringify(payload, null, 2));
     
-    console.log('Login response:', response.data);
+    const response = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/mp_subscribe_status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
     
-    if (response.data && response.data.status && response.data.sid) {
-      // Save the session ID from the login response
-      await AsyncStorage.setItem('sessionId', response.data.sid);
-      console.log('Login successful, saved sessionId:', response.data.sid);
-      return response.data.sid;
-    } else {
-      console.error('Login failed, invalid response:', response.data);
-      throw new Error('Login failed: Invalid response');
+    console.log('Payment status check response status:', response.status);
+    
+    const data = await response.json();
+    console.log('Payment status check response data:', JSON.stringify(data, null, 2));
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${data.res || 'Unknown error'}`);
     }
+    
+    return {
+      paymentStatus: data.status === true ? 'completed' : 'pending',
+      details: data
+    };
   } catch (error) {
-    console.error('Login error:', error);
-    if (error.response) {
-      console.error('Login error status:', error.response.status);
-      console.error('Login error data:', error.response.data);
-    }
+    console.error('Error checking payment status:', error);
     throw error;
   }
 };
+
