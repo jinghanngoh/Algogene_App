@@ -1,6 +1,7 @@
 // Test out the public marketplace endpoint 
 // MarketplaceApi.js
 import API from './api';
+import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -215,28 +216,48 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
   }
 };
 
-// 3.4) SUBSCRIBE TRADING BOT (PRIVATE)
 export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
   try {
-    if (!algoId || !accountId || !email) {
-      throw new Error('Missing required parameters: algoId, accountId, or email');
+    if (!accountId || !email) {
+      console.log('Missing required parameters');
+      throw new Error('Missing required parameters: accountId or email');
     }
 
+    // Get session ID
     let sessionId = await AsyncStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = generateSessionId();
       await AsyncStorage.setItem('sessionId', sessionId);
     }
 
-    const response = await API.post('/rest/v1/app_subscribe_strategy/', {
+    console.log("Making subscription request");
+    // Create payload for API request
+    const payload = {
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
       user: 'AGBOT1',
       sid: sessionId,
       c_Email: email,
-      algo_id : 'jjvp5_qrwkyntz_6194', // algo_id: algoId,
+      algo_id: algoId || "jjvp5_qrwkyntz_6194", // Use passed algoId or fallback to hardcoded value
       account_id: accountId,
-    });
-
+    };
+    
+    console.log('Subscription payload:', payload);
+    
+    // Since the actual API endpoint is giving 404 errors, use a mock response for now
+    console.log('IMPORTANT: Using mocked response for development - replace with actual API call when endpoint is available');
+    
+    // Return a properly structured mock response that matches the expected format
+    return {
+      status: true,
+      paymentLink: 'https://example.com/payment/12345',
+      ticketId: 'TICKET_' + Math.random().toString(36).substring(2, 10),
+    };
+    
+    // Uncomment this when your API endpoint is working
+    /*
+    const response = await API.post('/rest/v1/app_subscribe_strategy', payload);
+    console.log('Subscription API response:', response.data);
+    
     if (!response.data?.status) {
       throw new Error(response.data?.res || 'Subscription failed');
     }
@@ -246,28 +267,165 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
       paymentLink: response.data.res,
       ticketId: response.data.tid,
     };
+    */
   } catch (error) {
-    if (!(error.response?.status === 400 && error.response?.data?.res === 'Invalid session!')) {
-      console.error('Error subscribing to algorithm:', error);
-      console.error('Error details:', {
-        response: error.response?.data,
-        status: error.response?.status,
-        message: error.message,
-      });
-    }
-
-    if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
+    console.error('Error subscribing to algorithm:', error);
+    
+    // Handle invalid session
+    if (error.response?.status === 400 && 
+        error.response?.data?.res === 'Invalid session!' && 
+        retries > 0) {
       console.log(`Invalid session detected. Retrying (${retries} left)...`);
       await AsyncStorage.removeItem('sessionId');
       await delay(500);
       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
     }
-
+    
     throw error;
   }
 };
+// // 3.4) SUBSCRIBE TRADING BOT (PRIVATE)
+// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
+//   console.log('DEBUGLOG: subscribeToAlgorithm function called');
+//   console.log('DEBUGLOG: params:', { algoId, accountId, email, retries });
+  
+//   try {
+//     // Basic parameter validation
+//     if (!accountId || !email) {
+//       console.log('DEBUGLOG: Missing required parameters');
+//       throw new Error('Missing required parameters: accountId or email');
+//     }
 
-// 3.4) CHECK PAYMENT STATUS (PRIVATE)
+//     // Get session ID
+//     let sessionId = await AsyncStorage.getItem('sessionId');
+//     console.log('DEBUGLOG: retrieved sessionId:', sessionId);
+    
+//     if (!sessionId) {
+//       sessionId = generateSessionId();
+//       console.log('DEBUGLOG: generated new sessionId:', sessionId);
+//       await AsyncStorage.setItem('sessionId', sessionId);
+//     }
+
+//     // Create payload
+//     const payload = {
+//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+//       user: 'AGBOT1',
+//       sid: sessionId,
+//       c_Email: email,
+//       algo_id: "jjvp5_qrwkyntz_6194", // Using hardcoded value
+//       account_id: accountId,
+//     };
+    
+//     console.log('DEBUGLOG: created payload:', JSON.stringify(payload));
+
+//     // Make API request
+//     console.log('DEBUGLOG: making API request');
+//     const response = await API.post('/rest/v1/app_subscribe_strategy/', payload);
+//     console.log('DEBUGLOG: received API response:', JSON.stringify(response.data));
+    
+//     // Check response status
+//     if (!response.data?.status) {
+//       console.log('DEBUGLOG: API response status is falsy:', JSON.stringify(response.data));
+//       throw new Error(response.data?.res || 'Subscription failed');
+//     }
+
+//     // Return success result
+//     console.log('DEBUGLOG: subscription successful');
+//     return {
+//       status: response.data.status,
+//       paymentLink: response.data.res,
+//       ticketId: response.data.tid,
+//     };
+//   } catch (error) {
+//     // Error handling
+//     console.log('DEBUGLOG: caught error:', error.message);
+//     console.log('DEBUGLOG: error details:', error);
+    
+//     if (error.response) {
+//       console.log('DEBUGLOG: error response data:', JSON.stringify(error.response.data));
+//       console.log('DEBUGLOG: error response status:', error.response.status);
+//     }
+
+//     // Retry logic for invalid session
+//     if (error.response?.status === 400 && 
+//         error.response?.data?.res === 'Invalid session!' && 
+//         retries > 0) {
+//       console.log('DEBUGLOG: invalid session, will retry');
+//       await AsyncStorage.removeItem('sessionId');
+//       await delay(500);
+//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
+//     }
+
+//     console.log('DEBUGLOG: throwing error from catch block');
+//     throw error;
+//   } finally {
+//     console.log('DEBUGLOG: subscribeToAlgorithm function completed');
+//   }
+// };
+// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
+//   try {
+//     if (!accountId || !email) {
+//       throw new Error('Missing required parameters: accountId or email');
+//     }
+
+//     let sessionId = await AsyncStorage.getItem('sessionId');
+//     if (!sessionId) {
+//       sessionId = generateSessionId();
+//       await AsyncStorage.setItem('sessionId', sessionId);
+//     }
+
+//     console.log('🚀 Subscription request with:', { 
+//       passedAlgoId: algoId, 
+//       usingHardcodedAlgoId: "jjvp5_qrwkyntz_6194",
+//       accountId, 
+//       email, 
+//       sessionId 
+//     });
+
+//     const payload = {
+//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+//       user: 'AGBOT1',
+//       sid: sessionId,
+//       c_Email: email,
+//       algo_id: "jjvp5_qrwkyntz_6194", 
+//       account_id: accountId,
+//     };
+
+//     console.log('🚀 Subscription payload:', payload);
+
+//     const response = await API.post('/rest/v1/app_subscribe_strategy/', payload);
+    
+//     console.log('🚀 Subscription response:', response.data);
+
+//     if (!response.data?.status) {
+//       throw new Error(response.data?.res || 'Subscription failed');
+//     }
+
+//     return {
+//       status: response.data.status,
+//       paymentLink: response.data.res,
+//       ticketId: response.data.tid,
+//     };
+//   } catch (error) {
+//     console.error('🚀 Error subscribing to algorithm:', error);
+//     console.error('🚀 Error details:', {
+//       response: error.response?.data,
+//       status: error.response?.status,
+//       message: error.message,
+//     });
+
+//     if (error.response?.status === 400 && error.response?.data?.res === 'Invalid session!' && retries > 0) {
+//       console.log(`🚀 Invalid session detected. Retrying (${retries} left)...`);
+//       await AsyncStorage.removeItem('sessionId');
+//       await delay(500);
+//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
+//     }
+
+//     throw error;
+//   }
+// };
+
+// 3.5) CHECK PAYMENT STATUS (PRIVATE)
 export const checkPaymentStatus = async (ticketId, email, retries = 3) => {
   try {
     if (!ticketId || !email) {

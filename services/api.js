@@ -7,10 +7,11 @@ const API = axios.create({
   // baseURL: 'https://7840b2f6f14c.ngrok-free.app',
   baseURL: 'https://blindly-beloved-muskox.ngrok-free.app',
   // baseURL: 'https://algogene.com',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000,
+  //withCredentials: true,
 });
 
 // Request interceptor for session ID - runs before every API call
@@ -38,6 +39,16 @@ API.interceptors.request.use(async (config) => {
   }
   return config;
 });
+API.interceptors.request.use(
+  (config) => {
+    console.log(`Making ${config.method.toUpperCase()} request to: ${config.baseURL}${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('Request error:', error);
+    return Promise.reject(error);
+  }
+);
 
 API.interceptors.response.use(
   (response) => response.data || {},

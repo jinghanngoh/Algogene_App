@@ -9,32 +9,74 @@ import { useSubAccounts } from '../../context/SubAccountsContext';
 import SubAccountCreation from '../components/SubAccountCreationModal';
 import { startAlgo, stopAlgo } from '../../services/TradingApi';
 
+// const SubAccounts = () => {
+//   const { subAccounts, setSubAccounts, saveSubAccounts } = useSubAccounts();
+//   const navigation = useNavigation();
+//   const [modalVisible, setModalVisible] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState(null);
+
 const SubAccounts = () => {
-  const { subAccounts, setSubAccounts, saveSubAccounts } = useSubAccounts();
+  const { 
+    subAccounts, 
+    saveSubAccounts, 
+    updateSubAccount,
+    fetchSubAccounts,
+    setSubAccounts
+  } = useSubAccounts();
+
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({});
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const checkReopenModal = async () => {
+    console.log('SubAccounts component - subAccounts changed:', subAccounts);
+  }, [subAccounts]);
+
+  useEffect(() => {
+    const loadData = async () => {
       try {
-        const shouldReopen = await AsyncStorage.getItem('reopenSubAccountCreationModal');
-        if (shouldReopen === 'true') {
-          await AsyncStorage.removeItem('reopenSubAccountCreationModal');
-          setModalVisible(true);
+        console.log('Loading subaccounts data...');
+        const accounts = await fetchSubAccounts();
+        console.log('Fetched accounts in SubAccounts.jsx:', accounts);
+        
+        // If we still get an empty array after fetching, try resetting
+        if (accounts.length === 0) {
+          console.log('Still no accounts after fetch, resetting to defaults');
+          await resetToDefaults();
         }
-      } catch (error) {
-        console.error('Error checking modal reopen flag:', error);
+      } catch (err) {
+        console.error('Error loading subaccounts:', err);
+        setError('Failed to load sub accounts: ' + err.message);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
-    checkReopenModal();
-    const unsubscribe = navigation.addListener('focus', () => {
-      checkReopenModal();
-    });
+    
+    loadData();
+  }, []);
+
+  // useEffect(() => {
+  //   const checkReopenModal = async () => {
+  //     try {
+  //       const shouldReopen = await AsyncStorage.getItem('reopenSubAccountCreationModal');
+  //       if (shouldReopen === 'true') {
+  //         await AsyncStorage.removeItem('reopenSubAccountCreationModal');
+  //         setModalVisible(true);
+  //       }
+  //     } catch (error) {
+  //       console.error('Error checking modal reopen flag:', error);
+  //     }
+  //   };
+  //   checkReopenModal();
+  //   const unsubscribe = navigation.addListener('focus', () => {
+  //     checkReopenModal();
+  //   });
   
-    return unsubscribe;
-  }, [navigation]);
+  //   return unsubscribe;
+  // }, [navigation]);
 
 
   const fetchAlgorithmDetails = async (account) => {
@@ -160,13 +202,13 @@ const SubAccounts = () => {
   
     try {
       const algoId = account.runningScript || account.algorithm || 'live5_qrwkynfz_6194'; // Fallback to test algo_id
-      const updatedAccounts = subAccounts.map((acc) =>
-        acc.id === id
-          ? { ...acc, status: acc.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
-          : acc
-      );
-      setSubAccounts(updatedAccounts);
-      saveSubAccounts(updatedAccounts);
+      const updatedAccount = { 
+        ...account, 
+        status: account.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' 
+      };
+      
+      // Use updateSubAccount instead of manipulating the entire array
+      updateSubAccount(updatedAccount);
   
       if (account.status === 'ACTIVE') {
         // Pause (Stop Algo)
@@ -180,12 +222,10 @@ const SubAccounts = () => {
     } catch (err) {
       console.error(`Error toggling status for ${id}:`, err);
       setError(`Failed to ${account.status === 'ACTIVE' ? 'pause' : 'resume'} ${id}: ${err.message}`);
+      
       // Revert status on error
-      const revertedAccounts = subAccounts.map((acc) =>
-        acc.id === id ? { ...acc, status: account.status } : acc
-      );
-      setSubAccounts(revertedAccounts);
-      saveSubAccounts(revertedAccounts);
+      const revertedAccount = { ...account }; // Keep original status
+      updateSubAccount(revertedAccount);
     } finally {
       setLoading((prev) => ({ ...prev, [id]: false }));
     }
@@ -249,8 +289,15 @@ const SubAccounts = () => {
           <Text style={styles.sectionSubtitle}>
             Manage your trading sub accounts, each linked to a single broker and algorithm. Run Paper Tests or Real Trades to evaluate strategies.
           </Text>
-          {loading && <Text style={styles.loadingText}>Loading...</Text>}
-          {error && <Text style={styles.errorText}>{error}</Text>}
+
+
+          {isInitialLoading ? (
+            <Text style={styles.loadingText}>Loading...</Text>
+          ) : error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : subAccounts.length === 0 ? (
+            <Text style={styles.emptyText}>No sub accounts found. Create one to get started.</Text>
+          ) : (
           <ScrollView>
             {subAccounts.map((account) => (
               <TouchableOpacity
@@ -351,6 +398,7 @@ const SubAccounts = () => {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          )}
         </View>
         <SubAccountCreation 
           visible={modalVisible} 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { fetchAlgoDailyReturns, fetchAlgoPerformance } from '../../services/MarketplaceApi';
-import { useRouter } from 'expo-router';
+import { fetchAlgoDailyReturns, fetchAlgoPerformance, subscribeToAlgorithm, checkPaymentStatus  } from '../../services/MarketplaceApi';
+import { useRouter, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = false}) => {
@@ -14,6 +14,9 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   const [loadingPerformance, setLoadingPerformance] = useState(false);
   const [loadingDailyReturns, setLoadingDailyReturns] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigation = useNavigation();
 
   useEffect(() => {
     // console.log('Strategy:', strategy);
@@ -90,97 +93,253 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   //     Alert.alert('Error', 'Failed to select algorithm. Please try again.');
   //   }
   // };
-  const handleSelectForSubAccount = async (account) => {
+
+  const handleSelectForSubAccount = async () => {
+    console.log('👉 BEFORE SUBSCRIPTION: About to call subscribeToAlgorithm');
+  
+    if (!strategy) {
+      console.error('👉 ERROR: No strategy selected for subscription');
+      return;
+    }
+    
+    console.log('👉 Setting loading to true');
     setLoading(true);
     setError(null);
-    try {
-      // Step 1: Subscribe to the algorithm
-      const { status, paymentLink, ticketId } = await subscribeToAlgorithm(
-        'live5_qrwkynfz_6194', // Test algo_id
-        account.id === '#1000' ? 'GLKPZPXmtwmMP_qrwkyntz_6195' : 'kucoin_account_id_from_response', // Dynamic account_id
-        'thegohrilla@gmail.com'
-      );
   
+    try {
+      // Get the account ID from the current active broker account
+      const accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; // This should ideally come from your account context
+      const userEmail = 'thegohrilla@gmail.com'; // This should come from user context
+      
+      // Call the imported subscribeToAlgorithm function from MarketplaceApi.js
+      const result = await subscribeToAlgorithm(
+        strategy.algo_id,
+        accountId,
+        userEmail
+      );
+    
+      console.log('👉 API response result:', result);
+      
+      if (!result || typeof result !== 'object') {
+        console.error('👉 Invalid response format:', result);
+        throw new Error('Invalid response from subscription API');
+      }
+      
+      const { status, paymentLink, ticketId } = result;
+      console.log('👉 Destructured result:', { status, paymentLink, ticketId });
+      
       if (!status) {
+        console.log('👉 Status is falsy, throwing error');
         throw new Error('Subscription request failed');
       }
-  
-      // Step 2: Start polling for payment status
-      const maxDurationMs = 15 * 60 * 1000; // 15 minutes in milliseconds
-      const pollIntervalMs = 10 * 1000; // 10 seconds
-      let elapsedTimeMs = 0;
-  
-      const pollPaymentStatus = async () => {
-        try {
-          const response = await checkPaymentStatus(ticketId, 'thegohrilla@gmail.com');
-          if (response.paymentStatus === 'completed') {
-            clearInterval(pollInterval);
-            setLoading(false);
-            navigation.navigate('AlgoActive', { account, ticketId }); // Redirect to a success page
-            return;
-          }
-          elapsedTimeMs += pollIntervalMs;
-          if (elapsedTimeMs >= maxDurationMs) {
-            clearInterval(pollInterval);
-            setLoading(false);
-            setError('Payment not completed within 15 minutes. Please try again.');
-            navigation.navigate('SubscriptionPage'); // Redirect back to subscription page
-          }
-        } catch (error) {
-          console.error('Error polling payment status:', error);
-          clearInterval(pollInterval);
-          setLoading(false);
-          setError('Error checking payment status. Please try again.');
-          navigation.navigate('SubscriptionPage');
-        }
-      };
-  
-      // Start the polling
-      const pollInterval = setInterval(pollPaymentStatus, pollIntervalMs);
-  
-      // Step 3: Redirect to Stripe payment link
+      
+      // Handle successful subscription
       if (paymentLink) {
-        // Open the URL in an in-app browser or external browser
-        Linking.openURL(paymentLink).catch(err =>
-          console.error('Failed to open payment link:', err)
+        console.log('👉 Opening payment link:', paymentLink);
+        Alert.alert(
+          'Subscription Successful',
+          'You will be redirected to complete payment.',
+          [
+            {
+              text: 'Continue to Payment',
+              onPress: () => Linking.openURL(paymentLink)
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
         );
+      } else {
+        Alert.alert('Success', 'Successfully subscribed to algorithm');
       }
+      
+      onClose();
+      
     } catch (error) {
+      console.log('👉 CAUGHT ERROR:', error.message);
       console.error('Error in subscription process:', error);
-      setLoading(false);
       setError('Failed to initiate subscription. Please try again.');
+    } finally {
+      setLoading(false);
+      console.log('👉 handleSelectForSubAccount completed');
     }
   };
 
-  // Render the bottom action buttons based on the context
-  // const renderActionButtons = () => {
-  //   if (isSelectingForSubAccount) {
-  //     // When selecting for a sub-account, show blue "SUBSCRIBE" button
-  //     return (
-  //       <View style={styles.buttonContainer}>
-  //         <TouchableOpacity
-  //           style={styles.subscribeButton}
-  //           onPress={handleSelectForSubAccount}
-  //         >
-  //           <Text style={styles.buttonText}>SUBSCRIBE TO ALGORITHM</Text>
-  //         </TouchableOpacity>
+
+
+
+//   const handleSelectForSubAccount = async () => {
+//     console.log('👉 BEFORE SUBSCRIPTION: About to call subscribeToAlgorithm');
+
+//     if (!strategy) {
+//       console.error('👉 ERROR: No strategy selected for subscription');
+//       return;
+//     }
+    
+//     console.log('👉 Setting loading to true');
+//     setLoading(true);
+//     setError(null);
+
+//     try {
+//     // Import directly from MarketplaceApi to avoid context name collision
+//     const { subscribeToAlgorithm: apiSubscribeToAlgorithm } = require('../../services/MarketplaceApi');
+//     console.log('👉 API subscribeToAlgorithm is typeof:', typeof apiSubscribeToAlgorithm);
+    
+//     // Step 1: Subscribe to the algorithm using the API function, not the context function
+//     console.log('👉 Calling API subscribeToAlgorithm now');
+//     const result = await apiSubscribeToAlgorithm(
+//       'jjvp5_qrwkyntz_6194', // Use the hardcoded algo_id directly
+//       'GLKPZPXmtwmMP_qrwkyntz_6195', // This account ID should come from your user account context
+//       'thegohrilla@gmail.com' // This email should come from user context
+//     );
+  
+//     console.log('👉 API response result:', result);
+    
+//     const { status, paymentLink, ticketId } = result || {};
+//     console.log('👉 Destructured result:', { status, paymentLink, ticketId });
+    
+//     if (!status) {
+//       console.log('👉 Status is falsy, throwing error');
+//       throw new Error('Subscription request failed');
+//     }
+  
+//     // Step 2: Start polling for payment status
+//     const maxDurationMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+//     const pollIntervalMs = 10 * 1000; // 10 seconds
+//     let elapsedTimeMs = 0;
+  
+//       const pollPaymentStatus = async () => {
+//         try {
+//           const response = await checkPaymentStatus(ticketId, 'thegohrilla@gmail.com');
+//           console.log('Payment status check response:', response);
           
-  //         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-  //           <Text style={styles.closeButtonText}>CLOSE</Text>
-  //         </TouchableOpacity>
-  //       </View>
+//           if (response.paymentStatus === 'completed') {
+//             console.log('Payment completed successfully!');
+//             clearInterval(pollInterval);
+//             setLoading(false);
+//             navigation.navigate('AlgoActive', { ticketId }); // Redirect to a success page
+//             return;
+//           }
+//           elapsedTimeMs += pollIntervalMs;
+//           if (elapsedTimeMs >= maxDurationMs) {
+//             console.log('Payment timeout after 15 minutes');
+//             clearInterval(pollInterval);
+//             setLoading(false);
+//             setError('Payment not completed within 15 minutes. Please try again.');
+//             navigation.navigate('SubscriptionPage'); // Redirect back to subscription page
+//           }
+//         } catch (error) {
+//           console.error('Error polling payment status:', error);
+//           clearInterval(pollInterval);
+//           setLoading(false);
+//           setError('Error checking payment status. Please try again.');
+//           navigation.navigate('SubscriptionPage');
+//         }
+//       };
+  
+//       // Start the polling
+//       const pollInterval = setInterval(pollPaymentStatus, pollIntervalMs);
+  
+//       // Open payment link
+//       if (paymentLink) {
+//         Linking.openURL(paymentLink).catch(err =>
+//           console.error('Failed to open payment link:', err)
+//         );
+//       }
+//     } catch (error) {
+//       console.log('👉 CAUGHT ERROR:', error.message);
+//       console.log('👉 Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+//       console.error('Error in subscription process:', error);
+//       setLoading(false);
+//       setError('Failed to initiate subscription. Please try again.');
+//     } finally {
+//       console.log('👉 handleSelectForSubAccount completed');
+//     }
+// };
+
+
+
+
+
+
+
+  // const handleSelectForSubAccount = async () => {
+  //   if (!strategy) {
+  //     console.error('No strategy selected for subscription');
+  //     return;
+  //   }
+    
+  //   setLoading(true);
+  //   setError(null);
+  //   try {
+  //     // Step 1: Subscribe to the algorithm
+  //     const { status, paymentLink, ticketId } = await subscribeToAlgorithm(
+  //       strategy.algo_id, // Use the actual algo_id from the selected strategy
+  //       'GLKPZPXmtwmMP_qrwkyntz_6195', // This account ID should come from your user account context
+  //       'thegohrilla@gmail.com' // This email should come from user context
   //     );
-  //   } else {
-  //     // When viewed normally from Marketplace, only show Close button
-  //     return (
-  //       <View style={styles.buttonContainer}>
-  //         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-  //           <Text style={styles.closeButtonText}>CLOSE</Text>
-  //         </TouchableOpacity>
-  //       </View>
-  //     );
+  
+  //     console.log('Subscription response:', { status, paymentLink, ticketId });
+      
+  //     if (!status) {
+  //       throw new Error('Subscription request failed');
+  //     }
+  
+  //     // Step 2: Start polling for payment status
+  //     const maxDurationMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+  //     const pollIntervalMs = 10 * 1000; // 10 seconds
+  //     let elapsedTimeMs = 0;
+  
+  //     const pollPaymentStatus = async () => {
+  //       try {
+  //         const response = await checkPaymentStatus(ticketId, 'thegohrilla@gmail.com');
+  //         console.log('Payment status check response:', response);
+          
+  //         if (response.paymentStatus === 'completed') {
+  //           console.log('Payment completed successfully!');
+  //           clearInterval(pollInterval);
+  //           setLoading(false);
+  //           navigation.navigate('AlgoActive', { ticketId }); // Redirect to a success page
+  //           return;
+  //         }
+  //         elapsedTimeMs += pollIntervalMs;
+  //         if (elapsedTimeMs >= maxDurationMs) {
+  //           console.log('Payment timeout after 15 minutes');
+  //           clearInterval(pollInterval);
+  //           setLoading(false);
+  //           setError('Payment not completed within 15 minutes. Please try again.');
+  //           navigation.navigate('SubscriptionPage'); // Redirect back to subscription page
+  //         }
+  //       } catch (error) {
+  //         console.error('Error polling payment status:', error);
+  //         clearInterval(pollInterval);
+  //         setLoading(false);
+  //         setError('Error checking payment status. Please try again.');
+  //         navigation.navigate('SubscriptionPage');
+  //       }
+  //     };
+  
+  //     // Start the polling
+  //     const pollInterval = setInterval(pollPaymentStatus, pollIntervalMs);
+  
+  //     // Step 3: Redirect to Stripe payment link
+  //     if (paymentLink) {
+  //       console.log('Opening payment link:', paymentLink);
+  //       // Open the URL in an in-app browser or external browser
+  //       Linking.openURL(paymentLink).catch(err =>
+  //         console.error('Failed to open payment link:', err)
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error('Error in subscription process:', error);
+  //     setLoading(false);
+  //     setError('Failed to initiate subscription. Please try again.');
   //   }
   // };
+
+
+
 
   const currentStrategy = strategy || {
     algo_id: 'default-strategy',
@@ -193,38 +352,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   };
 
   const isSubscribed = subscribedAlgorithm?.algo_id === currentStrategy.algo_id;
-
-  //   // In TradingModal.jsx
-  //   const handleSubscribe = () => {
-  //     if (subscribedAlgorithm && subscribedAlgorithm.algo_id !== currentStrategy.algo_id) {
-  //       Alert.alert(
-  //         'Subscription Conflict',
-  //         "You're already subscribed to another algorithm. Please unsubscribe first.",
-  //         [{ text: 'OK' }]
-  //       );
-  //       return;
-  //     }
-  //     subscribeToAlgorithm(currentStrategy);
-  //     onClose();
-  //   };
-
-  // const handleUnsubscribe = () => {
-  //   Alert.alert(
-  //     'Confirm Unsubscribe',
-  //     'Are you sure you want to unsubscribe from this strategy?',
-  //     [
-  //       { text: 'Cancel', style: 'cancel' },
-  //       {
-  //         text: 'Unsubscribe',
-  //         onPress: () => {
-  //           unsubscribeFromAlgorithm();
-  //           onClose();
-  //         },
-  //         style: 'destructive'
-  //       }
-  //     ]
-  //   );
-  // };
 
   const chartData = performanceStats ? {
     labels: ['7d', '30d', '90d', '180d', '365d'],
@@ -280,6 +407,13 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
         {errorMessage && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
+
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#4FC3F7" />
+            <Text style={styles.loadingText}>Processing subscription...</Text>
           </View>
         )}
 
@@ -482,20 +616,17 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
         {/* Action Buttons - Modified as per request */}
         <View style={styles.buttonContainer}>
           {/* Only show SUBSCRIBE button when accessed from SubAccountCreationModal */}
-          {isSelectingForSubAccount ? (
+          {isSelectingForSubAccount && (
             <TouchableOpacity
               style={styles.selectButton}
               onPress={handleSelectForSubAccount}
+              disabled={loading}
             >
               <Text style={styles.buttonText}>SUBSCRIBE</Text>
             </TouchableOpacity>
-          ) : (
-            // Only show the CLOSE button when accessed directly from Marketplace
-            // The regular subscribe/unsubscribe buttons are removed
-            null
           )}
           
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={loading}>
             <Text style={styles.closeButtonText}>CLOSE</Text>
           </TouchableOpacity>
         </View>
