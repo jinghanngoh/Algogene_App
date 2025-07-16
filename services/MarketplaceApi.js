@@ -7,8 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Generate a 32-character session ID
 const generateSessionId = () => {
-  return uuidv4().replace(/-/g, ''); // 32 chars
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
+// const generateSessionId = () => {
+//   return uuidv4().replace(/-/g, ''); // 32 chars
+// };
 
 // Delay function for retry logic
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -97,11 +100,6 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
       },
     });
 
-    // // Log raw response
-    // console.log('=== FULL RAW STRATEGY RESPONSE ===');
-    // console.log(JSON.stringify(response, null, 2));
-    // console.log('=== END RAW RESPONSE ===');
-
     // Validate response
     if (!response?.performance) {
       throw new Error('Performance data not available.');
@@ -175,8 +173,6 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
       }
     });
 
-    // console.log(`Raw Daily Returns Response for algo_id ${algoId}:`, JSON.stringify(response, null, 2));
-
     if (!response.res) {
       throw new Error('Daily returns data not available.');
     }
@@ -216,11 +212,250 @@ export const fetchAlgoDailyReturns = async (algoId, accountingDate = null, isExt
   }
 };
 
+// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
+//   try {
+//     console.log('=== START SUBSCRIPTION PROCESS ===');
+//     console.log('Params:', { algoId, accountId, email });
+    
+//     // Validation
+//     if (!algoId) throw new Error('Missing algoId parameter');
+//     if (!accountId) throw new Error('Missing accountId parameter');
+//     if (!email) throw new Error('Missing email parameter');
+
+//     // Get session ID
+//     let sessionId = await AsyncStorage.getItem('sessionId');
+//     console.log('Retrieved sessionId:', sessionId);
+//     if (!sessionId) {
+//       sessionId = generateSessionId();
+//       await AsyncStorage.setItem('sessionId', sessionId);
+//       console.log('Generated new sessionId:', sessionId);
+//     }
+
+//     // Create the payload with exactly the fields you specified
+//     const payload = {
+//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+//       user: 'AGBOT1',
+//       sid: sessionId,
+//       c_Email: email,
+//       algo_id: algoId,
+//       account_id: accountId
+//     };
+
+//     console.log('Subscription payload:', JSON.stringify(payload, null, 2));
+
+//     // Make the API request using your API service
+//     console.log('Making POST request to /rest/v1/app_subscribe_strategy');
+    
+//     // Use a more direct approach to see the raw response
+//     const axios = require('axios');
+//     const response = await axios.post(
+//       'https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_subscribe_strategy',
+//       payload,
+//       { 
+//         headers: { 
+//           'Content-Type': 'application/json',
+//           'Accept': 'application/json'
+//         } 
+//       }
+//     );
+    
+//     console.log('Raw API response status:', response.status);
+//     console.log('Raw API response headers:', JSON.stringify(response.headers, null, 2));
+//     console.log('Raw API response data (stringify):', JSON.stringify(response.data, null, 2));
+//     console.log('Raw API response data (direct):', response.data);
+//     console.log('Raw API response type:', typeof response.data);
+    
+//     // Check for the expected JSON structure with res, status, and tid
+//     if (response.data && typeof response.data === 'object' && 'res' in response.data && 'status' in response.data && 'tid' in response.data) {
+//       console.log('Found expected JSON structure with payment link!');
+//       return {
+//         status: response.data.status,
+//         paymentLink: response.data.res,
+//         ticketId: response.data.tid
+//       };
+//     }
+    
+//     // If the API returns just a boolean
+//     if (typeof response.data === 'boolean') {
+//       console.log('API returned boolean value:', response.data);
+      
+//       // For testing purposes, return a mock payment link when the API returns true
+//       if (response.data === true) {
+//         console.log('API returned true, creating mock payment link for testing');
+//         return {
+//           status: true,
+//           paymentLink: 'https://checkout.stripe.com/c/pay/cs_test_mockPaymentLink',
+//           ticketId: 'MOCK_TICKET_' + Date.now()
+//         };
+//       }
+      
+//       // Return a structured response even for boolean API result
+//       return {
+//         status: response.data,
+//         paymentLink: null,
+//         ticketId: 'TICKET_' + Date.now()
+//       };
+//     }
+    
+//     // If we got an object response but not the expected structure
+//     if (response.data && typeof response.data === 'object') {
+//       console.log('Got object response but not the expected structure');
+//       return {
+//         status: response.data.status || false,
+//         paymentLink: response.data.res || null,
+//         ticketId: response.data.tid || null
+//       };
+//     }
+    
+//     // Default case - unknown response type
+//     console.error('Unknown API response type:', typeof response.data);
+//     throw new Error('Unexpected response format from API');
+    
+//   } catch (error) {
+//     console.error('Error in subscribeToAlgorithm:', error);
+    
+//     if (error.response) {
+//       console.error('API error response status:', error.response.status);
+//       console.error('API error data:', JSON.stringify(error.response.data, null, 2));
+//     }
+    
+//     // If we had an invalid session and have retries left, try again
+//     if (error.response?.status === 400 && 
+//         error.response?.data?.res === 'Invalid session!' && 
+//         retries > 0) {
+//       console.log(`Invalid session detected. Retrying (${retries} left)...`);
+//       await AsyncStorage.removeItem('sessionId');
+//       await delay(500);
+//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
+//     }
+    
+//     throw error;
+//   } finally {
+//     console.log('=== END SUBSCRIPTION PROCESS ===');
+//   }
+// };
+
+// export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
+//   try {
+//     console.log('=== START SUBSCRIPTION PROCESS ===');
+//     console.log('Params:', { algoId, accountId, email });
+    
+//     // Validation
+//     if (!algoId) throw new Error('Missing algoId parameter');
+//     if (!accountId) throw new Error('Missing accountId parameter');
+//     if (!email) throw new Error('Missing email parameter');
+
+//     // First, make sure we have a valid session by logging in
+//     const sessionId = await login();
+//     console.log('Using sessionId after login:', sessionId);
+    
+//     // Create the payload with exactly the fields you specified
+//     const payload = {
+//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+//       user: 'AGBOT1',
+//       sid: sessionId,
+//       c_Email: email,
+//       algo_id: algoId,
+//       account_id: accountId
+//     };
+
+//     console.log('Subscription payload:', JSON.stringify(payload, null, 2));
+
+//     // Make the API request using your API service
+//     console.log('Making POST request to /rest/v1/app_subscribe_strategy');
+    
+//     // Use a more direct approach to see the raw response
+//     const axios = require('axios');
+//     const response = await axios.post(
+//       'https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_subscribe_strategy',
+//       payload,
+//       { 
+//         headers: { 
+//           'Content-Type': 'application/json',
+//           'Accept': 'application/json'
+//         } 
+//       }
+//     );
+    
+//     console.log('Raw API response status:', response.status);
+//     console.log('Raw API response headers:', JSON.stringify(response.headers, null, 2));
+//     console.log('Raw API response data (stringify):', JSON.stringify(response.data, null, 2));
+//     console.log('Raw API response data (direct):', response.data);
+//     console.log('Raw API response type:', typeof response.data);
+    
+//     // Check for the expected JSON structure with res, status, and tid
+//     if (response.data && typeof response.data === 'object' && 'res' in response.data && 'status' in response.data && 'tid' in response.data) {
+//       console.log('Found expected JSON structure with payment link!');
+//       return {
+//         status: response.data.status,
+//         paymentLink: response.data.res,
+//         ticketId: response.data.tid
+//       };
+//     }
+    
+//     // If the API returns just a boolean
+//     if (typeof response.data === 'boolean') {
+//       console.log('API returned boolean value:', response.data);
+      
+//       // For testing purposes, return a mock payment link when the API returns true
+//       if (response.data === true) {
+//         console.log('API returned true, creating mock payment link for testing');
+//         return {
+//           status: true,
+//           paymentLink: 'https://checkout.stripe.com/c/pay/cs_test_mockPaymentLink',
+//           ticketId: 'MOCK_TICKET_' + Date.now()
+//         };
+//       }
+      
+//       // Return a structured response even for boolean API result
+//       return {
+//         status: response.data,
+//         paymentLink: null,
+//         ticketId: 'TICKET_' + Date.now()
+//       };
+//     }
+    
+//     // If we got an object response but not the expected structure
+//     if (response.data && typeof response.data === 'object') {
+//       console.log('Got object response but not the expected structure');
+//       return {
+//         status: response.data.status || false,
+//         paymentLink: response.data.res || null,
+//         ticketId: response.data.tid || null
+//       };
+//     }
+    
+//     // Default case - unknown response type
+//     console.error('Unknown API response type:', typeof response.data);
+//     throw new Error('Unexpected response format from API');
+    
+//   } catch (error) {
+//     console.error('Error in subscribeToAlgorithm:', error);
+    
+//     if (error.response) {
+//       console.error('API error response status:', error.response.status);
+//       console.error('API error data:', JSON.stringify(error.response.data, null, 2));
+//     }
+    
+//     // If we had an invalid session and have retries left, try again
+//     if (error.response?.status === 400 && 
+//         error.response?.data?.res === 'Invalid session!' && 
+//         retries > 0) {
+//       console.log(`Invalid session detected. Retrying (${retries} left)...`);
+//       await AsyncStorage.removeItem('sessionId');
+//       await delay(500);
+//       return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
+//     }
+    
+//     throw error;
+//   } finally {
+//     console.log('=== END SUBSCRIPTION PROCESS ===');
+//   }
+// };
 export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
   try {
-    if (!accountId || !email) {
-      console.log('Missing required parameters');
-      throw new Error('Missing required parameters: accountId or email');
+    if (!algoId || !accountId || !email) {
+      throw new Error('Missing required parameters: algoId, accountId or email');
     }
 
     // Get session ID
@@ -230,44 +465,36 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
       await AsyncStorage.setItem('sessionId', sessionId);
     }
 
-    console.log("Making subscription request");
-    // Create payload for API request
+    // Create the API payload
     const payload = {
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
       user: 'AGBOT1',
       sid: sessionId,
       c_Email: email,
-      algo_id: algoId || "jjvp5_qrwkyntz_6194", // Use passed algoId or fallback to hardcoded value
+      algo_id: algoId,
       account_id: accountId,
     };
-    
-    console.log('Subscription payload:', payload);
-    
-    // Since the actual API endpoint is giving 404 errors, use a mock response for now
-    console.log('IMPORTANT: Using mocked response for development - replace with actual API call when endpoint is available');
-    
-    // Return a properly structured mock response that matches the expected format
-    return {
-      status: true,
-      paymentLink: 'https://example.com/payment/12345',
-      ticketId: 'TICKET_' + Math.random().toString(36).substring(2, 10),
-    };
-    
-    // Uncomment this when your API endpoint is working
-    /*
-    const response = await API.post('/rest/v1/app_subscribe_strategy', payload);
-    console.log('Subscription API response:', response.data);
-    
-    if (!response.data?.status) {
-      throw new Error(response.data?.res || 'Subscription failed');
-    }
 
-    return {
-      status: response.data.status,
-      paymentLink: response.data.res,
-      ticketId: response.data.tid,
-    };
-    */
+    // Make the API request
+    const response = await API.post('/rest/v1/app_subscribe_strategy', payload);
+    
+    // If the API returns a boolean
+    if (typeof response.data === 'boolean') {
+      return response.data;
+    }
+    
+    // If the API returns an object with status, res, tid
+    if (response.data && typeof response.data === 'object') {
+      return {
+        status: response.data.status || false,
+        paymentLink: response.data.res || null,
+        ticketId: response.data.tid || null
+      };
+    }
+    
+    // Default case
+    return response.data;
+    
   } catch (error) {
     console.error('Error subscribing to algorithm:', error);
     
@@ -284,6 +511,8 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
     throw error;
   }
 };
+
+
 // // 3.4) SUBSCRIBE TRADING BOT (PRIVATE)
 // export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3) => {
 //   console.log('DEBUGLOG: subscribeToAlgorithm function called');
@@ -481,42 +710,40 @@ export const checkPaymentStatus = async (ticketId, email, retries = 3) => {
   }
 };
 
-
-
-// Log formatted strategy performance response
-// const logFullApiResponse = (response) => {
-//   console.log('=== FORMATTED STRATEGY RESPONSE ===');
-  
-//   // Performance section
-//   console.log('\nPERFORMANCE METRICS:');
-//   console.log('-------------------');
-//   const performance = response.performance || {};
-//   for (const [key, value] of Object.entries(performance)) {
-//     if (typeof value === 'number') {
-//       // Format numbers nicely
-//       if (key.includes('pct') || key.includes('Rate') || key.includes('ratio')) {
-//         console.log(`${key}: ${(value * 100).toFixed(2)}%`);
-//       } else if (Math.abs(value) < 0.01) {
-//         console.log(`${key}: ${value.toExponential(4)}`);
-//       } else {
-//         console.log(`${key}: ${value.toLocaleString()}`);
-//       }
-//     } else {
-//       console.log(`${key}: ${value}`);
-//     }
-//   }
-
-//   // Settings section
-//   console.log('\nSTRATEGY SETTINGS:');
-//   console.log('-----------------');
-//   const settings = response.setting || {};
-//   for (const [key, value] of Object.entries(settings)) {
-//     if (Array.isArray(value)) {
-//       console.log(`${key}: [${value.join(', ')}]`);
-//     } else {
-//       console.log(`${key}: ${value}`);
-//     }
-//   }
-
-//   console.log('=== END OF FORMATTED RESPONSE ===');
-// };
+export const login = async () => {
+  try {
+    console.log('Logging in to get a valid session ID...');
+    
+    const payload = {
+      user: 'AGBOT1',
+      api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
+      c_Email: 'thegohrilla@gmail.com',
+    };
+    
+    const axios = require('axios');
+    const response = await axios.post(
+      'https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin',
+      payload,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    
+    console.log('Login response:', response.data);
+    
+    if (response.data && response.data.status && response.data.sid) {
+      // Save the session ID from the login response
+      await AsyncStorage.setItem('sessionId', response.data.sid);
+      console.log('Login successful, saved sessionId:', response.data.sid);
+      return response.data.sid;
+    } else {
+      console.error('Login failed, invalid response:', response.data);
+      throw new Error('Login failed: Invalid response');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    if (error.response) {
+      console.error('Login error status:', error.response.status);
+      console.error('Login error data:', error.response.data);
+    }
+    throw error;
+  }
+};

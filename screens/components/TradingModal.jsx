@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { fetchAlgoDailyReturns, fetchAlgoPerformance, subscribeToAlgorithm, checkPaymentStatus  } from '../../services/MarketplaceApi';
+import { fetchAlgoDailyReturns, fetchAlgoPerformance, subscribeToAlgorithm, checkPaymentStatus, testSubscriptionAPI, checkStoredSession, debugSubscribeToAlgorithm, traceSubscriptionFlow, logWorkingSubscription } from '../../services/MarketplaceApi';
 import { useRouter, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -94,78 +94,170 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   //   }
   // };
 
+
   const handleSelectForSubAccount = async () => {
-    console.log('👉 BEFORE SUBSCRIPTION: About to call subscribeToAlgorithm');
-  
     if (!strategy) {
-      console.error('👉 ERROR: No strategy selected for subscription');
+      console.error('No strategy selected for subscription');
       return;
     }
     
-    console.log('👉 Setting loading to true');
     setLoading(true);
     setError(null);
-  
+    
     try {
-      // Get the account ID from the current active broker account
-      const accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; // This should ideally come from your account context
-      const userEmail = 'thegohrilla@gmail.com'; // This should come from user context
+      // Get the strategy's algo_id
+      const algo_id = strategy.algo_id;
       
-      // Call the imported subscribeToAlgorithm function from MarketplaceApi.js
+      // This should come from your account context in a real app
+      const accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; 
+      const userEmail = 'thegohrilla@gmail.com';
+      
+      // Call the subscribeToAlgorithm function
       const result = await subscribeToAlgorithm(
-        strategy.algo_id,
+        algo_id,
         accountId,
         userEmail
       );
-    
-      console.log('👉 API response result:', result);
       
-      if (!result || typeof result !== 'object') {
-        console.error('👉 Invalid response format:', result);
-        throw new Error('Invalid response from subscription API');
+      // For boolean responses
+      if (typeof result === 'boolean') {
+        if (result === true) {
+          Alert.alert('Success', 'Successfully subscribed to algorithm');
+          onClose();
+          return;
+        } else {
+          throw new Error('Subscription request failed');
+        }
       }
       
-      const { status, paymentLink, ticketId } = result;
-      console.log('👉 Destructured result:', { status, paymentLink, ticketId });
-      
-      if (!status) {
-        console.log('👉 Status is falsy, throwing error');
-        throw new Error('Subscription request failed');
+      // For object responses with payment link
+      if (result && typeof result === 'object') {
+        const { status, paymentLink, ticketId } = result;
+        
+        if (!status) {
+          throw new Error('Subscription request failed');
+        }
+        
+        if (paymentLink) {
+          Alert.alert(
+            'Subscription Successful',
+            'You will be redirected to complete payment.',
+            [
+              {
+                text: 'Continue to Payment',
+                onPress: () => Linking.openURL(paymentLink)
+              },
+              {
+                text: 'Cancel',
+                style: 'cancel'
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Success', 'Successfully subscribed to algorithm');
+        }
+        
+        onClose();
       }
-      
-      // Handle successful subscription
-      if (paymentLink) {
-        console.log('👉 Opening payment link:', paymentLink);
-        Alert.alert(
-          'Subscription Successful',
-          'You will be redirected to complete payment.',
-          [
-            {
-              text: 'Continue to Payment',
-              onPress: () => Linking.openURL(paymentLink)
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel'
-            }
-          ]
-        );
-      } else {
-        Alert.alert('Success', 'Successfully subscribed to algorithm');
-      }
-      
-      onClose();
-      
     } catch (error) {
-      console.log('👉 CAUGHT ERROR:', error.message);
       console.error('Error in subscription process:', error);
       setError('Failed to initiate subscription. Please try again.');
     } finally {
       setLoading(false);
-      console.log('👉 handleSelectForSubAccount completed');
     }
   };
 
+  
+  // const handleSelectForSubAccount = async () => {
+  //   console.log('👉 BEFORE SUBSCRIPTION: About to call subscribeToAlgorithm');
+  
+  //   if (!strategy) {
+  //     console.error('👉 ERROR: No strategy selected for subscription');
+  //     return;
+  //   }
+    
+  //   console.log('👉 Setting loading to true');
+  //   setLoading(true);
+  //   setError(null);
+  
+  //   try {
+  //     // Get the strategy's algo_id - use the hardcoded one as fallback
+  //     const algo_id = strategy.algo_id || 'jjvp5_qrwkyntz_6194';
+  //     console.log('👉 Using algo_id:', algo_id);
+      
+  //     // This should come from your account context in a real app
+  //     const accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; 
+  //     const userEmail = 'thegohrilla@gmail.com';
+      
+  //     // Call the subscribeToAlgorithm function
+  //     const result = await logWorkingSubscription(
+  //       algo_id,
+  //       accountId,
+  //       userEmail
+  //     );
+    
+  //     console.log('👉 API response result:', typeof result, result);
+      
+  //     // Handle different types of responses
+  //     if (typeof result === 'boolean') {
+  //       console.log('👉 Got boolean response:', result);
+        
+  //       if (result === true) {
+  //         Alert.alert('Success', 'Successfully subscribed to algorithm');
+  //         onClose();
+  //         return;
+  //       } else {
+  //         throw new Error('Subscription request failed');
+  //       }
+  //     }
+      
+  //     // If we got an object, validate it
+  //     if (!result || typeof result !== 'object' || !('status' in result)) {
+  //       console.error('👉 Invalid response format:', result);
+  //       throw new Error('Invalid response from subscription API');
+  //     }
+      
+  //     const { status, paymentLink, ticketId } = result;
+      
+  //     console.log('👉 Destructured result:', { status, paymentLink, ticketId });
+      
+  //     if (!status) {
+  //       console.log('👉 Status is falsy, throwing error');
+  //       throw new Error('Subscription request failed');
+  //     }
+      
+  //     // Handle successful subscription
+  //     if (paymentLink) {
+  //       console.log('👉 Opening payment link:', paymentLink);
+  //       Alert.alert(
+  //         'Subscription Successful',
+  //         'You will be redirected to complete payment.',
+  //         [
+  //           {
+  //             text: 'Continue to Payment',
+  //             onPress: () => Linking.openURL(paymentLink)
+  //           },
+  //           {
+  //             text: 'Cancel',
+  //             style: 'cancel'
+  //           }
+  //         ]
+  //       );
+  //     } else {
+  //       Alert.alert('Success', 'Successfully subscribed to algorithm');
+  //     }
+      
+  //     onClose();
+      
+  //   } catch (error) {
+  //     console.log('👉 CAUGHT ERROR:', error.message);
+  //     console.error('Error in subscription process:', error);
+  //     setError('Failed to initiate subscription. Please try again.');
+  //   } finally {
+  //     setLoading(false);
+  //     console.log('👉 handleSelectForSubAccount completed');
+  //   }
+  // };
 
 
 
@@ -625,7 +717,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
               <Text style={styles.buttonText}>SUBSCRIBE</Text>
             </TouchableOpacity>
           )}
-          
           <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={loading}>
             <Text style={styles.closeButtonText}>CLOSE</Text>
           </TouchableOpacity>
@@ -634,46 +725,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     </Modal>
   );
 };
-
-        {/* Action Buttons - different buttons based on mode
-        <View style={styles.buttonContainer}>
-          {isSelectingForSubAccount ? (
-            <TouchableOpacity
-              style={styles.selectButton}
-              onPress={handleSelectForSubAccount}
-            >
-              <Text style={styles.buttonText}>SUBSCRIBE</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.button,
-                subscribedAlgorithm?.algo_id === strategy?.algo_id ? styles.unsubscribeButton : styles.subscribeButton
-              ]}
-              onPress={() => {
-                if (subscribedAlgorithm?.algo_id === strategy?.algo_id) {
-                  unsubscribeFromAlgorithm();
-                } else {
-                  subscribeToAlgorithm(strategy);
-                }
-                onClose();
-              }}
-            >
-              <Text style={styles.buttonText}>
-                {subscribedAlgorithm?.algo_id === strategy?.algo_id ? 'UNSUBSCRIBE' : 'SUBSCRIBE'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>CLOSE</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </Modal>
-  );
-}; */}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

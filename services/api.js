@@ -85,25 +85,4 @@ export const login = async () => {
   }
 };
 
-// export const fetchBinanceSubAccount = async (brokerApiKey, brokerSecret) => {
-//   try {
-//     const payload = {
-//       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
-//       user: 'AGBOT1',
-//       c_Email: 'thegohrilla@gmail.com',
-//       broker: 'binance',
-//       runmode: 'livetest',
-//       broker_api: brokerApiKey,
-//       broker_pwd: brokerSecret,
-//     };
-//     console.log('Sending payload:', payload); // Debug payload
-//     const response = await API.post('/rest/v1/config', payload);
-//     console.log('API Response:', response);
-//     return response;
-//   } catch (error) {
-//     console.error('Error fetching sub-account:', error.response?.data || error.message);
-//     throw error;
-//   }
-// };
-
 export default API;
