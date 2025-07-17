@@ -96,22 +96,25 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
         }
       } else if (result && typeof result === 'object') {
         const { status, paymentLink, ticketId } = result;
-
+  
         if (!status) {
           throw new Error('Subscription request failed');
         }
-
+        
         if (paymentLink) {
           Alert.alert(
-            'Subscription Initiated',
+            'Subscription Successful',
             'You will be redirected to complete payment.',
             [
               {
                 text: 'Continue to Payment',
-                onPress: () => Linking.openURL(paymentLink).catch(err => {
-                  console.error('Failed to open payment link:', err);
-                  setError('Failed to open payment link');
-                }),
+                onPress: () => {
+                  console.log('Opening payment link:', paymentLink);
+                  Linking.openURL(paymentLink).catch(err => {
+                    console.error('Failed to open payment link:', err);
+                    setError('Failed to open payment link');
+                  });
+                },
               },
               {
                 text: 'Cancel',
@@ -121,21 +124,56 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
             ]
           );
 
+          // Set up payment status polling
+        if (ticketId) {
           const maxDurationMs = 15 * 60 * 1000; // 15 minutes
           const pollIntervalMs = 10 * 1000; // 10 seconds
           let elapsedTimeMs = 0;
-
+          
           const pollPaymentStatus = async () => {
             try {
               const response = await checkPaymentStatus(ticketId, userEmail);
               console.log('Payment Status Check:', JSON.stringify(response, null, 2));
-
-              if (response.paymentStatus === 'completed') {
+              
+              if (response.success && response.paymentStatus === 'completed') {
                 console.log('Payment completed successfully');
+                console.log(`Payment details: ${response.currency} ${response.amount}, settled at ${response.settleTime}`);
+                
                 clearInterval(pollInterval);
                 setLoading(false);
-                Alert.alert('Success', 'Payment completed successfully');
-                navigation.navigate('AlgoActive', { ticketId });
+                
+                Alert.alert(
+                  'Payment Successful',
+                  `Your payment of ${response.currency} ${response.amount} was completed successfully.`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        // Close the modal
+                        onClose();
+                        
+                        // Try to navigate to a main screen if possible
+                        if (navigation) {
+                          try {
+                            navigation.navigate('Home');
+                          } catch (navError) {
+                            console.log('Navigation to Home failed, trying Dashboard...');
+                            try {
+                              navigation.navigate('Dashboard');
+                            } catch (navError2) {
+                              console.log('Navigation to Dashboard failed, trying Marketplace...');
+                              try {
+                                navigation.navigate('Marketplace');
+                              } catch (navError3) {
+                                console.log('Could not navigate automatically.');
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                );
                 return;
               }
 
@@ -144,33 +182,33 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
                 console.log('Payment timeout after 15 minutes');
                 clearInterval(pollInterval);
                 setLoading(false);
-                setError('Payment not completed within 15 minutes. Please try again.');
-                navigation.navigate('SubscriptionPage');
+                Alert.alert(
+                  'Payment Timeout', 
+                  'Payment not completed within 15 minutes. You can try again later.',
+                  [{ text: 'OK', onPress: () => onClose() }]
+                );
               }
             } catch (error) {
               console.error('Error polling payment status:', error);
-              clearInterval(pollInterval);
-              setLoading(false);
-              setError('Error checking payment status. Please try again.');
-              navigation.navigate('SubscriptionPage');
+              // Don't stop polling on error, just log it
             }
           };
-
+                    
           const pollInterval = setInterval(pollPaymentStatus, pollIntervalMs);
-        } else {
-          Alert.alert('Success', 'Successfully subscribed to algorithm');
-          onClose();
         }
       } else {
-        throw new Error('Invalid response format from subscription API');
+        Alert.alert('Success', 'Successfully subscribed to algorithm');
+        onClose();
       }
-    } catch (error) {
-      console.error('Error in subscription process:', error);
-      setError('Failed to initiate subscription: ' + error.message);
-    } finally {
-      setLoading(false);
+    } else {
+      throw new Error('Invalid response format from subscription API');
     }
-  };
+  } catch (error) {
+    console.error('Error in subscription process:', error);
+    setError('Failed to initiate subscription: ' + error.message);
+    setLoading(false);
+  }
+};
 
   const currentStrategy = strategy || {
     algo_id: 'default-strategy',

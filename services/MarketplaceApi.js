@@ -316,7 +316,6 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
       throw new Error('Missing required parameters: algoId, accountId or email');
     }
 
-    // First, try to login to refresh the session
     console.log("Logging in to refresh session...");
     const loginPayload = {
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
@@ -389,10 +388,9 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
 
     // Handle invalid session error
     if (response.status === 400 && data.res === "Invalid session!" && retries > 0) {
-      console.log("Got 'Invalid session!' error. Retrying with different account_id...");
-      
-      // Try with the GLKPZPXmtwmMP_qrwkyntz_6195 account ID that appears in your logs
-      return subscribeToAlgorithm(algoId, "GLKPZPXmtwmMP_qrwkyntz_6195", email, retries - 1);
+      console.log("Got 'Invalid session!' error. Retrying with new session...");
+      await AsyncStorage.removeItem('sessionId');
+      return subscribeToAlgorithm(algoId, accountId, email, retries - 1);
     }
 
     if (!response.ok) {
@@ -419,6 +417,37 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
     throw error;
   }
 };
+//     if (response.status === 400 && data.res === "Invalid session!" && retries > 0) {
+//       console.log("Got 'Invalid session!' error. Retrying with different account_id...");
+      
+//       // Try with the GLKPZPXmtwmMP_qrwkyntz_6195 account ID that appears in your logs
+//       return subscribeToAlgorithm(algoId, "GLKPZPXmtwmMP_qrwkyntz_6195", email, retries - 1);
+//     }
+
+//     if (!response.ok) {
+//       console.error("API error:", data.res);
+//       throw new Error(`API error: ${data.res || 'Unknown error'}`);
+//     }
+
+//     // Process successful response
+//     console.log("Subscription request successful!");
+    
+//     if (typeof data === 'boolean') {
+//       return data;
+//     } else if (data && typeof data === 'object') {
+//       return {
+//         status: data.status || false,
+//         paymentLink: data.res || null,
+//         ticketId: data.tid || null
+//       };
+//     } else {
+//       return data;
+//     }
+//   } catch (error) {
+//     console.error("Error in subscribeToAlgorithm:", error);
+//     throw error;
+//   }
+// };
 
 
 // 3.5) CHECK PAYMENT STATUS (PRIVATE)
@@ -433,22 +462,24 @@ export const checkPaymentStatus = async (ticketId, email) => {
       throw new Error('No session ID found. Please log in first.');
     }
     
-    const payload = {
+    // Create query parameters for GET request
+    const queryParams = new URLSearchParams({
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
       user: 'AGBOT1',
       sid: sessionId,
       c_Email: email,
       tid: ticketId
-    };
+    }).toString();
     
-    console.log('Payment status check payload:', JSON.stringify(payload, null, 2));
+    const url = `https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_payment_status?${queryParams}`;
+    console.log('Payment status check URL:', url);
     
-    const response = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/mp_subscribe_status', {
-      method: 'POST',
+    // Make GET request as specified in the documentation
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
     });
     
     console.log('Payment status check response status:', response.status);
@@ -460,10 +491,23 @@ export const checkPaymentStatus = async (ticketId, email) => {
       throw new Error(`API error: ${data.res || 'Unknown error'}`);
     }
     
-    return {
-      paymentStatus: data.status === true ? 'completed' : 'pending',
-      details: data
-    };
+    // Format the response according to the documentation
+    if (data.status === true && data.res) {
+      return {
+        success: true,
+        paymentStatus: data.res.status || 'pending',
+        currency: data.res.cur || '',
+        amount: data.res.amt || 0,
+        settleTime: data.res.settle_time || '',
+        ticketId: data.res.tid || ticketId
+      };
+    } else {
+      return {
+        success: false,
+        paymentStatus: 'pending',
+        message: data.res || 'Unknown error'
+      };
+    }
   } catch (error) {
     console.error('Error checking payment status:', error);
     throw error;
