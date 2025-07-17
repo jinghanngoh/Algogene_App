@@ -11,35 +11,6 @@ const AccountManager = () => {
   const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
 
-  // Fetch subAccounts from SubAccounts component state dynamically
-  // const [subAccounts, setSubAccounts] = useState([]);
-  // useEffect(() => {
-  //   // Simulate fetching subAccounts (replace with actual state sharing logic)
-  //   const fetchSubAccounts = async () => {
-  //     // This is a placeholder; in a real app, you might use a context or prop to share state
-  //     // For now, we'll use the initial state from SubAccounts as a fallback
-  //     const initialSubAccounts = [
-  //       {
-  //         id: '#1000',
-  //         broker: 'Binance',
-  //         algorithm: 'SpiderNet',
-  //         currency: 'USD',
-  //         leverage: '5.0',
-  //         subscriptionEnd: '2025-08-31 02:02:51',
-  //         runningScript: 'SpiderNet_v1',
-  //         availableBalance: '1000000.0',
-  //         cashBalance: '1000000.0',
-  //         realizedPL: '0.0',
-  //         unrealizedPL: '0.0',
-  //         marginUsed: '0.0',
-  //         status: 'INACTIVE',
-  //       },
-  //     ];
-  //     setSubAccounts(initialSubAccounts);
-  //   };
-  //   fetchSubAccounts();
-  // }, []);
-
   // Calculate Account-level metrics
   const totalPortfolioValue = subAccounts.length > 0
     ? subAccounts.reduce((sum, acc) => sum + parseFloat(acc.availableBalance) + parseFloat(acc.cashBalance), 0).toFixed(2)

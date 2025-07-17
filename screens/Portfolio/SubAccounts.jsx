@@ -31,16 +31,16 @@ const SubAccounts = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    console.log('SubAccounts component - subAccounts changed:', subAccounts);
-  }, [subAccounts]);
+  // useEffect(() => {
+  //   console.log('SubAccounts component - subAccounts changed:', subAccounts);
+  // }, [subAccounts]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        console.log('Loading subaccounts data...');
+        // console.log('Loading subaccounts data...');
         const accounts = await fetchSubAccounts();
-        console.log('Fetched accounts in SubAccounts.jsx:', accounts);
+        // console.log('Fetched accounts in SubAccounts.jsx:', accounts);
         
         // If we still get an empty array after fetching, try resetting
         if (accounts.length === 0) {
@@ -83,7 +83,7 @@ const SubAccounts = () => {
     try {
       const response = await fetchPublicAlgos();
       if (response.status && Array.isArray(response.data)) {
-        const algoData = response.data.find(algo => algo.algo_id === account.runningScript || algo.name === account.algorithm);
+        const algoData = response.data.find(algo => algo.algo_id === account.algoId || algo.name === account.algorithm);
         if (algoData) {
           const updatedAccounts = subAccounts.map((acc) =>
             acc.id === account.id ? { ...acc, algorithm: algoData.name || acc.algorithm } : acc
@@ -91,7 +91,7 @@ const SubAccounts = () => {
           setSubAccounts(updatedAccounts);
           saveSubAccounts(updatedAccounts);
         } else {
-          console.warn(`No matching algorithm found for runningScript: ${account.runningScript}`);
+          console.warn(`No matching algorithm found for algoId: ${account.algoId}`);
         }
       } else {
         console.warn('Invalid response format from fetchPublicAlgos');
@@ -100,44 +100,6 @@ const SubAccounts = () => {
       console.error('Error fetching algorithm details:', err);
     }
   };
-
-  // const fetchSubAccountDetails = async (account) => {
-  //   if (account.broker !== 'Binance' || !account.brokerApiKey || !account.brokerSecret) return;
-  //   setLoading(true);
-  //   try {
-  //     const sessionId = await AsyncStorage.getItem('sessionId');
-  //     if (!sessionId) {
-  //       console.log('No session ID, attempting login...');
-  //       await login();
-  //     }
-  //     console.log('Attempting to configure broker with:', {
-  //       brokerApiKey: account.brokerApiKey,
-  //       brokerSecret: account.brokerSecret,
-  //     });
-  //     const response = await configureBroker(account.brokerApiKey, account.brokerSecret);
-  //     console.log('API Response:', response);
-  //     const updatedAccounts = subAccounts.map((acc) =>
-  //       acc.id === account.id
-  //         ? {
-  //             ...acc,
-  //             brokerConnected: response.status === true,
-  //             availableBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.available_Balance || acc.availableBalance,
-  //             cashBalance: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cashBalance || acc.cashBalance,
-  //             currency: response.broker_accountinfo?.['GLKPZPXmtwmMP_qrwkyntz_6195']?.cur || acc.currency,
-  //           }
-  //         : acc
-  //     );
-  //     setSubAccounts(updatedAccounts);
-  //     saveSubAccounts(updatedAccounts);
-  //     setError(null);
-  //   } catch (err) {
-  //     console.error(`Error fetching details for ${account.id}:`, err);
-  //     console.log('Full Error Response:', err.response?.data);
-  //     setError(`Failed to connect to ${account.broker}: ${err.message}`);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const fetchSubAccountDetails = async (account) => {
     if (!account.brokerApiKey || !account.brokerSecret) return;
@@ -148,12 +110,12 @@ const SubAccounts = () => {
         console.log('No session ID, attempting login...');
         await login();
       }
-      console.log('Attempting to configure broker with:', {
-        broker: account.broker,
-        brokerApiKey: account.brokerApiKey,
-        brokerSecret: account.brokerSecret,
-        brokerPassphrase: account.brokerPassphrase,
-      });
+      // console.log('Attempting to configure broker with:', {
+      //   broker: account.broker,
+      //   brokerApiKey: account.brokerApiKey,
+      //   brokerSecret: account.brokerSecret,
+      //   brokerPassphrase: account.brokerPassphrase,
+      // });
       const response = await configureBroker(
         account.broker.toLowerCase(),
         account.brokerApiKey,
@@ -201,74 +163,69 @@ const SubAccounts = () => {
     setError(null);
   
     try {
-      const algoId = account.runningScript || account.algorithm || 'live5_qrwkynfz_6194'; // Fallback to test algo_id
+      // Log the account details for debugging
+      console.log('Account details before toggle:', JSON.stringify(account, null, 2));
+      
+      // Map accounts to their broker IDs if not already present
+      let accountId;
+      if (account.brokerId) {
+        accountId = account.brokerId;
+      } else if (account.id === '#1000') {
+        accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
+      } else if (account.id === '#1001') {
+        accountId = 'jjvp5_qrwkyntz_6194';
+      } else {
+        throw new Error('Missing broker account ID. Please check broker connection.');
+      }
+      
+      // console.log(`Using mapped accountId: ${accountId}`);
+      
+      // Map to algorithm IDs if not already present
+      let algoId;
+      if (account.algoId) {
+        algoId = account.algoId;
+      } else if (account.runningScript === 'SpiderNet_v1') {
+        algoId = 'h448195gl0_ujbjcsgin_0451';
+      } else if (account.runningScript === 'DeepNet_v1') {
+        algoId = 'h448195gl0_ujbjcsgin_0452';
+      } else {
+        throw new Error('Missing algorithm ID for this account');
+      }
+      
+      // console.log(`Using mapped algoId: ${algoId}`);
+
       const updatedAccount = { 
         ...account, 
-        status: account.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' 
+        status: account.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+        // Store these mappings for future use
+        brokerId: accountId,
+        algoId: algoId
       };
-      
-      // Use updateSubAccount instead of manipulating the entire array
+    
+      // First update the UI optimistically
       updateSubAccount(updatedAccount);
   
       if (account.status === 'ACTIVE') {
         // Pause (Stop Algo)
-        await stopAlgo(account.id, algoId);
-        console.log(`Stopped algo for ${id} with algo_id: ${algoId}`);
+        // console.log(`Calling stopAlgo for ${accountId} with algoId: ${algoId}`);
+        const result = await stopAlgo(accountId, algoId);
+        console.log(`Successfully stopped algo for ${accountId} with algoId: ${algoId}`, result);
       } else {
         // Resume (Start Algo)
-        await startAlgo(account.id, algoId);
-        console.log(`Started algo for ${id} with algo_id: ${algoId}`);
+        // console.log(`Calling startAlgo for ${accountId} with algoId: ${algoId}`);
+        const result = await startAlgo(accountId, algoId);
+        // console.log(`Successfully started algo for ${accountId} with algoId: ${algoId}`, result);
       }
     } catch (err) {
       console.error(`Error toggling status for ${id}:`, err);
       setError(`Failed to ${account.status === 'ACTIVE' ? 'pause' : 'resume'} ${id}: ${err.message}`);
       
       // Revert status on error
-      const revertedAccount = { ...account }; // Keep original status
-      updateSubAccount(revertedAccount);
+      updateSubAccount(account);
     } finally {
       setLoading((prev) => ({ ...prev, [id]: false }));
     }
-  };
-  
-  // const toggleStatus = async (id) => {
-  //   const account = subAccounts.find((acc) => acc.id === id);
-  //   if (!account) return;
-
-  //   setLoading((prev) => ({ ...prev, [id]: true }));
-  //   setError(null);
-
-  //   try {
-  //     const updatedAccounts = subAccounts.map((acc) =>
-  //       acc.id === id
-  //         ? { ...acc, status: acc.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
-  //         : acc
-  //     );
-  //     setSubAccounts(updatedAccounts);
-  //     saveSubAccounts(updatedAccounts);
-
-  //     if (account.status === 'ACTIVE') {
-  //       // Pause (Stop Algo)
-  //       await stopAlgo(account.id);
-  //       console.log(`Stopped algo for ${id}`);
-  //     } else {
-  //       // Resume (Start Algo)
-  //       await startAlgo(account.id);
-  //       console.log(`Started algo for ${id}`);
-  //     }
-  //   } catch (err) {
-  //     console.error(`Error toggling status for ${id}:`, err);
-  //     setError(`Failed to ${account.status === 'ACTIVE' ? 'pause' : 'resume'} ${id}: ${err.message}`);
-  //     // Revert status on error
-  //     const revertedAccounts = subAccounts.map((acc) =>
-  //       acc.id === id ? { ...acc, status: account.status } : acc
-  //     );
-  //     setSubAccounts(revertedAccounts);
-  //     saveSubAccounts(revertedAccounts);
-  //   } finally {
-  //     setLoading((prev) => ({ ...prev, [id]: false }));
-  //   }
-  // };
+};
 
   return (
     <ScrollView style={styles.scrollContainer}>

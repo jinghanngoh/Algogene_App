@@ -57,7 +57,7 @@ API.interceptors.response.use(
       console.log('Auth failed, clearing session');
       await AsyncStorage.removeItem('sessionId');
     }
-    console.log('API Error Response:', JSON.stringify(error.response?.data, null, 2));
+    console.log('API Error Responsex:', JSON.stringify(error.response?.data, null, 2));
     return Promise.reject(error);
   }
 );

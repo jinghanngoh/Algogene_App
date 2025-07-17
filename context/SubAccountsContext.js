@@ -9,12 +9,13 @@ const SubAccountsContext = createContext();
 const DEFAULT_SUB_ACCOUNTS = [
   { // Hardcoded Binance
     id: '#1000',
+    brokerId: 'GLKPZPXmtwmMP_qrwkyntz_6195', // Add this field with the real broker account ID
     broker: 'Binance',
     algorithm: 'SpiderNet',
     currency: 'USD',
     leverage: '5.0',
     subscriptionEnd: '2025-08-31 02:02:51',
-    runningScript: 'SpiderNet_v1',
+    algoId: 'h448195gl0_ujbjcsgin_0451',
     availableBalance: '1000000.0',
     cashBalance: '1000000.0',
     realizedPL: '0.0',
@@ -27,12 +28,13 @@ const DEFAULT_SUB_ACCOUNTS = [
   },
   { // Hardcoded Kucoin
     id: '#1001',
+    brokerId: 'jjvp5_qrwkyntz_6194', // Add this field with the real broker account ID
     broker: 'Kucoin',
     algorithm: 'DeepNet',
     currency: 'USD',
     leverage: '5.0',
     subscriptionEnd: '2025-06-31 02:02:51',
-    runningScript: 'DeepNet_v1',
+    algoId: 'h448195gl0_ujbjcsgin_0452',
     availableBalance: '2000000000.0',
     cashBalance: '100000000.0',
     realizedPL: '0.0',
@@ -75,7 +77,7 @@ export const SubAccountsProvider = ({ children }) => {
         
         if (savedAccounts) {
           const parsedAccounts = JSON.parse(savedAccounts);
-          console.log('Found saved accounts:', parsedAccounts);
+          // console.log('Found saved accounts:', parsedAccounts);
           
           // If saved accounts is an empty array, reset to defaults
           if (Array.isArray(parsedAccounts) && parsedAccounts.length === 0) {
@@ -201,11 +203,6 @@ export const SubAccountsProvider = ({ children }) => {
     const updatedAccounts = subAccounts.filter(account => account.id !== accountId);
     saveSubAccounts(updatedAccounts);
   };
-  
-  // For debugging
-  useEffect(() => {
-    console.log('SubAccountsContext - subAccounts state changed:', subAccounts);
-  }, [subAccounts]);
 
   return (
     <SubAccountsContext.Provider

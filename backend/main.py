@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS subaccounts
                      (id TEXT PRIMARY KEY, broker TEXT, algorithm TEXT, currency TEXT, leverage TEXT, subscriptionEnd TEXT, 
-                      runningScript TEXT, availableBalance REAL, cashBalance REAL, realizedPL REAL, unrealizedPL REAL, 
+                      algo_id TEXT, availableBalance REAL, cashBalance REAL, realizedPL REAL, unrealizedPL REAL, 
                       marginUsed REAL, status TEXT, brokerConnected INTEGER, brokerApiKey TEXT, brokerSecret TEXT)''')
     conn.commit()
     logger.debug("Table subaccounts created or already exists")
@@ -107,7 +107,7 @@ async def get_watchlist():
 #                 sub.get("currency", ""),
 #                 sub.get("leverage", ""),
 #                 sub.get("subscriptionEnd", ""),
-#                 sub.get("runningScript", ""),
+#                 sub.get("algo_id", ""),
 #                 float(sub.get("availableBalance", 0)),
 #                 float(sub.get("cashBalance", 0)),
 #                 float(sub.get("realizedPL", 0)),
@@ -119,7 +119,7 @@ async def get_watchlist():
 #                 sub.get("brokerSecret", "")
 #             ) for sub in subaccounts
 #         ]
-#         cursor.executemany("INSERT OR REPLACE INTO subaccounts (id, broker, algorithm, currency, leverage, subscriptionEnd, runningScript, availableBalance, cashBalance, realizedPL, unrealizedPL, marginUsed, status, brokerConnected, brokerApiKey, brokerSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", prepared_data)
+#         cursor.executemany("INSERT OR REPLACE INTO subaccounts (id, broker, algorithm, currency, leverage, subscriptionEnd, algoId, availableBalance, cashBalance, realizedPL, unrealizedPL, marginUsed, status, brokerConnected, brokerApiKey, brokerSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", prepared_data)
 #         conn.commit()
 #     except Exception as e:
 #         logger.error("Database error: %s", str(e))
@@ -154,7 +154,7 @@ async def save_subaccounts(request: Request):
                 sub.get("currency", ""),
                 sub.get("leverage", ""),
                 sub.get("subscriptionEnd", ""),
-                sub.get("runningScript", ""),
+                sub.get("algoId", ""),
                 float(sub.get("availableBalance", 0)),
                 float(sub.get("cashBalance", 0)),
                 float(sub.get("realizedPL", 0)),
@@ -167,7 +167,7 @@ async def save_subaccounts(request: Request):
             ) for sub in subaccounts
         ]
         cursor.executemany(
-            "INSERT OR REPLACE INTO subaccounts (id, broker, algorithm, currency, leverage, subscriptionEnd, runningScript, availableBalance, cashBalance, realizedPL, unrealizedPL, marginUsed, status, brokerConnected, brokerApiKey, brokerSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO subaccounts (id, broker, algorithm, currency, leverage, subscriptionEnd, algoId, availableBalance, cashBalance, realizedPL, unrealizedPL, marginUsed, status, brokerConnected, brokerApiKey, brokerSecret) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             prepared_data
         )
         conn.commit()

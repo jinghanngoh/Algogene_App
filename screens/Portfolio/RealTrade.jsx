@@ -7,7 +7,7 @@ const RealTrade = () => {
         baseCurrency: '',
         leverage: '1.0',
         nav: '0.0',
-        runningScript: '',
+        algoId: '',
         subscriptionEnd: '2025-07-02 02:02:51',
     };
 
@@ -48,7 +48,7 @@ const RealTrade = () => {
                 </View>
                 <View style={styles.detailsRow}>
                     <Text style={styles.detailsLabel}>Running Script:</Text>
-                    <Text style={styles.detailsValue}>{accountData.runningScript}</Text>
+                    <Text style={styles.detailsValue}>{accountData.algoId}</Text>
                 </View>
                 <View style={styles.detailsRow}>
                     <Text style={styles.detailsLabel}>Subscription End:</Text>

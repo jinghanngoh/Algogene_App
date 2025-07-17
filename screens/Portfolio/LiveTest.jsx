@@ -7,7 +7,7 @@ const LiveTest = () => {
         baseCurrency: 'USD',
         leverage: '5.0',
         nav: '1,000,000.0',
-        runningScript: 'N/A',
+        algoId: 'N/A',
         subscriptionEnd: '2025-08-31 02:02:51',
     };
 
@@ -54,7 +54,7 @@ const LiveTest = () => {
                 </View>
                 <View style={styles.detailsRow}>
                     <Text style={styles.detailsLabel}>Running Script:</Text>
-                    <Text style={styles.detailsValue}>{accountData.runningScript}</Text>
+                    <Text style={styles.detailsValue}>{accountData.algoId}</Text>
                 </View>
                 <View style={styles.detailsRow}>
                     <Text style={styles.detailsLabel}>Subscription End:</Text>
