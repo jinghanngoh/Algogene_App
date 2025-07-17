@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { fetchAlgoDailyReturns, fetchAlgoPerformance, subscribeToAlgorithm as apiSubscribeToAlgorithm} from '../../services/MarketplaceApi';
+import { fetchAlgoDailyReturns, fetchAlgoPerformance, subscribeToAlgorithm as apiSubscribeToAlgorithm, checkPaymentStatus} from '../../services/MarketplaceApi';
 import { useRouter, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -84,7 +84,7 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
         userEmail
       );
 
-      console.log('Subscription API Full Response TTTTTTTTTTTTTTTTTTT:', JSON.stringify(result, null, 2));
+      console.log('Subscription API Full Response TTTTTTT:', JSON.stringify(result, null, 2));
       
       // For boolean responses
       if (typeof result === 'boolean') {
@@ -262,6 +262,16 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
       stroke: 'rgba(255, 255, 255, 0.1)'
     }
   };
+  // This to test 3.5) Payment Status
+  // const testPaymentStatus = async (ticketId) => {
+  //   try {
+  //     const email = 'thegohrilla@gmail.com';
+  //     const result = await checkPaymentStatus(ticketId, email);
+  //     console.log('Test Payment Status Result:', JSON.stringify(result, null, 2));
+  //   } catch (error) {
+  //     console.error('Test Payment Status Error:', error);
+  //   }
+  // };
 
   return (
     <Modal
@@ -494,6 +504,12 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
               <Text style={styles.buttonText}>SUBSCRIBE</Text>
             </TouchableOpacity>
           )}
+          {/* This is to test 3.5, the payment status */}
+          {/* <TouchableOpacity onPress={() => testPaymentStatus('210737526')} style={styles.testButton}>
+            <Text>Test Payment Status</Text>
+          </TouchableOpacity> */}
+
+
           <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={loading}>
             <Text style={styles.closeButtonText}>CLOSE</Text>
           </TouchableOpacity>

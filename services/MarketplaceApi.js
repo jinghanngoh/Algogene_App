@@ -417,37 +417,6 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
     throw error;
   }
 };
-//     if (response.status === 400 && data.res === "Invalid session!" && retries > 0) {
-//       console.log("Got 'Invalid session!' error. Retrying with different account_id...");
-      
-//       // Try with the GLKPZPXmtwmMP_qrwkyntz_6195 account ID that appears in your logs
-//       return subscribeToAlgorithm(algoId, "GLKPZPXmtwmMP_qrwkyntz_6195", email, retries - 1);
-//     }
-
-//     if (!response.ok) {
-//       console.error("API error:", data.res);
-//       throw new Error(`API error: ${data.res || 'Unknown error'}`);
-//     }
-
-//     // Process successful response
-//     console.log("Subscription request successful!");
-    
-//     if (typeof data === 'boolean') {
-//       return data;
-//     } else if (data && typeof data === 'object') {
-//       return {
-//         status: data.status || false,
-//         paymentLink: data.res || null,
-//         ticketId: data.tid || null
-//       };
-//     } else {
-//       return data;
-//     }
-//   } catch (error) {
-//     console.error("Error in subscribeToAlgorithm:", error);
-//     throw error;
-//   }
-// };
 
 
 // 3.5) CHECK PAYMENT STATUS (PRIVATE)
