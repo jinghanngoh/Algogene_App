@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSubAccounts } from '../../context/SubAccountsContext';
 import { getRealTimeAccountBalance, getRealTimeAccountPosition } from '../../services/TradingApi';
-import { throttledGetRealTimeAccountBalance, throttledGetRealTimeAccountPosition } from '../../services/TradingApi';
+import { throttledGetRealTimeAccountBalance, throttledGetRealTimeAccountPosition, throttledGetTradingPerformanceStats, throttledGetDailyCumulativePL } from '../../services/TradingApi';
 
 const AccountManager = () => {
   const { subAccounts, setSubAccounts, saveSubAccounts } = useSubAccounts();
@@ -14,6 +14,8 @@ const AccountManager = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [positions, setPositions] = useState([]);
+  const [performanceStats, setPerformanceStats] = useState(null);
+  const [dailyPL, setDailyPL] = useState(null); 
 
   // Calculate Account-level metrics
   const totalPortfolioValue = subAccounts.length > 0
@@ -105,6 +107,37 @@ const AccountManager = () => {
     }
   };
 
+  const fetchPerformanceData = async () => {
+    try {
+      // Get the first account or return if no accounts available
+      if (!subAccounts || subAccounts.length === 0) {
+        console.log('No accounts available for performance data');
+        return;
+      }
+      
+      // Use the first account (typically your Binance account)
+      const account = subAccounts[0];
+      const accountId = account.brokerId || account.id;
+      
+      console.log('Fetching performance data for account:', accountId);
+      
+      const performanceResponse = await throttledGetTradingPerformanceStats(accountId);
+      const plResponse = await throttledGetDailyCumulativePL(accountId);
+      
+      if (performanceResponse && performanceResponse.status) {
+        console.log('Received performance data:', performanceResponse.performance);
+        setPerformanceStats(performanceResponse.performance);
+      }
+      
+      if (plResponse && plResponse.status) {
+        console.log('Received P/L data:', plResponse.data);
+        setDailyPL(plResponse.data);
+      }
+    } catch (error) {
+      console.error('Error fetching performance data:', error);
+    }
+  };
+
   // useEffect(() => {
   //   if (subAccounts.length > 0) {
   //     fetchPortfolioData();
@@ -129,6 +162,12 @@ const AccountManager = () => {
       };
     }
   }, [/* Only include subAccounts.length as dependency */]);  // Only run when component mounts or subAccount length changes
+
+  useEffect(() => {
+    if (subAccounts.length > 0) {
+      fetchPerformanceData();
+    }
+  }, [subAccounts.length]);
 
 return (
     <ScrollView>

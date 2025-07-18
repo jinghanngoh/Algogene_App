@@ -146,14 +146,14 @@ export const getRealTimeAccountBalance = async (accountId, source = 'algogene', 
       src: source
     };
 
-    console.log('5.3) GET REAL-TIME ACCOUNT BALANCE - Payload:', params);
+    // console.log('5.3) GET REAL-TIME ACCOUNT BALANCE - Payload:', params);
 
     const response = await API.get('/rest/broker/account_balance', { 
       params,
       headers: { 'Content-Type': 'application/json'} 
     });
 
-    console.log('5.3) GET REAL-TIME ACCOUNT BALANCE - RESPONSE:', response);
+    // console.log('5.3) GET REAL-TIME ACCOUNT BALANCE - RESPONSE:', response);
 
     const responseData = response.data || response;
 
@@ -197,14 +197,14 @@ export const getRealTimeAccountPosition = async (accountId, source = 'algogene',
       src: source
     };
 
-    console.log('5.4) GET REAL-TIME ACCOUNT POSITION - Payload:', params);
+    // console.log('5.4) GET REAL-TIME ACCOUNT POSITION - Payload:', params);
 
     const response = await API.get('/rest/broker/account_positions', { 
       params,
       headers: { 'Content-Type': 'application/json' }
     });
 
-    console.log('5.4) GET REAL-TIME ACCOUNT POSITION - RESPONSE:', response);
+    // console.log('5.4) GET REAL-TIME ACCOUNT POSITION - RESPONSE:', response);
 
     const responseData = response.data || response;
     
@@ -230,71 +230,97 @@ export const getRealTimeAccountPosition = async (accountId, source = 'algogene',
 
 // 5.5) GET TRADING PERFORMANCE STATISTICS
 export const getTradingPerformanceStats = async (accountId, asOfDate = '', retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-  
-      const params = {
-        api_key: apiKey,
-        user,
-        account_id: accountId,
-        asOfDate: asOfDate || '',
-      };
-      const response = await API.get('/rest/v1/strategy_stats', { params });
-  
-      if (!response.data?.performance) {
-        throw new Error(response.data?.err_msg || 'Failed to get performance stats');
-      }
-  
-      return {
-        performance: response.data.performance,
-      };
-    } catch (error) {
-      console.error('API Error Response:', JSON.stringify(error.response?.data, null, 2));
-      if (error.response?.status === 400 && retries > 0) {
-        console.log(`Retrying getTradingPerformanceStats (${retries} left)...`);
-        await delay(1000);
-        return getTradingPerformanceStats(accountId, asOfDate, retries - 1);
-      }
-      throw error;
+  try {
+    const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; // Use the Binance account ID that works with the API
+    
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No valid session ID found. Please log in first.');
     }
-  };
+
+    const params = {
+      api_key: apiKey,
+      user,
+      account_id: fixedAccountId,
+      acdate: asOfDate || '',
+    };
+
+    // console.log('5.5) GET TRADING PERFORMANCE STATISTICS - Payload', params); 
+    
+    const response = await API.get('/rest/v1/strategy_stats', { 
+      params,
+      headers: { 'Content-Type' : 'application/json' }
+    });
+
+    // console.log('5.5) GET TRADING PERFORMANCE STATISTICS - RESPONSE', response);
+
+    // The API response is already in response, not in response.data
+    // The response object includes performance directly
+    if (!response || !response.performance) {
+      throw new Error('Failed to get performance stats or no performance data available');
+    }
+
+    return {
+      status: true,
+      performance: response.performance || {},
+      settings: response.setting || {}
+    };
+  } catch (error) {
+    console.error('GET TRADING PERFORMANCE STATS - ERROR:', {
+      message: error.message,
+      response: error.response?.data
+    });
+    
+    if (retries > 0) {
+      console.log(`Retrying getTradingPerformanceStats (${retries} left)...`);
+      await delay(1000);
+      return getTradingPerformanceStats(accountId, asOfDate, retries - 1);
+    }
+    throw error;
+  }
+};
 
 // 5.6) GET HISTORY OF DAILY CUMULATIVE P/L
-export const getDailyCumulativePL = async (accountId, asOfDate = '', extrapolate = false, retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-  
-      const params = {
-        api_key: apiKey,
-        user,
-        account_id: accountId,
-        asOfDate: asOfDate || '',
-        extrapolate: extrapolate,
-      };
-      const response = await API.get('/rest/v1/strategy_pos', { params });
-  
-      if (!response.data?.count) {
-        throw new Error(response.data?.err_msg || 'Failed to get daily cumulative P/L');
-      }
-  
-      return {
-        count: response.data.count,
-        data: response.data.res,
-      };
-    } catch (error) {
-      console.error('API Error Response:', JSON.stringify(error.response?.data, null, 2));
-      if (error.response?.status === 400 && retries > 0) {
-        console.log(`Retrying getDailyCumulativePL (${retries} left)...`);
-        await delay(1000);
-        return getDailyCumulativePL(accountId, asOfDate, extrapolate, retries - 1);
-      }
-      throw error;
+export const getDailyCumulativePL = async (accountId, asOfDate = '', extrapolate = 'True', retries = 3) => {
+  try {
+    // Use the Binance account ID that works with the API
+    const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
+    
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No valid session ID found. Please log in first.');
     }
-  };
+
+    const params = {
+      api_key: apiKey,
+      user,
+      account_id: fixedAccountId, 
+      acdate: asOfDate || '',
+      isExtrapolate: extrapolate,
+    };
+    
+    console.log('5.6) GET DAILY CUMULATIVE P/L - Payload', params);
+    
+    const response = await API.get('/rest/v1/strategy_pl', {
+      params,
+      headers: { 'Content-Type' : 'application/json'}
+    });
+    
+    console.log('5.6) GET DAILY CUMULATIVE P/L - RESPONSE:', response);
+  } catch (error) {
+    console.error('GET DAILY CUMULATIVE P/L - ERROR:', {
+      message: error.message,
+      response: error.response?.data
+    });
+    
+    if (retries > 0) {
+      console.log(`Retrying getDailyCumulativePL (${retries} left)...`);
+      await delay(1000);
+      return getDailyCumulativePL(accountId, asOfDate, extrapolate, retries - 1);
+    }
+    throw error;
+  }
+};
 
 
 // 5.7) GET HISTORY OF DAILY POSITION
@@ -405,5 +431,7 @@ export const getTransactionHistory = async (accountId, asOfDate = '', page = 1, 
   };
 
 // Throttled versions 
-export const throttledGetRealTimeAccountBalance = throttle(getRealTimeAccountBalance, 10000); // 10 seconds
-export const throttledGetRealTimeAccountPosition = throttle(getRealTimeAccountPosition, 10000); // 10 seconds
+export const throttledGetRealTimeAccountBalance = throttle(getRealTimeAccountBalance, 30000);
+export const throttledGetRealTimeAccountPosition = throttle(getRealTimeAccountPosition, 30000);
+export const throttledGetTradingPerformanceStats = throttle(getTradingPerformanceStats, 30000);
+export const throttledGetDailyCumulativePL = throttle(getDailyCumulativePL, 30000);
