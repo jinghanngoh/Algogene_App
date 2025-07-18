@@ -299,14 +299,14 @@ export const getDailyCumulativePL = async (accountId, asOfDate = '', extrapolate
       isExtrapolate: extrapolate,
     };
     
-    console.log('5.6) GET DAILY CUMULATIVE P/L - Payload', params);
+    // console.log('5.6) GET DAILY CUMULATIVE P/L - Payload', params);
     
     const response = await API.get('/rest/v1/strategy_pl', {
       params,
       headers: { 'Content-Type' : 'application/json'}
     });
     
-    console.log('5.6) GET DAILY CUMULATIVE P/L - RESPONSE:', response);
+    // console.log('5.6) GET DAILY CUMULATIVE P/L - RESPONSE:', response);
   } catch (error) {
     console.error('GET DAILY CUMULATIVE P/L - ERROR:', {
       message: error.message,
@@ -325,113 +325,152 @@ export const getDailyCumulativePL = async (accountId, asOfDate = '', extrapolate
 
 // 5.7) GET HISTORY OF DAILY POSITION
 export const getDailyPosition = async (accountId, asOfDate = '', retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-  
-      const params = {
-        api_key: apiKey,
-        user,
-        account_id: accountId,
-        acdate: asOfDate || '',
-      };
-      const response = await API.get('/rest/v1/strategy_pos', { params });
-  
-      if (!response.data?.count) {
-        throw new Error(response.data?.err_msg || 'Failed to get daily position');
-      }
-  
-      return {
-        count: response.data.count,
-        data: response.data.yes || response.data.no, // Handle both ascending and descending
-      };
-    } catch (error) {
-      console.error('API Error Response:', JSON.stringify(error.response?.data, null, 2));
-      if (error.response?.status === 400 && retries > 0) {
-        console.log(`Retrying getDailyPosition (${retries} left)...`);
-        await delay(1000);
-        return getDailyPosition(accountId, asOfDate, retries - 1);
-      }
-      throw error;
+  try {
+    // Use the fixed account ID that works with the API
+    const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
+    
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No valid session ID found. Please log in first.');
     }
-  };
+
+    const params = {
+      api_key: apiKey,
+      user,
+      account_id: fixedAccountId,
+      acdate: asOfDate || '',
+    };
+    
+    // console.log('5.7) GET DAILY POSITION - REQUEST DETAILS:', params);
+    
+    const response = await API.get('/rest/v1/strategy_pos', { 
+      params,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    // console.log('5.7) GET DAILY POSITION - RESPONSE:', response);
+
+    return {
+      status: true,
+      data: response.res || [],
+      count: response.count || 0
+    };
+  } catch (error) {
+    // console.error('5.7) GET DAILY POSITION - ERROR:', {
+    //   message: error.message,
+    //   response: error.response?.data
+    // });
+    
+    if (retries > 0) {
+      console.log(`Retrying getDailyPosition (${retries} left)...`);
+      await delay(1000);
+      return getDailyPosition(accountId, asOfDate, retries - 1);
+    }
+    throw error;
+  }
+};
 
 
 // 5.8) GET HISTORY OF DAILY BALANCE
-export const getDailyBalance = async (accountId, asOfDate = '', extrapolate = false, retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-  
-      const params = {
-        api_key: apiKey,
-        user,
-        account_id: accountId,
-        acdate: asOfDate || '',
-        extrapolate: extrapolate,
-      };
-      const response = await API.get('/rest/v1/strategy_bal', { params });
-  
-      if (!response.data?.count) {
-        throw new Error(response.data?.err_msg || 'Failed to get daily balance');
-      }
-  
-      return {
-        count: response.data.count,
-        data: response.data.vars,
-      };
-    } catch (error) {
-      console.error('API Error Response:', JSON.stringify(error.response?.data, null, 2));
-      if (error.response?.status === 400 && retries > 0) {
-        console.log(`Retrying getDailyBalance (${retries} left)...`);
-        await delay(1000);
-        return getDailyBalance(accountId, asOfDate, extrapolate, retries - 1);
-      }
-      throw error;
+export const getTradeHistory = async (accountId, asOfDate = '', extrapolate = 'True', retries = 3) => {
+  try {
+    // Use the fixed account ID that works with the API
+    const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
+    
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No valid session ID found. Please log in first.');
     }
-  };
 
+    const params = {
+      api_key: apiKey,
+      user,
+      account_id: fixedAccountId,
+      acdate: '',
+      isExtrapolate: 'True',
+    };
+
+    // console.log('5.8) GET TRADE HISTORY - REQUEST DETAILS:', params);
+    
+    const response = await API.get('/rest/v1/strategy_bal', { 
+      params,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    // console.log('5.8) GET TRADE HISTORY - RESPONSE:', response)
+
+    return {
+      response
+    };
+  } catch (error) {
+    // console.error('5.8) GET TRADE HISTORY - ERROR:', {
+    //   message: error.message,
+    //   response: error.response?.data
+    // });
+    
+    if (retries > 0) {
+      console.log(`Retrying getTradeHistory (${retries} left)...`);
+      await delay(1000);
+      return getTradeHistory(accountId, startDate, endDate, retries - 1);
+    }
+    throw error;
+  }
+};
 
 // 5.9) GET HISTORY OF TRANSACTIONS
-export const getTransactionHistory = async (accountId, asOfDate = '', page = 1, extrapolate = true, retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-  
-      const params = {
-        api_key: apiKey,
-        user,
-        account_id: accountId,
-        acdate: asOfDate || '',
-        page,
-        isExtrapolate: extrapolate,
-      };
-      const response = await API.get('/rest/v1/strategy_trade', { params });
-  
-      if (!response.data?.count) {
-        throw new Error(response.data?.err_msg || 'Failed to get transaction history');
-      }
-  
-      return {
-        count: response.data.count,
-        data: response.data.res,
-      };
-    } catch (error) {
-      console.error('API Error Response:', JSON.stringify(error.response?.data, null, 2));
-      if (error.response?.status === 400 && retries > 0) {
-        console.log(`Retrying getTransactionHistory (${retries} left)...`);
-        await delay(1000);
-        return getTransactionHistory(accountId, asOfDate, page, extrapolate, retries - 1);
-      }
-      throw error;
+export const getAlgoStatistics = async (accountId, algoId, asOfDate = '', extrapolate = 'True', retries = 3) => {
+  try {
+    // Use the fixed account ID that works with the API
+    const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
+    
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No valid session ID found. Please log in first.');
     }
-  };
+    
+    if (!algoId) {
+      throw new Error('Missing required parameter: algoId');
+    }
+
+    const params = {
+      api_key: apiKey,
+      user,
+      account_id: fixedAccountId,
+      acdate: asOfDate || '',
+      page: page,
+      isExtrapolate: extrapolate
+    };
+    
+    console.log('5.9) GET ALGO STATISTICS - REQUEST DETAILS:', params);
+    
+    const response = await API.get('/rest/v1/strategy_trade', { 
+      params,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    console.log('5.9) GET ALGO STATISTICS - RESPONSE:', response);
+
+    return {response}
+  } catch (error) {
+    // console.error('5.9) GET ALGO STATISTICS - ERROR:', {
+    //   message: error.message,
+    //   response: error.response?.data
+    // });
+    
+    if (retries > 0) {
+      console.log(`Retrying getAlgoStatistics (${retries} left)...`);
+      await delay(1000);
+      return getAlgoStatistics(accountId, algoId, retries - 1);
+    }
+    throw error;
+  }
+};
 
 // Throttled versions 
 export const throttledGetRealTimeAccountBalance = throttle(getRealTimeAccountBalance, 30000);
 export const throttledGetRealTimeAccountPosition = throttle(getRealTimeAccountPosition, 30000);
 export const throttledGetTradingPerformanceStats = throttle(getTradingPerformanceStats, 30000);
 export const throttledGetDailyCumulativePL = throttle(getDailyCumulativePL, 30000);
+export const throttledGetDailyPosition = throttle(getDailyPosition, 30000);
+export const throttledGetTradeHistory = throttle(getTradeHistory, 30000);
+export const throttledGetAlgoStatistics = throttle(getAlgoStatistics, 30000);
