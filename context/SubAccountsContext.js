@@ -49,14 +49,14 @@ const DEFAULT_SUB_ACCOUNTS = [
 ];
 
 export const SubAccountsProvider = ({ children }) => {
-  console.log('SubAccountsProvider rendering');
+  // console.log('SubAccountsProvider rendering');
   // Initialize with the default accounts
   const [subAccounts, setSubAccounts] = useState(DEFAULT_SUB_ACCOUNTS);
   
   // Function to reset AsyncStorage to default accounts
   const resetToDefaults = async () => {
     try {
-      console.log('Resetting subAccounts to defaults');
+      // console.log('Resetting subAccounts to defaults');
       await AsyncStorage.setItem('subAccounts', JSON.stringify(DEFAULT_SUB_ACCOUNTS));
       setSubAccounts(DEFAULT_SUB_ACCOUNTS);
     } catch (error) {
@@ -81,7 +81,7 @@ export const SubAccountsProvider = ({ children }) => {
           
           // If saved accounts is an empty array, reset to defaults
           if (Array.isArray(parsedAccounts) && parsedAccounts.length === 0) {
-            console.log('Empty array found in storage, resetting to defaults');
+            // console.log('Empty array found in storage, resetting to defaults');
             await resetToDefaults();
           } else {
             // Otherwise use the saved accounts
@@ -89,7 +89,7 @@ export const SubAccountsProvider = ({ children }) => {
           }
         } else {
           // No saved accounts, save defaults
-          console.log('No saved accounts, initializing with defaults');
+          // console.log('No saved accounts, initializing with defaults');
           await resetToDefaults();
         }
       } catch (error) {
@@ -126,18 +126,18 @@ export const SubAccountsProvider = ({ children }) => {
   // }, []); // Empty dependency array ensures this runs once on mount
   const fetchSubAccounts = async () => {
     try {
-      console.log('Fetching subAccounts...');
+      // console.log('Fetching subAccounts...');
       
       // Try to get from AsyncStorage first
       const savedAccounts = await AsyncStorage.getItem('subAccounts');
       
       if (savedAccounts) {
         const parsedAccounts = JSON.parse(savedAccounts);
-        console.log('Loaded subAccounts from AsyncStorage:', parsedAccounts);
+        // console.log('Loaded subAccounts from AsyncStorage:', parsedAccounts);
         
         // If empty array in storage but we have defaults in state, use state
         if (parsedAccounts.length === 0 && subAccounts.length > 0) {
-          console.log('Empty array in storage but have accounts in state');
+          // console.log('Empty array in storage but have accounts in state');
           await AsyncStorage.setItem('subAccounts', JSON.stringify(subAccounts));
           return subAccounts;
         }
@@ -152,13 +152,13 @@ export const SubAccountsProvider = ({ children }) => {
       
       // If nothing in storage but we have state, save state to storage
       if (subAccounts.length > 0) {
-        console.log('Nothing in storage, saving current state');
+        // console.log('Nothing in storage, saving current state');
         await AsyncStorage.setItem('subAccounts', JSON.stringify(subAccounts));
         return subAccounts;
       }
       
       // Last resort: reset to defaults
-      console.log('No accounts found anywhere, resetting to defaults');
+      c// onsole.log('No accounts found anywhere, resetting to defaults');
       await resetToDefaults();
       return DEFAULT_SUB_ACCOUNTS;
     } catch (error) {
@@ -171,7 +171,7 @@ export const SubAccountsProvider = ({ children }) => {
   // Function to save or update accounts in the database
   const saveSubAccounts = async (updatedAccounts) => {
     try {
-      console.log('Saving subAccounts:', updatedAccounts);
+      // console.log('Saving subAccounts:', updatedAccounts);
       
       // Update state
       setSubAccounts(updatedAccounts);
@@ -179,7 +179,7 @@ export const SubAccountsProvider = ({ children }) => {
       // Save to AsyncStorage
       await AsyncStorage.setItem('subAccounts', JSON.stringify(updatedAccounts));
       
-      console.log('Successfully saved subAccounts');
+      // console.log('Successfully saved subAccounts');
     } catch (err) {
       console.error('Error saving subAccounts:', err);
       // Still update state even if storage fails

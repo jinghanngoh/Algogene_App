@@ -1,10 +1,46 @@
 import API from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 const user = 'AGBOT1';
 const apiKey = '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff';
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+
+// Throttle function to limit API rates
+const throttle = (func, delay) => {
+  let lastCall = 0;
+  let cachedResult = null;
+  let loggedRecently = false;
+  
+  return async function(...args) {
+    const now = Date.now();
+    if (now - lastCall < delay) {
+      // Only log throttling occasionally to reduce spam
+      if (!loggedRecently) {
+        console.log(`Using cached data (refreshes every ${delay/1000}s)`);
+        loggedRecently = true;
+        setTimeout(() => { loggedRecently = false; }, 5000); // Reset logging flag after 5 seconds
+      }
+      
+      // Only return cached result if it's valid
+      if (cachedResult) {
+        return cachedResult;
+      }
+    }
+    
+    lastCall = now;
+    try {
+      const result = await func.apply(this, args);
+      if (result) {
+        cachedResult = result;
+      }
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  };
+};
+
 
 // 5.1) START ALGO
 // export const startAlgo = async (accountId, algoId = 'jjvp5_qrwkyntz_6194', retries = 3) => {
@@ -30,15 +66,15 @@ const apiKey = '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff
       };
       
       // Log complete request details
-      console.log('START ALGO - REQUEST DETAILS:');
-      console.log('Payload:', JSON.stringify(payload, null, 2));
+      // console.log('START ALGO - REQUEST DETAILS:');
+      // console.log('Payload:', JSON.stringify(payload, null, 2));
   
       const response = await API.post('/rest/v1/startalgo', payload, { 
         headers: { 'Content-Type': 'application/json' } 
       });
   
-      console.log('START ALGO - RESPONSE:');
-      console.log('RESPONSE:', response);
+      // console.log('START ALGO - RESPONSE:');
+      // console.log('RESPONSE:', response);
   
       return {
         algo_id: response.algo_id,
@@ -82,8 +118,8 @@ export const stopAlgo = async (accountId, algoId, retries = 3) => {
     });
 
     // Log the complete response
-    console.log('STOP ALGO - RESPONSE:');
-    console.log('RESPONSE:', response);
+    // console.log('STOP ALGO - RESPONSE:');
+    // console.log('RESPONSE:', response);
     
     return {
       res: response.res,
@@ -93,74 +129,104 @@ export const stopAlgo = async (accountId, algoId, retries = 3) => {
     console.error('API Error:', error.message);
 }};
 
-// 5.3) GET REAL-TIME ACCOUNT BALANCE
+// 5.3) GET REAL-TIME ACCOUNT BALANCE (GET THE ACCOUNT ID FOR KUCOIN INSTEAD OF HARDCODING FIXEDACCOUNTID)
 export const getRealTimeAccountBalance = async (accountId, source = 'algogene', retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-  
-      const params = {
-        api_key: apiKey,
-        user,
-        account_id: accountId,
-        src: source,
-      };
-      const response = await API.get('/rest/broker/account_balance', { params });
-  
-      if (!response.data?.status) {
-        throw new Error(response.data?.err_msg || 'Failed to get account balance');
-      }
-  
-      return {
-        status: response.data.status,
-        balance: response.data.res,
-      };
-    } catch (error) {
-      console.error('API Error Response:', JSON.stringify(error.response?.data, null, 2));
-      if (error.response?.status === 400 && retries > 0) {
-        console.log(`Retrying getRealTimeAccountBalance (${retries} left)...`);
-        await delay(1000);
-        return getRealTimeAccountBalance(accountId, source, retries - 1);
-      }
-      throw error;
+  try {
+    const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
+    
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No valid session ID found. Please log in first.');
     }
-  };
 
-// 5.4) GET REAL-TIME ACCOUNT POSITION
+    const params = {
+      api_key: apiKey,
+      user,
+      account_id: fixedAccountId,
+      src: source
+    };
+
+    console.log('5.3) GET REAL-TIME ACCOUNT BALANCE - Payload:', params);
+
+    const response = await API.get('/rest/broker/account_balance', { 
+      params,
+      headers: { 'Content-Type': 'application/json'} 
+    });
+
+    console.log('5.3) GET REAL-TIME ACCOUNT BALANCE - RESPONSE:', response);
+
+    const responseData = response.data || response;
+
+    return {
+      status: responseData.status,
+      balance: {
+        nav: responseData.res.NAV,
+        availableBalance: responseData.res.availableBalance,
+        currency: responseData.res.cur,
+        marginUsed: responseData.res.marginUsed,
+        isBinded: responseData.res.is_binded,
+        errorMessage: responseData.res.err_msg || null,
+      },
+    };
+  } catch (error) {
+    console.error('GET REAL-TIME ACCOUNT BALANCE - ERROR:', error);
+    
+    if (retries > 0) {
+      console.log(`Retrying getRealTimeAccountBalance (${retries} left)...`);
+      await delay(1000);
+      return getRealTimeAccountBalance(accountId, source, retries - 1);
+    }
+    throw error;
+  }
+};
+
+// 5.4) GET REAL-TIME ACCOUNT POSITION (GET THE ACCOUNT ID FOR KUCOIN INSTEAD OF HARDCODING FIXEDACCOUNTID)
 export const getRealTimeAccountPosition = async (accountId, source = 'algogene', retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-  
-      const params = {
-        api_key: apiKey,
-        user,
-        account_id: accountId,
-        src: source,
-      };
-      const response = await API.get('/rest/broker/account_positions', { params });
-  
-      if (!response.data?.status) {
-        throw new Error(response.data?.err_msg || 'Failed to get account positions');
-      }
-  
-      return {
-        status: response.data.status,
-        positions: response.data.res,
-      };
-    } catch (error) {
-      console.error('API Error Response:', JSON.stringify(error.response?.data, null, 2));
-      if (error.response?.status === 400 && retries > 0) {
-        console.log(`Retrying getRealTimeAccountPosition (${retries} left)...`);
-        await delay(1000);
-        return getRealTimeAccountPosition(accountId, source, retries - 1);
-      }
-      throw error;
-    }
-  };
+  try {
+    const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
 
+    const sessionId = await AsyncStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No valid session ID found. Please log in first.');
+    }
+
+    const params = {
+      api_key: apiKey,
+      user,
+      account_id: fixedAccountId, // REPLACE WITH ACTUAL ACCOUNT_ID
+      src: source
+    };
+
+    console.log('5.4) GET REAL-TIME ACCOUNT POSITION - Payload:', params);
+
+    const response = await API.get('/rest/broker/account_positions', { 
+      params,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    console.log('5.4) GET REAL-TIME ACCOUNT POSITION - RESPONSE:', response);
+
+    const responseData = response.data || response;
+    
+    if (!responseData.status && !responseData.res) {
+      throw new Error(responseData.message || 'Failed to get account positions');
+    }
+
+    return {
+      positions: Array.isArray(responseData.res) ? responseData.res : [],
+      status: responseData.status || true
+    };
+  } catch (error) {
+    console.error('GET REAL-TIME ACCOUNT POSITION - ERROR:', error);
+
+    if (retries > 0) {
+      console.log(`Retrying getRealTimeAccountPosition (${retries} left)...`);
+      await delay(1000);
+      return getRealTimeAccountPosition(accountId, source, retries - 1);
+    }
+    throw error;
+  }
+};
 
 // 5.5) GET TRADING PERFORMANCE STATISTICS
 export const getTradingPerformanceStats = async (accountId, asOfDate = '', retries = 3) => {
@@ -337,3 +403,7 @@ export const getTransactionHistory = async (accountId, asOfDate = '', page = 1, 
       throw error;
     }
   };
+
+// Throttled versions 
+export const throttledGetRealTimeAccountBalance = throttle(getRealTimeAccountBalance, 10000); // 10 seconds
+export const throttledGetRealTimeAccountPosition = throttle(getRealTimeAccountPosition, 10000); // 10 seconds

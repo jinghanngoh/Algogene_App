@@ -46,9 +46,9 @@ export const fetchBinanceSubAccount = async (brokerApiKey, brokerSecret) => {
             broker_api: brokerApiKey,
             broker_pwd: brokerSecret,
         };
-        console.log('Sending Binance payload:', payload); 
+        // console.log('Sending Binance payload:', payload); 
         const response = await API.post('/rest/v1/config', payload);
-        console.log('Binance API Response:', response);
+        // console.log('Binance API Response:', response);
         return response;
     } catch (error) {
         console.error('Error fetching Binance sub-account:', error.response?.data || error.message);
@@ -68,9 +68,9 @@ export const fetchKucoinSubAccount = async (brokerApiKey, brokerSecret, brokerPa
             broker_pwd: brokerSecret,
             broker_passphrase: brokerPassphrase,
         };
-        console.log('Sending Kucoin payload:', payload); 
+        // console.log('Sending Kucoin payload:', payload); 
         const response = await API.post('/rest/v1/config', payload);
-        console.log('Kucoin API Response:', response);
+        // console.log('Kucoin API Response:', response);
         return response;
     } catch (error) {
         console.error('Error fetching Kucoin sub-account:', error.response?.data || error.message);

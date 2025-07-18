@@ -31,7 +31,7 @@ const SubAccounts = () => {
         
         // If we still get an empty array after fetching, try resetting
         if (accounts.length === 0) {
-          console.log('Still no accounts after fetch, resetting to defaults');
+          // console.log('Still no accounts after fetch, resetting to defaults');
           // await resetToDefaults();
         }
       } catch (err) {
@@ -94,7 +94,7 @@ const SubAccounts = () => {
     try {
       const sessionId = await AsyncStorage.getItem('sessionId');
       if (!sessionId) {
-        console.log('No session ID, attempting login...');
+        // console.log('No session ID, attempting login...');
         await login();
       }
       // console.log('Attempting to configure broker with:', {
@@ -151,7 +151,7 @@ const SubAccounts = () => {
   
     try {
       // Log the account details for debugging
-      console.log('Account details before toggle:', JSON.stringify(account, null, 2));
+      // console.log('Account details before toggle:', JSON.stringify(account, null, 2));
       
       // Map accounts to their broker IDs if not already present
       let accountId;
@@ -284,7 +284,7 @@ return (
                   <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
                     onPress={() => {
-                      console.log(`Starting Paper Test for ${account.id} with ${account.algorithm}`);
+                      // console.log(`Starting Paper Test for ${account.id} with ${account.algorithm}`);
                     }}
                   >
                     <Text style={styles.actionButtonText}>Paper Test</Text>
@@ -303,11 +303,11 @@ return (
                       },
                     ]}
                     disabled={account.status !== 'ACTIVE'}
-                    onPress={() => {
-                      console.log(
-                        `Starting Real Trade for ${account.id} with ${account.algorithm}` +
-                        `${account.brokerConnected ? ' (Live)' : ' (Simulated, upload optional)'}`);
-                    }}
+                    // onPress={() => {
+                    //    console.log(
+                    //     `Starting Real Trade for ${account.id} with ${account.algorithm}` +
+                    //     `${account.brokerConnected ? ' (Live)' : ' (Simulated, upload optional)'}`);
+                    // }}
                   >
                     <Text style={styles.actionButtonText}>Real Trade</Text>
                   </TouchableOpacity>
