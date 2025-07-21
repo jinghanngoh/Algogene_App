@@ -390,14 +390,14 @@ export const getTradeHistory = async (accountId, asOfDate = '', extrapolate = 'T
       isExtrapolate: 'True',
     };
 
-    // console.log('5.8) GET TRADE HISTORY - REQUEST DETAILS:', params);
+    console.log('5.8) GET TRADE HISTORY - REQUEST DETAILS:', params);
     
     const response = await API.get('/rest/v1/strategy_bal', { 
       params,
       headers: { 'Content-Type': 'application/json' }
     });
     
-    // console.log('5.8) GET TRADE HISTORY - RESPONSE:', response)
+    console.log('5.8) GET TRADE HISTORY - RESPONSE:', response)
 
     return {
       response
