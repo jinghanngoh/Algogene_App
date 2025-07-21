@@ -436,8 +436,8 @@ export const getAlgoStatistics = async (accountId, algoId, asOfDate = '', extrap
       api_key: apiKey,
       user,
       account_id: fixedAccountId,
+      algo_id: algoId, 
       acdate: '',
-      // acdate: asOfDate || '',
       page: page,
       isExtrapolate: extrapolate
     };

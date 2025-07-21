@@ -174,7 +174,7 @@ const AccountManager = () => {
           console.log('No valid algo statistics returned');
         }
       } catch (algoError) {
-        console.error('Error fetching algo statistics:', algoError);
+        console.error('Error fetching algo statisticsp:', algoError);
       }
     } catch (error) {
       console.error('Error in fetchPerformanceData:', error);
@@ -479,23 +479,24 @@ const AccountManager = () => {
     }
   }, [subAccounts.length]);
 
-  const fetchAlgoData = async (algoId) => {
+  const fetchAlgoData = async (algoId = activeAlgoId || 'jjvp5_qrwkyntz_6194') => {
     try {
       const stats = await throttledGetAlgoStatistics(null, algoId);
       if (stats && stats.status) {
-        setAlgoStatistics(stats.statistics);
+        // setAlgoStatistics(stats.statistics);
+        setAlgoStats(stats.statistics);
         setAlgoPerformance(stats.performance);
       }
     } catch (error) {
-      console.error('Error fetching algo statistics:', error);
+      console.error('Error fetching algo statisticsx:', error);
     }
   };
 
   useEffect(() => {
     if (subAccounts.length > 0){
-      fetchAlgoData();
+      fetchAlgoData(activeAlgoId);
     }
-  }, [subAccounts.length]);
+  }, [subAccounts.length, activeAlgoId]);
 
 return (
     <ScrollView>
