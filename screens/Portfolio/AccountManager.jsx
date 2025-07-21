@@ -156,41 +156,65 @@ const AccountManager = () => {
       } catch (posError) {
         console.error('Error fetching daily positions:', posError);
       }
-      
-      // Get trade history (last 30 days)
+
       try {
-        // Calculate dates for the last 30 days
-        const endDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
-        const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 30 days ago
+        // Use activeAlgoId if available, or try to get it from the account
+        const algoId = activeAlgoId || account.algoId || 'jjvp5_qrwkyntz_6194';
         
-        const tradeResponse = await throttledGetTradeHistory(accountId, startDate, endDate);
-        if (tradeResponse && tradeResponse.status) {
-          console.log('Trade history loaded:', tradeResponse.trades?.length || 0, 'trades');
-          setTradeHistory(tradeResponse.trades || []);
+        console.log('Fetching algo statistics for:', algoId);
+        
+        const algoResponse = await throttledGetAlgoStatistics(accountId, algoId);
+        if (algoResponse && algoResponse.status) {
+          console.log('Algo statistics loaded for:', algoId);
+          setAlgoStats({
+            statistics: algoResponse.statistics || {},
+            performance: algoResponse.performance || {}
+          });
+        } else {
+          console.log('No valid algo statistics returned');
         }
-      } catch (tradeError) {
-        console.error('Error fetching trade history:', tradeError);
-      }
-      
-      // Get algo statistics
-      if (activeAlgoId) {
-        try {
-          const algoResponse = await throttledGetAlgoStatistics(accountId, activeAlgoId);
-          if (algoResponse && algoResponse.status) {
-            console.log('Algo statistics loaded for algo:', activeAlgoId);
-            setAlgoStats({
-              statistics: algoResponse.statistics || {},
-              performance: algoResponse.performance || {}
-            });
-          }
-        } catch (algoError) {
-          console.error('Error fetching algo statistics:', algoError);
-        }
+      } catch (algoError) {
+        console.error('Error fetching algo statistics:', algoError);
       }
     } catch (error) {
       console.error('Error in fetchPerformanceData:', error);
     }
   };
+      
+  //     // Get trade history (last 30 days)
+  //     try {
+  //       // Calculate dates for the last 30 days
+  //       const endDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
+  //       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 30 days ago
+        
+  //       const tradeResponse = await throttledGetTradeHistory(accountId, startDate, endDate);
+  //       if (tradeResponse && tradeResponse.status) {
+  //         console.log('Trade history loaded:', tradeResponse.trades?.length || 0, 'trades');
+  //         setTradeHistory(tradeResponse.trades || []);
+  //       }
+  //     } catch (tradeError) {
+  //       console.error('Error fetching trade history:', tradeError);
+  //     }
+      
+  //     // Get algo statistics
+  //     if (activeAlgoId) {
+  //       try {
+  //         const algoResponse = await throttledGetAlgoStatistics(accountId, activeAlgoId);
+  //         if (algoResponse && algoResponse.status) {
+  //           console.log('Algo statistics loaded for algo:', activeAlgoId);
+  //           setAlgoStats({
+  //             statistics: algoResponse.statistics || {},
+  //             performance: algoResponse.performance || {}
+  //           });
+  //         }
+  //       } catch (algoError) {
+  //         console.error('Error fetching algo statistics:', algoError);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Error in fetchPerformanceData:', error);
+  //   }
+  // };
 
   // Initial data load and polling setup
   useEffect(() => {
@@ -360,7 +384,6 @@ const AccountManager = () => {
         </View>
       );
     }
-
   const { statistics, performance } = stats;
 
   return (
@@ -592,6 +615,10 @@ return (
               </View>
             ))
           )}
+        </View>
+
+        <View style={styles.box}>
+          <AlgoStatsSection stats={algoStats} />
         </View>
 
         <View style={styles.box}>

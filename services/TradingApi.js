@@ -390,14 +390,14 @@ export const getTradeHistory = async (accountId, asOfDate = '', extrapolate = 'T
       isExtrapolate: 'True',
     };
 
-    console.log('5.8) GET TRADE HISTORY - REQUEST DETAILS:', params);
+    // console.log('5.8) GET TRADE HISTORY - REQUEST DETAILS:', params);
     
     const response = await API.get('/rest/v1/strategy_bal', { 
       params,
       headers: { 'Content-Type': 'application/json' }
     });
     
-    console.log('5.8) GET TRADE HISTORY - RESPONSE:', response)
+    // console.log('5.8) GET TRADE HISTORY - RESPONSE:', response)
 
     return {
       response
@@ -418,7 +418,7 @@ export const getTradeHistory = async (accountId, asOfDate = '', extrapolate = 'T
 };
 
 // 5.9) GET HISTORY OF TRANSACTIONS
-export const getAlgoStatistics = async (accountId, algoId, asOfDate = '', extrapolate = 'True', retries = 3) => {
+export const getAlgoStatistics = async (accountId, algoId, asOfDate = '', extrapolate = 'True', retries = 3, page = '1') => {
   try {
     // Use the fixed account ID that works with the API
     const fixedAccountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
@@ -436,19 +436,20 @@ export const getAlgoStatistics = async (accountId, algoId, asOfDate = '', extrap
       api_key: apiKey,
       user,
       account_id: fixedAccountId,
-      acdate: asOfDate || '',
+      acdate: '',
+      // acdate: asOfDate || '',
       page: page,
       isExtrapolate: extrapolate
     };
     
-    console.log('5.9) GET ALGO STATISTICS - REQUEST DETAILS:', params);
+    // console.log('5.9) GET ALGO STATISTICS - REQUEST DETAILS:', params);
     
     const response = await API.get('/rest/v1/strategy_trade', { 
       params,
       headers: { 'Content-Type': 'application/json' }
     });
     
-    console.log('5.9) GET ALGO STATISTICS - RESPONSE:', response);
+    // console.log('5.9) GET ALGO STATISTICS - RESPONSE:', response);
 
     return {response}
   } catch (error) {
@@ -457,11 +458,11 @@ export const getAlgoStatistics = async (accountId, algoId, asOfDate = '', extrap
     //   response: error.response?.data
     // });
     
-    if (retries > 0) {
-      console.log(`Retrying getAlgoStatistics (${retries} left)...`);
-      await delay(1000);
-      return getAlgoStatistics(accountId, algoId, retries - 1);
-    }
+    // if (retries > 0) {
+    //   console.log(`Retrying getAlgoStatistics (${retries} left)...`);
+    //   await delay(1000);
+    //   return getAlgoStatistics(accountId, algoId, retries - 1);
+    // }
     throw error;
   }
 };
