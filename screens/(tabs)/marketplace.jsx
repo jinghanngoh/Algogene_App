@@ -157,7 +157,7 @@ const Marketplace = () => {
                   if (i === yearLabels.length - 1 && year === endYear) {
                     // For the last year (2025), shift the label left by 10% of the chart width
                     // to prevent it from being cut off
-                    const shiftAmount = Math.round(sampledReturns.length * 0.07);
+                    const shiftAmount = Math.round(sampledReturns.length * 0.05);
                     yearPosition = Math.min(
                       Math.round(((year - startYear) / (endYear - startYear || 1)) * (sampledReturns.length - 1)),
                       sampledReturns.length - 1 - shiftAmount
@@ -493,63 +493,6 @@ const Marketplace = () => {
                     fontSize: 9,
                     fontWeight: 'bold',
                   },
-                  // Increase left padding to shift the graph right and make room for y-axis labels
-                  paddingLeft: 35,
-                  // Adjust right padding to balance the chart
-                  paddingRight: 25,
-                  // Reduce bottom padding to make room for labels above the x-axis
-                  paddingTop: 50, 
-                  paddingBottom: -60, 
-                }}
-                withInnerLines={false}
-                withOuterLines={true}
-                withHorizontalLabels={true}
-                withVerticalLabels={true}
-                withDots={false}
-                bezier={false}
-                yAxisSuffix="%"
-                fromZero={false}
-                // Position x-axis labels ABOVE the x-axis by using a negative offset
-                xLabelsOffset={-15}
-                // Ensure y-axis labels are properly positioned
-                yLabelsOffset={10}
-                style={{
-                  marginVertical: 8,
-                  // marginRight: 10,
-                  borderRadius: 16
-                }}
-              /> */}
-              <LineChart
-                data={{
-                  labels: algorithm.chartData.labels,
-                  datasets: [
-                    {
-                      data: algorithm.chartData.data,
-                      color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`
-                    }
-                  ]
-                }}
-                width={width * 0.85}
-                height={120}
-                chartConfig={{
-                  backgroundColor: '#ffffff',
-                  backgroundGradientFrom: '#ffffff',
-                  backgroundGradientTo: '#ffffff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16
-                  },
-                  propsForDots: {
-                    r: '0',
-                    strokeWidth: '0'
-                  },
-                  formatYLabel: (value) => `${Math.round(value)}%`,
-                  propsForLabels: {
-                    fontSize: 9,
-                    fontWeight: 'bold',
-                  },
                   // Adjust padding to shift everything appropriately
                   paddingLeft: 20, // Smaller padding to show more of the chart
                   paddingRight: 50, // Increased to make room for 2025 label
@@ -572,7 +515,60 @@ const Marketplace = () => {
                   marginLeft: -15, 
                   borderRadius: 16
                 }}
-              />
+              /> */}
+              <LineChart
+  data={{
+    labels: algorithm.chartData.labels,
+    datasets: [
+      {
+        data: algorithm.chartData.data,
+        color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`
+      }
+    ]
+  }}
+  width={width * 0.85}
+  height={120}
+  chartConfig={{
+    backgroundColor: '#ffffff',
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+      borderRadius: 16
+    },
+    propsForDots: {
+      r: '0',
+      strokeWidth: '0'
+    },
+    formatYLabel: (value) => `${Math.round(value)}%`,
+    propsForLabels: {
+      fontSize: 9,
+      fontWeight: 'bold',
+    },
+    // Adjust padding to ensure enough space for all labels
+    paddingLeft: 20, // Smaller padding to show more of the chart
+    paddingRight: 60, // Extra padding on right for 2025 label
+    paddingTop: 30, // Maintain increased top padding for labels above
+    paddingBottom: -20, // Negative padding to move content up
+  }}
+  withInnerLines={false}
+  withOuterLines={true}
+  withHorizontalLabels={true}
+  withVerticalLabels={true}
+  withDots={false}
+  bezier={false}
+  yAxisSuffix="%"
+  fromZero={false}
+  xLabelsOffset={-10} // Keep at -10 to maintain vertical positioning
+  yLabelsOffset={10}
+  style={{
+    marginVertical: 8,
+    marginLeft: -15, 
+    borderRadius: 16
+  }}
+/>
             </View>
               
 
