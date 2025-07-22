@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { fetchAlgoDailyReturns, fetchAlgoPerformance, subscribeToAlgorithm as apiSubscribeToAlgorithm, checkPaymentStatus} from '../../services/MarketplaceApi';
+import { fetchAlgoDailyReturns, fetchAlgoPerformance, subscribeToAlgorithm as apiSubscribeToAlgorithm, checkPaymentStatus, fetchAlgoMonthlyReturns} from '../../services/MarketplaceApi';
 import { useRouter, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -11,9 +11,11 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   const { subscribedAlgorithm, subscribeToAlgorithm: contextSubscribeToAlgorithm } = useSubscription();
   const [generatedChartData, setGeneratedChartData] = useState(null);
   const [performanceStats, setPerformanceStats] = useState(null);
-  const [dailyReturns, setDailyReturns] = useState(null);
+  // Rename state variable for monthly returns
+  const [monthlyReturns, setMonthlyReturns] = useState(null);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
-  const [loadingDailyReturns, setLoadingDailyReturns] = useState(false);
+  // Rename loading state for monthly returns
+  const [loadingMonthlyReturns, setLoadingMonthlyReturns] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -23,7 +25,7 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     // console.log('Strategy:', strategy);
     if (strategy?.algo_id) {
       fetchPerformanceStats(strategy.algo_id);
-      fetchDailyReturnsData(strategy.algo_id);
+      fetchMonthlyReturnsData(strategy.algo_id); // Changed from fetchDailyReturnsData
       
       // If the strategy already has chart data (passed from Marketplace), we don't need to regenerate it
       if (!strategy.chartData || !strategy.chartData.data) {
@@ -140,6 +142,85 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     });
   };
 
+  const fetchMonthlyReturnsData = async (algoId) => {
+    setLoadingMonthlyReturns(true);
+    setErrorMessage(null);
+    try {
+      console.log(`[TradingModal] Fetching monthly returns for algo_id: ${algoId}`);
+      
+      // Use the API function that processes monthly returns
+      const monthlyData = await fetchAlgoMonthlyReturns(algoId);
+      
+      console.log('[TradingModal] Monthly data received:', 
+        monthlyData ? `${monthlyData.length} items` : 'none');
+      
+      // Check if we have data
+      if (monthlyData && monthlyData.length > 0) {
+        console.log(`[TradingModal] Processing ${monthlyData.length} monthly returns`);
+        
+        // Take the most recent 5 months
+        const recentMonthlyReturns = monthlyData.slice(0, 5).map(item => ({
+          date: item.date,
+          return: item.mr * 100, // Convert decimal to percentage
+          cumulativeReturn: item.cr * 100 // Convert decimal to percentage
+        }));
+        
+        console.log('[TradingModal] Processed monthly returns:', 
+          JSON.stringify(recentMonthlyReturns).substring(0, 200));
+        
+        setMonthlyReturns(recentMonthlyReturns);
+      } else {
+        console.log('[TradingModal] No monthly data received');
+        setMonthlyReturns([]);
+      }
+    } catch (error) {
+      console.error('[TradingModal] Error fetching monthly returns:', error);
+      setErrorMessage('Error fetching monthly returns data.');
+      setMonthlyReturns([]);
+    } finally {
+      setLoadingMonthlyReturns(false);
+    }
+  };
+
+  const generateFallbackMonthlyReturns = () => {
+    // Use actual current date rather than a fixed date to ensure we get the latest 5 months
+    const currentDate = new Date();
+    const fallbackMonthlyReturns = [];
+    
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    // Generate data for the last 5 months (including current month)
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(currentDate);
+      date.setMonth(date.getMonth() - i);
+      
+      const formattedDate = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+      
+      // Generate realistic returns that decrease slightly as we go back in time
+      // This creates a more natural cumulative growth pattern
+      const baseReturn = 1.5 - (i * 0.2); // Base return decreases slightly each month back
+      const variance = 1.0; // Random variance
+      
+      const monthlyReturn = baseReturn + ((Math.random() * 2) - 1) * variance;
+      
+      // Calculate cumulative returns that increase as we get to more recent months
+      // Start with a base of 10% and add 2-5% per month
+      const cumulativeBase = 10 + (i * 3.5); // Earlier months have lower cumulative returns
+      const cumulativeReturn = cumulativeBase + (Math.random() * 2);
+      
+      fallbackMonthlyReturns.push({
+        date: formattedDate,
+        return: monthlyReturn,
+        cumulativeReturn: cumulativeReturn
+      });
+    }
+    
+    // Reverse to show most recent month first
+    setMonthlyReturns(fallbackMonthlyReturns.reverse());
+  };
 
   const fetchPerformanceStats = async (algoId) => {
     setLoadingPerformance(true);
@@ -153,25 +234,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
       setErrorMessage(error.message || 'Failed to load performance data.');
     } finally {
       setLoadingPerformance(false);
-    }
-  };
-
-  const fetchDailyReturnsData = async (algoId) => {
-    setLoadingDailyReturns(true);
-    setErrorMessage(null);
-    try {
-      const returns = await fetchAlgoDailyReturns(algoId);
-      const formattedReturns = returns.slice(-5).map((item) => ({
-        date: item.t, // Map 't' to 'date'
-        return: item.r * 100, // Daily return as percentage (optional, keep if you want to show it)
-        cumulativeReturn: item.cr * 100, // Cumulative return as percentage
-      }));
-      setDailyReturns(formattedReturns);
-    } catch (error) {
-      console.error('Error fetching daily returns:', error);
-      setErrorMessage('Using random daily returns due to fetch error.');
-    } finally {
-      setLoadingDailyReturns(false);
     }
   };
 
@@ -578,34 +640,44 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
           </View>
         )}
 
-        {/* Daily Returns */}
+        {/* Monthly Returns */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>LAST 5 DAILY RETURNS</Text>
-          {loadingDailyReturns ? (
+          <Text style={styles.sectionTitle}>LAST 5 MONTHLY RETURNS</Text>
+          {loadingMonthlyReturns ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#4FC3F7" />
             </View>
-          ) : dailyReturns ? (
+          ) : monthlyReturns && monthlyReturns.length > 0 ? (
             <View style={styles.tableContainer}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.tableCell]}>Date</Text>
-                <Text style={[styles.tableHeaderText, styles.tableCell]}>Daily Return (%)</Text>
+                <Text style={[styles.tableHeaderText, styles.tableCell]}>Month</Text>
+                <Text style={[styles.tableHeaderText, styles.tableCell]}>Monthly Return (%)</Text>
                 <Text style={[styles.tableHeaderText, styles.tableCell]}>Cumulative Return (%)</Text>
               </View>
-              {dailyReturns.map((item, index) => (
+              {monthlyReturns.map((item, index) => (
                 <View key={index} style={styles.tableRow}>
                   <Text style={[styles.tableCell, styles.tableText]}>{item.date}</Text>
-                  <Text style={[styles.tableCell, styles.tableText]}>
-                    {item.return > 0 ? `+${item.return.toFixed(2)}` : item.return.toFixed(2)}
+                  <Text style={[styles.tableCell, styles.tableText, 
+                    isNaN(item.return) ? styles.unavailableData : 
+                    item.return > 0 ? styles.positiveReturn : 
+                    item.return < 0 ? styles.negativeReturn : null]}>
+                    {isNaN(item.return) ? 'N/A' : 
+                    item.return > 0 ? `+${item.return.toFixed(2)}` : 
+                    item.return.toFixed(2)}
                   </Text>
-                  <Text style={[styles.tableCell, styles.tableText]}>
-                    {item.cumulativeReturn > 0 ? `+${item.cumulativeReturn.toFixed(2)}` : item.cumulativeReturn.toFixed(2)}
+                  <Text style={[styles.tableCell, styles.tableText,
+                    isNaN(item.cumulativeReturn) ? styles.unavailableData :
+                    item.cumulativeReturn > 0 ? styles.positiveReturn : 
+                    item.cumulativeReturn < 0 ? styles.negativeReturn : null]}>
+                    {isNaN(item.cumulativeReturn) ? 'N/A' : 
+                    item.cumulativeReturn > 0 ? `+${item.cumulativeReturn.toFixed(2)}` : 
+                    item.cumulativeReturn.toFixed(2)}
                   </Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={styles.description}>No daily returns available</Text>
+            <Text style={styles.description}>No monthly returns data available</Text>
           )}
         </View>
 
@@ -880,6 +952,16 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#ffffff',
     fontWeight: 'bold',
+  },
+  positiveReturn: {
+    color: '#4CAF50', // Green color for positive returns
+  },
+  negativeReturn: {
+    color: '#F44336', // Red color for negative returns
+  },
+  unavailableData: {
+    color: '#9E9E9E', // Gray color for N/A data
+    fontStyle: 'italic'
   },
 });
 
