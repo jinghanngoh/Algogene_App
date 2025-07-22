@@ -462,7 +462,7 @@ const Marketplace = () => {
               </View>
 
               <View style={styles.graphContainer}>
-              <LineChart
+              {/* <LineChart
                 data={{
                   labels: algorithm.chartData.labels,
                   datasets: [
@@ -515,7 +515,61 @@ const Marketplace = () => {
                 yLabelsOffset={10}
                 style={{
                   marginVertical: 8,
-                  marginRight: 10,
+                  // marginRight: 10,
+                  borderRadius: 16
+                }}
+              /> */}
+              <LineChart
+                data={{
+                  labels: algorithm.chartData.labels,
+                  datasets: [
+                    {
+                      data: algorithm.chartData.data,
+                      color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`
+                    }
+                  ]
+                }}
+                width={width * 0.85}
+                height={120}
+                chartConfig={{
+                  backgroundColor: '#ffffff',
+                  backgroundGradientFrom: '#ffffff',
+                  backgroundGradientTo: '#ffffff',
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  style: {
+                    borderRadius: 16
+                  },
+                  propsForDots: {
+                    r: '0',
+                    strokeWidth: '0'
+                  },
+                  formatYLabel: (value) => `${Math.round(value)}%`,
+                  propsForLabels: {
+                    fontSize: 9,
+                    fontWeight: 'bold',
+                  },
+                  // Adjust padding to shift everything appropriately
+                  paddingLeft: 20, // Smaller padding to show more of the chart
+                  paddingRight: 50, // Increased to make room for 2025 label
+                  paddingTop: 30, // Increase top padding to make room for labels above
+                  paddingBottom: -20, // Negative padding to move content up
+                }}
+                withInnerLines={false}
+                withOuterLines={true}
+                withHorizontalLabels={true}
+                withVerticalLabels={true}
+                withDots={false}
+                bezier={false}
+                yAxisSuffix="%"
+                fromZero={false}
+                // Increase the negative offset to move x-axis labels up by 15 pixels
+                xLabelsOffset={-10} // Previously -5, now -20 to move up by 15 more pixels
+                yLabelsOffset={10}
+                style={{
+                  marginVertical: 8,
+                  marginLeft: -15, 
                   borderRadius: 16
                 }}
               />
@@ -722,11 +776,22 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     lineHeight: 20,
   },
+  // graphContainer: {
+  //   marginBottom: 15,
+  //   marginLeft: -15, 
+  //   marginTop: 15, 
+  //   overflow: 'hidden',
+  // },
   graphContainer: {
-    marginBottom: 15,
-    marginLeft: -15, 
-    marginTop: 15, 
-    overflow: 'hidden',
+    marginTop: 5,
+    marginBottom: 10,
+    paddingLeft: 0,
+    height: 160,
+    width: '95%',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
   },
   graphPlaceholder: {
     backgroundColor: '#E0E0E0',

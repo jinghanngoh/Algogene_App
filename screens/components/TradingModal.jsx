@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = false}) => {
   const router = useRouter();
   const { subscribedAlgorithm, subscribeToAlgorithm: contextSubscribeToAlgorithm } = useSubscription();
+  const [generatedChartData, setGeneratedChartData] = useState(null);
   const [performanceStats, setPerformanceStats] = useState(null);
   const [dailyReturns, setDailyReturns] = useState(null);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
@@ -23,8 +24,122 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     if (strategy?.algo_id) {
       fetchPerformanceStats(strategy.algo_id);
       fetchDailyReturnsData(strategy.algo_id);
+      
+      // If the strategy already has chart data (passed from Marketplace), we don't need to regenerate it
+      if (!strategy.chartData || !strategy.chartData.data) {
+        // We'll need to generate chart data if it wasn't provided
+        generateChartData();
+      }
     }
   }, [strategy]);
+
+  // Add this function to generate chart data similar to Marketplace:
+  const generateChartData = () => {
+    if (!performanceStats?.setting?.period_start || !performanceStats?.performance) return;
+    
+    const startYear = parseInt(performanceStats.setting.period_start.substring(0, 4));
+    const currentYear = new Date().getFullYear();
+    
+    const yearSpan = currentYear - startYear;
+    
+    // Determine the interval based on the year span
+    let yearInterval;
+    if (yearSpan <= 3) {
+      yearInterval = 1; // Show every year if span is small
+    } else if (yearSpan <= 6) {
+      yearInterval = 2; // Show every other year for medium spans
+    } else {
+      yearInterval = Math.ceil(yearSpan / 4); // Show 4-5 labels for longer spans
+    }
+
+    // Generate year labels with the calculated interval
+    const yearLabels = [];
+    for (let year = startYear; year <= currentYear; year += yearInterval) {
+      yearLabels.push(year.toString());
+    }
+    // Make sure the end year is included
+    if (yearLabels[yearLabels.length - 1] !== currentYear.toString()) {
+      yearLabels.push(currentYear.toString());
+    }
+    
+    // Generate more detailed data points for the line
+    const dataPoints = [];
+    const totalReturn = performanceStats.performance.MeanAnnualReturn * yearSpan * 100 || 0;
+    const volatility = performanceStats.performance.Volatility * 100 || 5; // Use actual volatility or default to 5%
+    
+    // Number of points per year (more points = more detailed graph)
+    const pointsPerYear = 12; // Monthly data points
+    const totalPoints = yearSpan * pointsPerYear;
+    
+    for (let i = 0; i <= totalPoints; i++) {
+      // Progress as a percentage of total time
+      const progress = i / totalPoints;
+      
+      // Base cumulative return trend following a slightly non-linear curve
+      const baseTrend = totalReturn * Math.pow(progress, 1.05);
+      
+      // Add realistic market noise using volatility
+      // Higher frequency components for short-term movements
+      const shortTermNoise = volatility * 0.4 * (Math.sin(i * 0.8) + Math.cos(i * 1.3));
+      // Medium frequency for market cycles
+      const mediumTermNoise = volatility * 0.3 * (Math.sin(i * 0.2) + Math.cos(i * 0.5));
+      // Low frequency for long-term deviations
+      const longTermNoise = volatility * 0.3 * (Math.sin(i * 0.05) + Math.cos(i * 0.1));
+      
+      // Combine all components
+      const noise = shortTermNoise + mediumTermNoise + longTermNoise;
+      
+      // Set the cumulative return with realistic noise
+      const value = baseTrend + noise;
+      dataPoints.push(value);
+    }
+    
+    // Ensure last point matches total expected return
+    if (dataPoints.length > 0) {
+      dataPoints[dataPoints.length - 1] = totalReturn;
+    }
+    
+    // Create labels array with empty strings except at year positions
+    const finalLabels = Array(dataPoints.length).fill('');
+    
+    // Place year labels at appropriate positions
+    for (let i = 0; i < yearLabels.length; i++) {
+      const year = parseInt(yearLabels[i]);
+      
+      // Calculate position
+      let yearPosition;
+      
+      if (i === yearLabels.length - 1 && year === currentYear) {
+        // For the last year (2025), shift the label left by 10% of the chart width
+        const shiftAmount = Math.round(dataPoints.length * 0.1);
+        yearPosition = Math.min(
+          Math.round(((year - startYear) / (currentYear - startYear || 1)) * (dataPoints.length - 1)),
+          dataPoints.length - 1 - shiftAmount
+        );
+      } else {
+        // Normal positioning for other years
+        yearPosition = Math.round(((year - startYear) / (currentYear - startYear || 1)) * (dataPoints.length - 1));
+      }
+      
+      if (yearPosition >= 0 && yearPosition < finalLabels.length) {
+        finalLabels[yearPosition] = yearLabels[i];
+      }
+    }
+    
+    // Calculate y-axis bounds with fixed 5% intervals
+    const minValue = Math.min(...dataPoints, 0);
+    const maxValue = Math.max(...dataPoints, 0);
+    const interval = 5; // Fixed 5% intervals
+    const yMin = Math.floor(minValue / interval) * interval;
+    const yMax = Math.ceil(maxValue / interval) * interval;
+    
+    setGeneratedChartData({
+      labels: finalLabels,
+      data: dataPoints,
+      yAxisBound: { min: yMin, max: yMax }
+    });
+  };
+
 
   const fetchPerformanceStats = async (algoId) => {
     setLoadingPerformance(true);
@@ -321,55 +436,57 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
           <View style={styles.graphContainer}>
             <LineChart
               data={{
-                labels: strategy?.chartData?.labels?.length
-                  ? strategy.chartData.labels
-                  : ['No Data'],
+                labels: strategy?.chartData?.labels || generatedChartData?.labels || ['No Data'],
                 datasets: [{
-                  data: strategy?.chartData?.data?.length
-                    ? strategy.chartData.data
-                    : [0],
-                  color: (opacity = 1) => `rgba(79, 195, 247, ${opacity})`,
-                  strokeWidth: 2
+                  data: strategy?.chartData?.data || generatedChartData?.data || [0],
+                  color: (opacity = 1) => `rgba(79, 195, 247, ${opacity})`
                 }]
               }}
               width={Dimensions.get('window').width - 40}
               height={150}
-              withDots={true}
-              withShadow={false}
-              withInnerLines={true}
-              withOuterLines={true}
-              withHorizontalLabels={true}
-              withVerticalLabels={true}
               chartConfig={{
                 backgroundColor: '#1E1E1E',
                 backgroundGradientFrom: '#121212',
                 backgroundGradientTo: '#1E1E1E',
-                decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(30, 30, 30, ${opacity})`,
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(79, 195, 247, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                style: {
+                  borderRadius: 16
+                },
+                propsForDots: {
+                  r: '0',
+                  strokeWidth: '0'
+                },
+                formatYLabel: (value) => `${Math.round(value)}%`,
                 propsForLabels: {
-                  fontSize: 10,
-                  fontWeight: 'normal',
-                  dy: -4,
-                  dx: -10,
-                  textAnchor: 'start'
+                  fontSize: 9,
+                  fontWeight: 'bold',
                 },
-                propsForBackgroundLines: {
-                  strokeDashArray: (value) => value === 0 ? '' : '5, 5',
-                  stroke: 'rgba(255, 255, 255, 0.1)'
-                },
-                yAxisInterval: strategy?.chartData?.yAxisBound?.max / 5 || 1
+                // Adjust padding to shift everything left
+                paddingLeft: 20, // Increase to move chart right, making more room for y-axis labels
+                paddingRight: 50, // Increase to provide more space on right for 2025 label
+                paddingTop: 20,
+                paddingBottom: 0,
               }}
-              yAxisLabel=""
+              withInnerLines={false}
+              withOuterLines={true}
+              withHorizontalLabels={true}
+              withVerticalLabels={true}
+              withDots={false}
+              bezier={false}
               yAxisSuffix="%"
-              yLabelsOffset={25}
+              fromZero={false}
               xLabelsOffset={-5}
-              bezier
-              style={styles.chartStyle}
+              yLabelsOffset={10}
+              style={{
+                marginVertical: 8,
+                marginLeft: -15, 
+                borderRadius: 16
+              }}
             />
           </View>
         </View>
-        {/* End of Updated Code */}
 
         {loadingPerformance ? (
           <View style={styles.loadingContainer}>
@@ -596,6 +713,18 @@ const styles = StyleSheet.create({
   chart: {
     borderRadius: 8,
   },
+  graphContainer: {
+    marginTop: 5,
+    marginBottom: 10,
+    paddingLeft: 0, // Remove left padding to allow chart to shift left
+    // paddingRight: 250, // Add right padding for more space
+    height: 160, // Ensure enough height for the chart and labels
+    width: '100%', // Use full width
+    justifyContent: 'center',
+    alignItems: 'flex-start', // Align to the left instead of center
+    backgroundColor: '#121212',
+    borderRadius: 16,
+  },
   detailItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -707,14 +836,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#000000', // Black background as per previous request
+    backgroundColor: '#000000',
     borderRadius: 10,
     padding: 20,
     width: Dimensions.get('window').width - 40,
     maxHeight: Dimensions.get('window').height - 100,
   },
   modalTitle: {
-    color: '#ffffff', // White text for dark theme
+    color: '#ffffff', 
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
@@ -743,7 +872,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   closeButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#4FC3F7',
     padding: 10,
     borderRadius: 5,
     alignItems: 'center',
