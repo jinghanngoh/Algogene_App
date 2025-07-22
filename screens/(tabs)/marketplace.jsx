@@ -26,107 +26,6 @@ const Marketplace = () => {
   const itemsPerPage = 5; 
   const width = Dimensions.get('window').width;
 
-  // const loadAlgorithms = useCallback(
-  //   debounce(async () => {
-  //     if (isLoading || !hasMore) return;
-  
-  //     setIsLoading(true);
-  //     try {
-  //       const sessionId = await AsyncStorage.getItem('sessionId');
-  //       console.log('Marketplace sessionId:', sessionId);
-  //       const result = await fetchPublicAlgos();
-  
-  //       if (!result || !result.data || !Array.isArray(result.data)) {
-  //         throw new Error('Invalid API response format');
-  //       }
-  
-  //       const startIndex = (page - 1) * itemsPerPage;
-  //       const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
-  
-  //       const enrichedData = await Promise.all(
-  //         paginatedData.map(async (algorithm) => {
-  //           try {
-  //             console.log(`Fetching performance for algo_id: ${algorithm.algo_id}`);
-  //             const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
-  //             console.log(`Performance response for algo_id ${algorithm.algo_id}:`, JSON.stringify(performanceResponse, null, 2));
-  
-  //             console.log(`Fetching daily returns for algo_id: ${algorithm.algo_id}`);
-  //             const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id, null, false);
-  
-  //             // Get start date and end date
-  //             const startDate = new Date(algorithm.created_at);
-  //             const endDate = new Date('2025-07-21'); // Current date
-  //             const dates = [];
-  //             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-  //               dates.push(new Date(d).toISOString().slice(0, 10));
-  //             }
-  
-  //             // Map cumulative returns to dates
-  //             const dateToCr = new Map(dailyReturnsResponse.map(item => [item.t, item.cr * 100]));
-  //             const cumulativeReturns = dates.map(date => dateToCr.get(date) || 0);
-  
-  //             // Sample data to fit chart with up to 100 points for detail
-  //             const maxPoints = 100;
-  //             const step = Math.max(1, Math.floor(cumulativeReturns.length / maxPoints));
-  //             const sampledReturns = [];
-  //             const sampledLabels = [];
-  //             for (let i = 0; i < cumulativeReturns.length; i += step) {
-  //               if (i < cumulativeReturns.length) {
-  //                 sampledReturns.push(cumulativeReturns[i]);
-  //                 sampledLabels.push(dates[i].slice(0, 7)); // Use YYYY-MM for labels
-  //               }
-  //             }
-  
-  //             // Determine y-axis bounds with fixed 5% intervals
-  //             const minValue = Math.min(...sampledReturns, 0);
-  //             const maxValue = Math.max(...sampledReturns, 0);
-  //             const interval = 5;
-  //             const yMin = Math.floor(minValue / interval) * interval;
-  //             const yMax = Math.ceil(maxValue / interval) * interval;
-  
-  //             const chartData = sampledReturns.length > 0 ? {
-  //               labels: sampledLabels,
-  //               data: sampledReturns,
-  //               yAxisBound: { min: yMin, max: yMax }
-  //             } : {
-  //               labels: ['No Data'],
-  //               data: [0],
-  //               yAxisBound: { min: 0, max: 0 }
-  //             };
-  
-  //             console.log(`Chart data for algo_id ${algorithm.algo_id}:`, JSON.stringify(chartData, null, 2));
-  
-  //             return {
-  //               ...algorithm,
-  //               performanceStats: performanceResponse.performance || { Score_Total: 0 },
-  //               setting: performanceResponse.setting || {},
-  //               chartData
-  //             };
-  //           } catch (error) {
-  //             console.error(`Error fetching data for algo_id ${algorithm.algo_id}:`, error);
-  //             return {
-  //               ...algorithm,
-  //               performanceStats: { Score_Total: 0 },
-  //               setting: {},
-  //               chartData: { labels: ['No Data'], data: [0], yAxisBound: { min: 0, max: 0 } }
-  //             };
-  //           }
-  //         })
-  //       );
-  
-  //       setAlgorithms((prev) => [...prev, ...enrichedData]);
-  //       setHasMore(result.data.length > page * itemsPerPage);
-  //       setPage((prev) => prev + 1);
-  //     } catch (error) {
-  //       console.error('Error loading algorithms:', error);
-  //       Alert.alert('Error', error.message || 'Failed to load algorithms. Please try again.');
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   }, 300),
-  //   [isLoading, hasMore, page]
-  // );
-
   const loadAlgorithms = useCallback(
     debounce(async () => {
       if (isLoading || !hasMore) return;
@@ -221,7 +120,7 @@ const Marketplace = () => {
                   sampledDates.push(dates[dates.length - 1]);
                 }
                 
-                // Generate year labels using the simpler approach
+                // Generate year labels with appropriate intervals
                 const startYear = startDate.getFullYear();
                 const endYear = endDate.getFullYear();
                 const yearSpan = endYear - startYear;
@@ -234,30 +133,44 @@ const Marketplace = () => {
                 } else {
                   yearInterval = Math.ceil(yearSpan / 4); // Show 4-5 labels for longer spans
                 }
-
-                  // Generate year labels with the calculated interval
-                  const yearLabels = [];
-                  for (let year = startYear; year <= endYear; year += yearInterval) {
-                    yearLabels.push(year.toString());
+  
+                // Generate year labels with the calculated interval
+                const yearLabels = [];
+                for (let year = startYear; year <= endYear; year += yearInterval) {
+                  yearLabels.push(year.toString());
+                }
+                // Make sure the end year is included
+                if (yearLabels[yearLabels.length - 1] !== endYear.toString()) {
+                  yearLabels.push(endYear.toString());
+                }
+  
+                // Create a sparse array of labels with years at appropriate positions
+                const finalLabels = Array(sampledReturns.length).fill('');
+  
+                // Determine where to place the year labels in the data array
+                for (let i = 0; i < yearLabels.length; i++) {
+                  const year = parseInt(yearLabels[i]);
+                  
+                  // Calculate position based on year progress through the entire date range
+                  let yearPosition;
+                  
+                  if (i === yearLabels.length - 1 && year === endYear) {
+                    // For the last year (2025), shift the label left by 10% of the chart width
+                    // to prevent it from being cut off
+                    const shiftAmount = Math.round(sampledReturns.length * 0.07);
+                    yearPosition = Math.min(
+                      Math.round(((year - startYear) / (endYear - startYear || 1)) * (sampledReturns.length - 1)),
+                      sampledReturns.length - 1 - shiftAmount
+                    );
+                  } else {
+                    // Normal positioning for other years
+                    yearPosition = Math.round(((year - startYear) / (endYear - startYear || 1)) * (sampledReturns.length - 1));
                   }
-                  // Make sure the end year is included
-                  if (yearLabels[yearLabels.length - 1] !== endYear.toString()) {
-                    yearLabels.push(endYear.toString());
+                  
+                  if (yearPosition >= 0 && yearPosition < finalLabels.length) {
+                    finalLabels[yearPosition] = yearLabels[i];
                   }
-
-                  // Create a sparse array of labels with years at appropriate positions
-                  const finalLabels = Array(sampledReturns.length).fill('');
-
-                  // Determine where to place the year labels in the data array
-                  for (let i = 0; i < yearLabels.length; i++) {
-                    const year = parseInt(yearLabels[i]);
-                    // Calculate position based on year progress through the entire date range
-                    const yearProgress = (year - startYear) / (endYear - startYear || 1);
-                    const yearPosition = Math.round(yearProgress * (sampledReturns.length - 1));
-                    if (yearPosition >= 0 && yearPosition < finalLabels.length) {
-                      finalLabels[yearPosition] = yearLabels[i];
-                    }
-                  }
+                }
                 
                 // Calculate y-axis bounds with fixed 5% intervals
                 const minValue = Math.min(...sampledReturns, 0);
@@ -271,26 +184,37 @@ const Marketplace = () => {
                   data: sampledReturns,
                   yAxisBound: { min: yMin, max: yMax }
                 };
-              } else {
+              } else if (performanceResponse?.setting?.period_start && performanceResponse?.performance) {
                 // Fallback to synthetic data if no daily returns
-                const startYear = performanceResponse?.setting?.period_start 
-                  ? parseInt(performanceResponse.setting.period_start.substring(0, 4)) 
-                  : new Date().getFullYear() - 3;
+                const startYear = parseInt(performanceResponse.setting.period_start.substring(0, 4));
                 const currentYear = new Date().getFullYear();
                 
                 const yearSpan = currentYear - startYear;
                 
-                // Generate year labels for x-axis
-                const yearLabels = Array.from({ length: yearSpan + 1 }, (_, i) => (startYear + i).toString());
+                // Determine the interval based on the year span
+                let yearInterval;
+                if (yearSpan <= 3) {
+                  yearInterval = 1; // Show every year if span is small
+                } else if (yearSpan <= 6) {
+                  yearInterval = 2; // Show every other year for medium spans
+                } else {
+                  yearInterval = Math.ceil(yearSpan / 4); // Show 4-5 labels for longer spans
+                }
+  
+                // Generate year labels with the calculated interval
+                const yearLabels = [];
+                for (let year = startYear; year <= currentYear; year += yearInterval) {
+                  yearLabels.push(year.toString());
+                }
+                // Make sure the end year is included
+                if (yearLabels[yearLabels.length - 1] !== currentYear.toString()) {
+                  yearLabels.push(currentYear.toString());
+                }
                 
                 // Generate more detailed data points for the line
                 const dataPoints = [];
-                const totalReturn = performanceResponse?.performance?.MeanAnnualReturn 
-                  ? performanceResponse.performance.MeanAnnualReturn * yearSpan * 100 
-                  : Math.random() * 10 * yearSpan; // Random fallback
-                const volatility = performanceResponse?.performance?.Volatility 
-                  ? performanceResponse.performance.Volatility * 100 
-                  : 5; // Default volatility
+                const totalReturn = performanceResponse.performance.MeanAnnualReturn * yearSpan * 100 || 0;
+                const volatility = performanceResponse.performance.Volatility * 100 || 5; // Use actual volatility or default to 5%
                 
                 // Number of points per year (more points = more detailed graph)
                 const pointsPerYear = 12; // Monthly data points
@@ -329,9 +253,25 @@ const Marketplace = () => {
                 
                 // Place year labels at appropriate positions
                 for (let i = 0; i < yearLabels.length; i++) {
-                  const position = Math.round((i / yearSpan) * (dataPoints.length - 1));
-                  if (position >= 0 && position < finalLabels.length) {
-                    finalLabels[position] = yearLabels[i];
+                  const year = parseInt(yearLabels[i]);
+                  
+                  // Calculate position
+                  let yearPosition;
+                  
+                  if (i === yearLabels.length - 1 && year === currentYear) {
+                    // For the last year (2025), shift the label left by 10% of the chart width
+                    const shiftAmount = Math.round(dataPoints.length * 0.1);
+                    yearPosition = Math.min(
+                      Math.round(((year - startYear) / (currentYear - startYear || 1)) * (dataPoints.length - 1)),
+                      dataPoints.length - 1 - shiftAmount
+                    );
+                  } else {
+                    // Normal positioning for other years
+                    yearPosition = Math.round(((year - startYear) / (currentYear - startYear || 1)) * (dataPoints.length - 1));
+                  }
+                  
+                  if (yearPosition >= 0 && yearPosition < finalLabels.length) {
+                    finalLabels[yearPosition] = yearLabels[i];
                   }
                 }
                 
@@ -346,6 +286,12 @@ const Marketplace = () => {
                   labels: finalLabels,
                   data: dataPoints,
                   yAxisBound: { min: yMin, max: yMax }
+                };
+              } else {
+                chartData = { 
+                  labels: ['No Data'], 
+                  data: [0], 
+                  yAxisBound: { min: -5, max: 20 } 
                 };
               }
   
@@ -383,7 +329,6 @@ const Marketplace = () => {
     }, 300),
     [page, isLoading, hasMore]
   );
-
 
   const getCategoryColor = (category) => {
     switch(category) {
@@ -574,7 +519,7 @@ const Marketplace = () => {
                   borderRadius: 16
                 }}
               />
-              </View>
+            </View>
               
 
             <TouchableOpacity
