@@ -91,50 +91,40 @@ const SubAccountCreation = ({ visible, onClose }) => {
       });
     };
 
-    // Handle opening algorithm selection
     const handleAlgorithmSelect = async () => {
       // Save current form state before navigating
       await saveFormState();
       
-      // Navigate to marketplace with selection flag
-      router.push({
-        pathname: '/(tabs)/marketplace',
-        params: { selectForSubAccount: 'true' }
-      });
+      try {
+        // First, close the modal to prevent navigation issues
+        onClose();
+        
+        // Short delay to ensure modal is closed before navigation
+        setTimeout(() => {
+          try {
+            if (Platform.OS === 'ios') {
+              // For iOS, use the direct navigation API with params
+              router.push({
+                pathname: '/marketplace',
+                params: { selectForSubAccount: 'true' }
+              });
+            } else {
+              // For Android, use the existing router method
+              router.push({
+                pathname: '/(tabs)/marketplace',
+                params: { selectForSubAccount: 'true' }
+              });
+            }
+          } catch (error) {
+            console.error('Delayed navigation error:', error);
+            // Final fallback with params
+            router.navigate('marketplace', { selectForSubAccount: 'true' });
+          }
+        }, 300); // 300ms delay
+      } catch (error) {
+        console.error('Navigation setup error:', error);
+      }
     };
-    // const handleAlgorithmSelect = async () => {
-    //   // Save current form state before navigating
-    //   await saveFormState();
-      
-    //   try {
-    //     console.log('Attempting to navigate to marketplace...');
-        
-    //     // First, close the modal to prevent navigation issues
-    //     onClose();
-        
-    //     // Short delay to ensure modal is closed before navigation
-    //     setTimeout(() => {
-    //       try {
-    //         if (Platform.OS === 'ios') {
-    //           // For iOS, use the direct navigation API
-    //           router.push('/marketplace');
-    //         } else {
-    //           // For Android, use the existing router method
-    //           router.push({
-    //             pathname: '/(tabs)/marketplace',
-    //             params: { selectForSubAccount: 'true' }
-    //           });
-    //         }
-    //       } catch (error) {
-    //         console.error('Delayed navigation error:', error);
-    //         // Final fallback
-    //         router.navigate('marketplace');
-    //       }
-    //     }, 300); // 300ms delay
-    //   } catch (error) {
-    //     console.error('Navigation setup error:', error);
-    //   }
-    // };
     
     // Handle modal close with cleanup
     const handleClose = () => {
