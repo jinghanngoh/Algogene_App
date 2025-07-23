@@ -1,15 +1,27 @@
 import React, { useState } from 'react';
+import { Button } from 'react-native';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform, ScrollView} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { optimizePortfolio } from '../../services/PortfolioApi';
 import { useRouter } from 'expo-router';
 
+
+// Initialize default dates to avoid null issues
+// const today = new Date();
+// today.setHours(0, 0, 0, 0);
+// const defaultStartDate = new Date(today);
+// defaultStartDate.setMonth(today.getMonth() - 1); // One month ago
+
+
 // Edit such that we cant have ending date and starting date switched 
 const AIPortfolioAnalysis = () => {
   // const navigation = useNavigation(); // Initialize navigation
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const router = useRouter();
+  // const [startDate, setStartDate] = useState(null);
+  // const [endDate, setEndDate] = useState(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [initialCapital, setInitialCapital] = useState('');
   const [currency, setCurrency] = useState('AUD');
   const [objective, setObjective] = useState('');
@@ -41,7 +53,6 @@ const AIPortfolioAnalysis = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showResult, setShowResult] = useState(false);
-  const router = useRouter(); 
 
   const assetClasses = [
     'Algo Marketplace',
@@ -105,6 +116,7 @@ const AIPortfolioAnalysis = () => {
 
   const showDatePicker = (field) => {
     setSelectedField(field);
+    setDate(new Date((field === 'startDate' && startDate) ? startDate : (field === 'endDate' && endDate) ? endDate : Date.now()));
     setDatePickerVisible(true);
   };
 
@@ -112,11 +124,43 @@ const AIPortfolioAnalysis = () => {
     setDatePickerVisible(false);
   };
 
+  // const handleDateChange = (event, selected) => {
+  //   if (event.type === 'dismissed') {
+  //     hideDatePicker();
+  //     return;
+  //   }
+  //   if (selected) {
+  //     const today = new Date();
+  //     today.setHours(0, 0, 0, 0);
+  //     if (selected > today) {
+  //       alert('Date cannot be today or in the future.');
+  //       return;
+  //     }
+  //     const formattedDate = selected.toISOString().split('T')[0]; // YYYY-MM-DD
+  //     if (selectedField === 'startDate') {
+  //       if (endDate && new Date(formattedDate) > new Date(endDate)) {
+  //         alert('Start date cannot be after end date.');
+  //         return;
+  //       }
+  //       setStartDate(formattedDate);
+  //     }
+  //     if (selectedField === 'endDate') {
+  //       if (startDate && new Date(formattedDate) < new Date(startDate)) {
+  //         alert('End date cannot be before start date.');
+  //         return;
+  //       }
+  //       setEndDate(formattedDate);
+  //     }
+  //   }
+  //   hideDatePicker();
+  // };
+
   const handleDateChange = (event, selected) => {
-    if (event.type === 'dismissed') {
+    if (Platform.OS === 'ios' && event.type === 'dismissed') {
       hideDatePicker();
       return;
     }
+
     if (selected) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -124,22 +168,37 @@ const AIPortfolioAnalysis = () => {
         alert('Date cannot be today or in the future.');
         return;
       }
-      const formattedDate = selected.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      const formattedDate = selected.toISOString().split('T')[0];
       if (selectedField === 'startDate') {
         if (endDate && new Date(formattedDate) > new Date(endDate)) {
           alert('Start date cannot be after end date.');
           return;
         }
         setStartDate(formattedDate);
-      }
-      if (selectedField === 'endDate') {
-        if (startDate && new Date(formattedDate) < new Date(startDate)) {
+        } else if (selectedField === 'endDate') {
+          if (startDate && new Date(formattedDate) < new Date(startDate)) {
           alert('End date cannot be before start date.');
           return;
         }
-        setEndDate(formattedDate);
+          setEndDate(formattedDate);
+      // } else if (selectedField === 'endDate') {
+      //   if (startDate && new Date(formattedDate) < new Date(startDate)) {
+      //     alert('End date cannot be before start date.');
+      //     return;
+      //   }
+      //   setEndDate(formattedDate);
       }
+      setDate(selected);
     }
+
+    // On iOS, keep the picker open until confirmed; on Android, close it
+    if (Platform.OS !== 'ios') {
+      hideDatePicker();
+    }
+  };
+
+  const confirmDate = () => {
     hideDatePicker();
   };
 
@@ -686,7 +745,7 @@ const AIPortfolioAnalysis = () => {
         <Text style={styles.computeButtonText}>COMPUTE</Text>
       </TouchableOpacity>
 
-      {isDatePickerVisible && (
+      {/* {isDatePickerVisible && (
         <DateTimePicker
           value={date}
           mode="date"
@@ -694,6 +753,27 @@ const AIPortfolioAnalysis = () => {
           onChange={handleDateChange}
           style={styles.datePicker}
         />
+      )} */}
+      {isDatePickerVisible && (
+        <Modal transparent visible={isDatePickerVisible} animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.datePickerContainer}>
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                onChange={handleDateChange}
+                maximumDate={new Date()}
+              />
+              {Platform.OS === 'ios' && (
+                <View style={styles.datePickerButtons}>
+                  <Button title="Cancel" onPress={hideDatePicker} />
+                  <Button title="Confirm" onPress={confirmDate} />
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
       )}
 
       <Modal transparent visible={isCurrencyModalVisible} animationType="fade" onRequestClose={hideModal}>
@@ -796,6 +876,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 40,
     textAlign: 'center',
+    marginTop: 50
   },
   inputRow: {
     flexDirection: 'row',
@@ -1005,6 +1086,8 @@ const styles = StyleSheet.create({
   iconText: {
     fontSize: 16,
   },
+  datePickerContainer: { backgroundColor: '#2A2A2A', borderRadius: 10, padding: 20, alignItems: 'center' },
+  datePickerButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 10 },
 });
 
 export default AIPortfolioAnalysis;

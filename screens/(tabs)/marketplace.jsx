@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
   }, 
   loadMoreButton: {
     padding: 15,
-    backgroundColor: '#2196F3',
+    backgroundColor: '#4FC3F7',
     borderRadius: 5,
     alignItems: 'center',
     marginVertical: 10,

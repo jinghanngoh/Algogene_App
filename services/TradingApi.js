@@ -82,7 +82,7 @@ const throttle = (func, delay) => {
         status: response.status
       };
     } catch (error) {
-      console.error('API Error:', error.message);
+      console.error('5.1) API Error:', error.message);
   }};
 
 
@@ -126,7 +126,7 @@ export const stopAlgo = async (accountId, algoId, retries = 3) => {
       status: response.status
     };
   } catch (error) {
-    console.error('API Error:', error.message);
+    console.error('5.2) API Error:', error.message);
 }};
 
 // 5.3) GET REAL-TIME ACCOUNT BALANCE (GET THE ACCOUNT ID FOR KUCOIN INSTEAD OF HARDCODING FIXEDACCOUNTID)

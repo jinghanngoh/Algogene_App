@@ -18,6 +18,22 @@ const api = axios.create({
   },
 });
 
+const getSessionId = async () => {
+  try {
+    const cachedSid = await AsyncStorage.getItem('sessionId');
+    if (cachedSid) {
+      return cachedSid;
+    }
+    const newSid = uuidv4().replace(/-/g, '').slice(0, 32); // Generate 32-char session ID
+    await AsyncStorage.setItem('sessionId', newSid);
+    setTimeout(() => AsyncStorage.removeItem('sessionId'), 30 * 60 * 1000); // Expire after 30 minutes
+    return newSid;
+  } catch (error) {
+    console.error('Error handling session ID:', error);
+    return uuidv4().replace(/-/g, '').slice(0, 32); // Fallback to new ID
+  }
+};
+
 const objectiveMap = {
   'Global Minimum Variance': 0,
   'Max Sharpe Ratio': 1,

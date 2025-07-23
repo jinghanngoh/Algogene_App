@@ -538,18 +538,20 @@ return (
             <Text style={styles.detailsLabel}>Total Market Value:</Text>
             <Text style={styles.detailsValue}>${totalMarketValue}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Portfolio/SubAccounts')}
-          >
-            <Text style={styles.actionButtonText}>View Sub Accounts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#FFA500' }]}
-            onPress={fetchPortfolioData}
-          >
-            <Text style={styles.actionButtonText}>Refresh Portfolio</Text>
-          </TouchableOpacity>
+            <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('Portfolio/SubAccounts')}
+            >
+              <Text style={styles.actionButtonText}>View Sub Accounts</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
+              onPress={fetchPortfolioData}
+            >
+              <Text style={styles.actionButtonText}>Refresh Portfolio</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style= {styles.box}>
@@ -677,7 +679,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
     padding: 20,
-    marginTop: 60,
+    marginTop: 100,
   },
   box: {
     backgroundColor: '#1a1a1a',
@@ -700,6 +702,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
+    gap: 10, 
   },
   detailsLabel: {
     color: 'lightgray',
@@ -714,7 +717,7 @@ const styles = StyleSheet.create({
     top: 40,
     left: 20,
     zIndex: 1,
-    marginTop: 10,
+    marginTop: 40,
   },
   actionButton: {
     backgroundColor: '#4FC3F7',

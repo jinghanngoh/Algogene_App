@@ -184,6 +184,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
       paddingBottom: 20,
+      marginTop: 50
   },
   latestNewsText: {
       fontWeight: 'bold',

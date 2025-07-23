@@ -348,12 +348,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'black',
     padding: 20,
+    marginTop: 30
   },
   box: {
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
     padding: 20,
-    marginTop: 50,
+    marginTop: 70,
   },
   subAccountBox: {
     backgroundColor: '#2a2a2a',
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     backgroundColor: '#4FC3F7',
-    paddingVertical: 5,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 8,
   },
