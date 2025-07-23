@@ -54,3 +54,45 @@ DEBUG:backend.main:Shutting down lifespan event
 2025-07-10 12:50:50,559 - backend.main - DEBUG - Starting lifespan event
 2025-07-10 12:50:50,560 - backend.main - DEBUG - Table subaccounts created or already exists
 2025-07-10 12:51:00,566 - backend.main - DEBUG - Shutting down lifespan event
+2025-07-22 15:38:06,046 - main - DEBUG - Starting lifespan event
+2025-07-22 15:38:06,048 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:38:58,812 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:38:59,320 - main - DEBUG - Starting lifespan event
+2025-07-22 15:38:59,320 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:39:04,377 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:39:04,786 - main - DEBUG - Starting lifespan event
+2025-07-22 15:39:04,786 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:39:15,005 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:39:15,485 - main - DEBUG - Starting lifespan event
+2025-07-22 15:39:15,485 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:39:27,112 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:39:27,542 - main - DEBUG - Starting lifespan event
+2025-07-22 15:39:27,542 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:39:32,395 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:39:32,825 - main - DEBUG - Starting lifespan event
+2025-07-22 15:39:32,826 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:40:44,385 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:40:44,915 - main - DEBUG - Starting lifespan event
+2025-07-22 15:40:44,915 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:41:06,451 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:41:06,954 - main - DEBUG - Starting lifespan event
+2025-07-22 15:41:06,955 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:41:16,052 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:41:16,531 - main - DEBUG - Starting lifespan event
+2025-07-22 15:41:16,532 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:41:17,444 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:41:17,854 - main - DEBUG - Starting lifespan event
+2025-07-22 15:41:17,855 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:41:50,712 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:42:03,713 - main - DEBUG - Starting lifespan event
+2025-07-22 15:42:03,714 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:42:25,546 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:42:28,350 - main - DEBUG - Starting lifespan event
+2025-07-22 15:42:28,351 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:45:11,715 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:45:12,265 - main - DEBUG - Starting lifespan event
+2025-07-22 15:45:12,266 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:45:52,397 - main - DEBUG - Shutting down lifespan event
+2025-07-22 15:45:52,928 - main - DEBUG - Starting lifespan event
+2025-07-22 15:45:52,929 - main - DEBUG - Table subaccounts created or already exists
+2025-07-22 15:46:19,112 - main - DEBUG - Shutting down lifespan event

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, Alert} from 'react-native';
 import { useSubAccounts } from '../../context/SubAccountsContext';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -102,6 +102,39 @@ const SubAccountCreation = ({ visible, onClose }) => {
         params: { selectForSubAccount: 'true' }
       });
     };
+    // const handleAlgorithmSelect = async () => {
+    //   // Save current form state before navigating
+    //   await saveFormState();
+      
+    //   try {
+    //     console.log('Attempting to navigate to marketplace...');
+        
+    //     // First, close the modal to prevent navigation issues
+    //     onClose();
+        
+    //     // Short delay to ensure modal is closed before navigation
+    //     setTimeout(() => {
+    //       try {
+    //         if (Platform.OS === 'ios') {
+    //           // For iOS, use the direct navigation API
+    //           router.push('/marketplace');
+    //         } else {
+    //           // For Android, use the existing router method
+    //           router.push({
+    //             pathname: '/(tabs)/marketplace',
+    //             params: { selectForSubAccount: 'true' }
+    //           });
+    //         }
+    //       } catch (error) {
+    //         console.error('Delayed navigation error:', error);
+    //         // Final fallback
+    //         router.navigate('marketplace');
+    //       }
+    //     }, 300); // 300ms delay
+    //   } catch (error) {
+    //     console.error('Navigation setup error:', error);
+    //   }
+    // };
     
     // Handle modal close with cleanup
     const handleClose = () => {

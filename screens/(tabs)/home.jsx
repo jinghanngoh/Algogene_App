@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import WatchlistModal from "../components/WatchlistModal";
 import NewsModal from "../components/NewsModal";
+import { stubFalse } from "lodash";
+import { FeTurbulence } from "react-native-svg";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -39,7 +41,6 @@ const Home = () => {
   const scrollViewRef = useRef(null);
 
   const useStaticData = true; // TOGGLE TO FALSE WHEN BACKEND IS RUNNING // SET TO TRUE FOR DEVELOPMENT WITHOUT BACKEND SERVERS
-
 
   // Fetch watchlist data from FastAPI
   useEffect(() => {
