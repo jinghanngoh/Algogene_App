@@ -4,12 +4,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import API from '../services/api'; // Adjust path to your API service
 
+export const ALGO_ACCOUNT_MAPPINGS = {
+  'h448195gl0_ujbjcsgin_0452': 'GLKPZPXmtwmMP_qrwkyabjj_2370',
+  'h448195gl0_ujbjcsgin_0451': 'GLKPZPXmtwmMP_qrwkyntz_6195'// SpiderNet (Binance)
+};
+
+export const getCorrectAccountId = (algoId, providedAccountId) => {
+  if (ALGO_ACCOUNT_MAPPINGS[algoId]) {
+    if (!providedAccountId || !providedAccountId.startsWith('GLKPZP')) {
+      console.log(`[MAPPING] Using correct account ID for algo ${algoId}`);
+      return ALGO_ACCOUNT_MAPPINGS[algoId];
+    }
+  }
+  return providedAccountId;
+};
+
 const SubAccountsContext = createContext();
 
 const DEFAULT_SUB_ACCOUNTS = [
   { // Hardcoded Binance
     id: '#1000',
-    brokerId: 'GLKPZPXmtwmMP_qrwkyntz_6195', // Add this field with the real broker account ID
+    brokerId: 'GLKPZPXmtwmMP_qrwkyntz_6195', 
     broker: 'Binance',
     algorithm: 'SpiderNet',
     currency: 'USD',
@@ -28,7 +43,7 @@ const DEFAULT_SUB_ACCOUNTS = [
   },
   { // Hardcoded Kucoin
     id: '#1001',
-    brokerId: 'jjvp5_qrwkyntz_6194', // Add this field with the real broker account ID
+    brokerId: 'GLKPZPXmtwmMP_qrwkyabjj_2370',
     broker: 'Kucoin',
     algorithm: 'DeepNet',
     currency: 'USD',
@@ -49,10 +64,24 @@ const DEFAULT_SUB_ACCOUNTS = [
 ];
 
 export const SubAccountsProvider = ({ children }) => {
+  const [subAccounts, setSubAccounts] = useState(DEFAULT_SUB_ACCOUNTS);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   // console.log('SubAccountsProvider rendering');
   // Initialize with the default accounts
-  const [subAccounts, setSubAccounts] = useState(DEFAULT_SUB_ACCOUNTS);
-  
+  const getCorrectAccountId = (algoId, providedAccountId) => {
+    // If the algorithm is known in our mappings
+    if (ALGO_ACCOUNT_MAPPINGS[algoId]) {
+      // If the provided account ID doesn't match the expected format 
+      // or is missing/incorrect, return the correct one
+      if (!providedAccountId || !providedAccountId.startsWith('GLKPZP')) {
+        console.log(`[MAPPING] Using correct account ID for algo ${algoId}`);
+        return ALGO_ACCOUNT_MAPPINGS[algoId];
+      }
+    }
+    return providedAccountId; // Keep the original if no mapping or format looks correct
+  };
+
   // Function to reset AsyncStorage to default accounts
   const resetToDefaults = async () => {
     try {
@@ -102,28 +131,6 @@ export const SubAccountsProvider = ({ children }) => {
     initializeData();
   }, []);
 
-  // useEffect(() => {
-  //   const fetchInitialSubAccounts = async () => {
-  //     try {
-  //       const sessionId = await AsyncStorage.getItem('sessionId');
-  //       if (!sessionId) {
-  //         await login();
-  //         return;
-  //       }
-  //       const response = await API.get('/rest/v1/app_subaccounts', {
-  //         params: { sid: sessionId, user: 'AGBOT1', api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff' },
-  //       }).catch(() => ({ status: false, data: [] })); // Fallback for failed requests
-  //       if (response.status && Array.isArray(response.data)) {
-  //         setSubAccounts(response.data); // Override with API data if successful
-  //       } else {
-  //         console.warn('Failed to fetch subAccounts or invalid data:', response.data);
-  //       }
-  //     } catch (err) {
-  //       console.error('Error fetching initial subAccounts:', err);
-  //     }
-  //   };
-  //   fetchInitialSubAccounts();
-  // }, []); // Empty dependency array ensures this runs once on mount
   const fetchSubAccounts = async () => {
     try {
       // console.log('Fetching subAccounts...');

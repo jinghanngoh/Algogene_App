@@ -45,27 +45,6 @@ const SubAccounts = () => {
     loadData();
   }, []);
 
-  // useEffect(() => {
-  //   const checkReopenModal = async () => {
-  //     try {
-  //       const shouldReopen = await AsyncStorage.getItem('reopenSubAccountCreationModal');
-  //       if (shouldReopen === 'true') {
-  //         await AsyncStorage.removeItem('reopenSubAccountCreationModal');
-  //         setModalVisible(true);
-  //       }
-  //     } catch (error) {
-  //       console.error('Error checking modal reopen flag:', error);
-  //     }
-  //   };
-  //   checkReopenModal();
-  //   const unsubscribe = navigation.addListener('focus', () => {
-  //     checkReopenModal();
-  //   });
-  
-  //   return unsubscribe;
-  // }, [navigation]);
-
-
   const fetchAlgorithmDetails = async (account) => {
     try {
       const response = await fetchPublicAlgos();
@@ -97,12 +76,6 @@ const SubAccounts = () => {
         // console.log('No session ID, attempting login...');
         await login();
       }
-      // console.log('Attempting to configure broker with:', {
-      //   broker: account.broker,
-      //   brokerApiKey: account.brokerApiKey,
-      //   brokerSecret: account.brokerSecret,
-      //   brokerPassphrase: account.brokerPassphrase,
-      // });
       const response = await configureBroker(
         account.broker.toLowerCase(),
         account.brokerApiKey,
@@ -150,8 +123,7 @@ const SubAccounts = () => {
     setError(null);
   
     try {
-      // Log the account details for debugging
-      // console.log('Account details before toggle:', JSON.stringify(account, null, 2));
+      console.log(`[VALIDATION] Account #${account.id} mapped to broker ID: ${accountId}`);
       
       // Map accounts to their broker IDs if not already present
       let accountId;
@@ -160,7 +132,7 @@ const SubAccounts = () => {
       } else if (account.id === '#1000') {
         accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195';
       } else if (account.id === '#1001') {
-        accountId = 'jjvp5_qrwkyntz_6194';
+        accountId = 'GLKPZPXmtwmMP_qrwkyabjj_2370'; 
       } else {
         throw new Error('Missing broker account ID. Please check broker connection.');
       }
@@ -176,8 +148,6 @@ const SubAccounts = () => {
       } else {
         throw new Error('Missing algorithm ID for this account');
       }
-      
-      // console.log(`Using mapped algoId: ${algoId}`);
 
       const updatedAccount = { 
         ...account, 
@@ -188,13 +158,18 @@ const SubAccounts = () => {
     
       // First update the UI optimistically
       updateSubAccount(updatedAccount);
-  
+
+      console.log(`[DEBUG] Mapped values - accountId: ${accountId}, algoId: ${algoId}`);
+
+      // Then before calling stopAlgo:
       if (account.status === 'ACTIVE') {
+        console.log(`[DEBUG] Stopping algo with accountId: ${accountId}, algoId: ${algoId}`);
         const result = await stopAlgo(accountId, algoId);
-        // console.log(`Successfully stopped algo for ${accountId} with algoId: ${algoId}`, result);
+        console.log(`[DEBUG] Stop algo result:`, result);
       } else {
+        console.log(`[DEBUG] Starting algo with accountId: ${accountId}, algoId: ${algoId}`);
         const result = await startAlgo(accountId, algoId);
-        // console.log(`Successfully started algo for ${accountId} with algoId: ${algoId}`, result);
+        console.log(`[DEBUG] Start algo result:`, result);
       }
     } catch (err) {
       console.error(`Error toggling status for ${id}:`, err);

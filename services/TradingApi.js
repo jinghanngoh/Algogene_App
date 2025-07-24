@@ -1,10 +1,10 @@
 import API from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ALGO_ACCOUNT_MAPPINGS, getCorrectAccountId } from '../context/SubAccountsContext';
 
 const user = 'AGBOT1';
 const apiKey = '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff';
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 
 // Throttle function to limit API rates
 const throttle = (func, delay) => {
@@ -41,58 +41,18 @@ const throttle = (func, delay) => {
   };
 };
 
-
 // 5.1) START ALGO
-// export const startAlgo = async (accountId, algoId = 'jjvp5_qrwkyntz_6194', retries = 3) => {
-  export const startAlgo = async (accountId, algoId, retries = 3) => {
-    try {
-      if (!accountId) {
-        throw new Error('Missing required parameter: accountId');
-      }
-      if (!algoId) {
-        throw new Error('Missing required parameter: algoId');
-      }
-      
-      const sessionId = await AsyncStorage.getItem('sessionId');
-      if (!sessionId) {
-        throw new Error('No valid session ID found. Please log in first.');
-      }
-  
-      const payload = {
-        api_key: apiKey,
-        user,
-        algo_id: algoId,
-        account_id: accountId
-      };
-      
-      // Log complete request details
-      // console.log('START ALGO - REQUEST DETAILS:');
-      // console.log('Payload:', JSON.stringify(payload, null, 2));
-  
-      const response = await API.post('/rest/v1/startalgo', payload, { 
-        headers: { 'Content-Type': 'application/json' } 
-      });
-  
-      // console.log('START ALGO - RESPONSE:');
-      // console.log('RESPONSE:', response);
-  
-      return {
-        algo_id: response.algo_id,
-        res: response.res,
-        status: response.status
-      };
-    } catch (error) {
-      console.error('5.1) API Error:', error.message);
-  }};
-
-
-// 5.2) STOP ALGO
-export const stopAlgo = async (accountId, algoId, retries = 3) => {
+export const startAlgo = async (accountId, algoId, retries = 3) => {
   try {
+    const correctAccountId = getCorrectAccountId(algoId, accountId);
+    if (correctAccountId !== accountId) {
+      console.log(`[CORRECTION] Using correct account ID: ${correctAccountId}`);
+      accountId = correctAccountId;
+    }
+
     if (!accountId) {
       throw new Error('Missing required parameter: accountId');
     }
-    
     if (!algoId) {
       throw new Error('Missing required parameter: algoId');
     }
@@ -110,8 +70,44 @@ export const stopAlgo = async (accountId, algoId, retries = 3) => {
     };
     
     // Log complete request details
-    console.log('STOP ALGO - REQUEST DETAILS:');
-    console.log('Payload:', JSON.stringify(payload, null, 2));
+    // console.log('START ALGO - REQUEST DETAILS:');
+    // console.log('Payload:', JSON.stringify(payload, null, 2));
+
+    const response = await API.post('/rest/v1/startalgo', payload, { 
+      headers: { 'Content-Type': 'application/json' } 
+    });
+
+    // console.log('START ALGO - RESPONSE:');
+    // console.log('RESPONSE:', response);
+
+    return {
+      algo_id: response.algo_id,
+      res: response.res,
+      status: response.status
+    };
+  } catch (error) {
+    console.error('5.1) API Error:', error.message);
+}};
+
+// 5.2) STOP ALGO
+export const stopAlgo = async (accountId, algoId, retries = 3) => {
+  try {
+    const correctAccountId = getCorrectAccountId(algoId, accountId);
+    if (correctAccountId !== accountId) {
+      console.log(`[CORRECTION] Using correct account ID: ${correctAccountId}`);
+      accountId = correctAccountId;
+    }
+
+    const payload = {
+      api_key: apiKey,
+      user,
+      algo_id: algoId,
+      account_id: accountId
+    };
+    
+    // Log complete request details
+    // console.log('STOP ALGO - REQUEST DETAILS:');
+    // console.log('Payload:', JSON.stringify(payload, null, 2));
     
     const response = await API.post('/rest/v1/stopalgo', payload, {
       headers: { 'Content-Type': 'application/json' }
