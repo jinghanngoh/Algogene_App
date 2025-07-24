@@ -508,7 +508,7 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
               height={150}
               chartConfig={{
                 backgroundColor: '#1E1E1E',
-                backgroundGradientFrom: '#121212',
+                backgroundGradientFrom: '#1E1E1E',
                 backgroundGradientTo: '#1E1E1E',
                 decimalPlaces: 0,
                 color: (opacity = 1) => `rgba(79, 195, 247, ${opacity})`,

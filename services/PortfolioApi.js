@@ -48,7 +48,7 @@ export const optimizePortfolio = async (params = {}) => {
       StartDate: params.StartDate,
       EndDate: params.EndDate,
       arrSymbol: params.arrSymbol,
-      objective: objectiveMap[params.objective] !== undefined ? objectiveMap[params.objective] : 3,
+      objective: objectiveMap[params.objective] !== undefined ? objectiveMap[params.objective] : 3, 
       target_return: params.target_return || 0.15,
       risk_tolerance: params.risk_tolerance || 0.3,
       allowShortSell: params.allowShortSell || false,

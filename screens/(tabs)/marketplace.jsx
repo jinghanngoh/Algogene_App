@@ -468,19 +468,19 @@ const Marketplace = () => {
                   datasets: [
                     {
                       data: algorithm.chartData.data,
-                      color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`
+                      color: (opacity = 1) => `rgba(79, 195, 247, ${opacity})` 
                     }
                   ]
                 }}
                 width={width * 0.85}
                 height={120}
                 chartConfig={{
-                  backgroundColor: '#ffffff',
-                  backgroundGradientFrom: '#ffffff',
-                  backgroundGradientTo: '#ffffff',
+                  backgroundColor: '#333',
+                  backgroundGradientFrom: '#333',
+                  backgroundGradientTo: '#333',
                   decimalPlaces: 0,
                   color: (opacity = 1) => `rgba(0, 118, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                   style: {
                     borderRadius: 16
                   },
@@ -493,11 +493,16 @@ const Marketplace = () => {
                     fontSize: 9,
                     fontWeight: 'bold',
                   },
-                  // Adjust padding to ensure enough space for all labels
-                  paddingLeft: 20, // Smaller padding to show more of the chart
-                  paddingRight: 60, // Extra padding on right for 2025 label
-                  paddingTop: 30, // Maintain increased top padding for labels above
-                  paddingBottom: -20, // Negative padding to move content up
+                  propsForBackgroundLines: {
+                    strokeWidth: 1,
+                    stroke: '#FFFFFF',
+                    strokeDashArray: ''
+                  },
+
+                  paddingLeft: 20, 
+                  paddingRight: 60, 
+                  paddingTop: 30, 
+                  paddingBottom: -20, 
                 }}
                 withInnerLines={false}
                 withOuterLines={true}
@@ -588,7 +593,7 @@ const Marketplace = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: 'black',
   },
   chartStyle: {
     marginVertical: 10,
@@ -654,7 +659,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   contentBox: {
-    backgroundColor: 'white',
+    backgroundColor: '#333',
     marginBottom: 20,
     padding: 20,
     borderRadius: 10,
@@ -679,7 +684,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   userName: {
-    color: 'black',
+    color: 'white',
     fontSize: 16,
   },
   categoryLabel: {
@@ -698,7 +703,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'black',
+    backgroundColor: '#999',
     marginVertical: 10,
   },
   titleContainer: {
@@ -708,13 +713,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   titleText: {
-    color: 'black',
+    color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
     flex: 1, 
   },
   descriptionText: {
-    color: 'black',
+    color: 'white',
     marginBottom: 15,
     lineHeight: 20,
   },
@@ -726,18 +731,18 @@ const styles = StyleSheet.create({
     width: '95%',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#333',
     borderRadius: 16,
   },
   graphPlaceholder: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#555',
     height: 150,
     borderRadius: 5,
     padding: 10,
     marginBottom: 15,
   },
   graphLabel: {
-    color: 'black',
+    color: 'white',
   },
   performanceScore: {
     backgroundColor: '#2196F3',
@@ -754,7 +759,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   readMoreButton: {
-    backgroundColor: '#222',
+    backgroundColor: '#4FC3F7',
     paddingVertical: 7,
     paddingHorizontal: 10,
     borderRadius: 5,
@@ -762,6 +767,13 @@ const styles = StyleSheet.create({
   },
   readMoreText: {
     color: 'white',
+  },
+  priceContainer:{
+    color: 'white',
+  },
+  priceText:{
+    color: 'white',
+    fontSize: 14,
   },
   subscribedBox: {
     borderColor: '#4CAF50',
@@ -818,7 +830,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    color: '#666',
+    color: '#999',
     textAlign: 'center',
     marginVertical: 10,
   },
@@ -841,8 +853,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 5,
     paddingHorizontal: 5,
-    paddingRight: 15, // Add padding on the right to shift content left
-    backgroundColor: '#ffffff',
+    paddingRight: 15, 
+    backgroundColor: '#333', 
     borderRadius: 16,
   },
 });
