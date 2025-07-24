@@ -219,7 +219,7 @@ const PortfolioResult = () => {
                     <Text style={styles.value}>{(resultData.cvar95 || 0).toFixed(5)}</Text>
                   </View>
                   <View style={styles.row}>
-                    <Text style={styles.label}>Cash Lefdt</Text>
+                    <Text style={styles.label}>Cash Left</Text>
                     <Text style={styles.value}>{(resultData.cashLeft || 0).toFixed(2)}</Text>
                   </View>
                   <View style={styles.row}>

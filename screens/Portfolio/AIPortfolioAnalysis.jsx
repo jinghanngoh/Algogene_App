@@ -1,25 +1,15 @@
 import React, { useState } from 'react';
 import { Button } from 'react-native';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform, ScrollView} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+// import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { optimizePortfolio } from '../../services/PortfolioApi';
+import { optimizePortfolio, objectiveMap } from '../../services/PortfolioApi';
 import { useRouter } from 'expo-router';
-
-
-// Initialize default dates to avoid null issues
-// const today = new Date();
-// today.setHours(0, 0, 0, 0);
-// const defaultStartDate = new Date(today);
-// defaultStartDate.setMonth(today.getMonth() - 1); // One month ago
-
 
 // Edit such that we cant have ending date and starting date switched 
 const AIPortfolioAnalysis = () => {
   // const navigation = useNavigation(); // Initialize navigation
   const router = useRouter();
-  // const [startDate, setStartDate] = useState(null);
-  // const [endDate, setEndDate] = useState(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [initialCapital, setInitialCapital] = useState('');
@@ -52,7 +42,6 @@ const AIPortfolioAnalysis = () => {
   const [modalIndex, setModalIndex] = useState(-1); 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showResult, setShowResult] = useState(false);
 
   const assetClasses = [
     'Algo Marketplace',
@@ -296,6 +285,9 @@ const AIPortfolioAnalysis = () => {
       console.log('Input Validation:', { startDate, endDate, objective, tableData });
       if (!startDate || !endDate) throw new Error('Please select date range');
       if (new Date(endDate) < new Date(startDate)) throw new Error('End date cannot be earlier than start date');
+      if (new Date(startDate) > new Date() || new Date(endDate) > new Date()) {
+        throw new Error('Dates cannot be in the future');
+      }
       if (!objective) throw new Error('Please select an objective');
 
       // Extract symbol strings
@@ -313,7 +305,7 @@ const AIPortfolioAnalysis = () => {
         StartDate: startDate,
         EndDate: endDate,
         arrSymbol: validSymbols,
-        objective: objective,
+        objective: objectiveMap[objective] !== undefined ? objectiveMap[objective] : objectiveMap['Global Minimum Variance'],
         target_return: parseFloat(targetReturn) / 100 || 0.15,
         risk_tolerance: parseFloat(riskTolerance) / 100 || 0.3,
         allowShortSell: allowShortSell || false,
@@ -327,11 +319,13 @@ const AIPortfolioAnalysis = () => {
           }), {}),
           lower: validSymbols.reduce((acc, _, idx) => ({
             ...acc,
-            [`Group${idx + 1}`]: 0.0,
+            // [`Group${idx + 1}`]: 0.0,
+            [`Group${idx + 1}`]: 0.1,
           }), {}),
           upper: validSymbols.reduce((acc, _, idx) => ({
             ...acc,
-            [`Group${idx + 1}`]: 1.0,
+            // [`Group${idx + 1}`]: 1.0,
+            [`Group${idx + 1}`]: 0.5,
           }), {}),
         },
       };
@@ -382,14 +376,13 @@ const AIPortfolioAnalysis = () => {
       params: {
         resultData: encodeURIComponent(JSON.stringify(resultData)),
         assetAllocate: encodeURIComponent(JSON.stringify(result.data?.asset_allocate)),
-        underlyingAssets: encodeURIComponent(JSON.stringify(apiParams.arrSymbol)), // Add Underlying Assets
+        underlyingAssets: encodeURIComponent(JSON.stringify(apiParams.arrSymbol)),
         rebalanceStrategy: encodeURIComponent(rebalanceFrequency || 'None'),
       },
     });
     
     // console.log("FULL RESPONSE XXXXXXXXXXXXXXXXX ", JSON.stringify(result))
 
-      // Update tableData with allocations if present
       if (result.data.asset_allocate?.length > 0) {
         setTableData(
           result.data.asset_allocate.map(allocation => ({

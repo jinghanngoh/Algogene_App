@@ -34,7 +34,7 @@ const getSessionId = async () => {
   }
 };
 
-const objectiveMap = {
+export const objectiveMap = {
   'Global Minimum Variance': 0,
   'Max Sharpe Ratio': 1,
   'Max Sortino Ratio': 2,
@@ -48,7 +48,7 @@ export const optimizePortfolio = async (params = {}) => {
       StartDate: params.StartDate,
       EndDate: params.EndDate,
       arrSymbol: params.arrSymbol,
-      objective: objectiveMap[params.objective] !== undefined ? objectiveMap[params.objective] : 0,
+      objective: objectiveMap[params.objective] !== undefined ? objectiveMap[params.objective] : 3,
       target_return: params.target_return || 0.15,
       risk_tolerance: params.risk_tolerance || 0.3,
       allowShortSell: params.allowShortSell || false,
@@ -59,7 +59,8 @@ export const optimizePortfolio = async (params = {}) => {
     };
     
     const response = await api.post('/rest/v1/app/54/asset.optimize', payload);
-    // console.log('Raw API Response:', JSON.stringify(response.data, null, 2));
+  
+    console.log('Raw API Response!!!!!!!!!!!!!: ', JSON.stringify(response.data, null, 2));
     // console.log('Raw Alloc:', response.data.res?.asset_allocate?.alloc);
     // console.log('Raw Shares:', response.data.res?.asset_allocate?.shares);
     // console.log('Raw Prices:', response.data.res?.asset_allocate?.prices);
