@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Button } from 'react-native';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform, ScrollView} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform, ScrollView, Button} from 'react-native';
 // import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { optimizePortfolio, objectiveMap } from '../../services/PortfolioApi';
 import { useRouter } from 'expo-router';
@@ -429,6 +429,12 @@ const AIPortfolioAnalysis = () => {
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()} // Use router.back() for navigation
+      >
+        <Ionicons name="arrow-back" size={24} color="white" />
+      </TouchableOpacity>
       <Text style={styles.headerTitle}>PORTFOLIO OPTIMIZER</Text>
 
       <View style={styles.inputRow}>
@@ -862,6 +868,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
     padding: 20,
   },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    zIndex: 1,
+    marginTop: 40,
+  },
   headerTitle: {
     fontSize: 20,
     color: 'white',
@@ -869,7 +882,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 40,
     textAlign: 'center',
-    marginTop: 50
+    marginTop: 80,
   },
   inputRow: {
     flexDirection: 'row',

@@ -348,7 +348,8 @@ export const subscribeToAlgorithm = async (algoId, accountId, email, retries = 3
     
     let sessionId;
     try {
-      const loginResponse = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin', {
+      // const loginResponse = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin', {
+        const loginResponse = await fetch('https://algogene.com/rest/v1/app_userlogin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
