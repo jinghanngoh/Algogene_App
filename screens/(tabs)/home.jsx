@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   StyleSheet,
+  Image
 } from "react-native";
 import WatchlistModal from "../components/WatchlistModal";
 import NewsModal from "../components/NewsModal";
@@ -26,7 +27,13 @@ const staticWatchlistData = [
     name: "BTC / USD",
     symbol: "BTCUSD",
     price: "108703.00",
-    change: "+0.09%"
+    change: "+0.09%",
+  },
+  {
+    name: "ETH / USD",
+    symbol: "ETHUSD",
+    price: "108704.00",
+    change: "-0.10%"
   }
 ];
 
@@ -35,12 +42,12 @@ const Home = () => {
   const [selectedNews, setSelectedNews] = useState(null);
   const [newsModalVisible, setNewsModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedItems, setSelectedItems] = useState(["BTCUSD"]);
+  const [selectedItems, setSelectedItems] = useState(["BTCUSD", "ETHUSD"]);
   const [watchlistItems, setWatchlistItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef(null);
 
-  const useStaticData = true; // TOGGLE TO FALSE WHEN BACKEND IS RUNNING // SET TO TRUE FOR DEVELOPMENT WITHOUT BACKEND SERVERS
+  const useStaticData = false; // TOGGLE TO FALSE WHEN BACKEND IS RUNNING // SET TO TRUE FOR DEVELOPMENT WITHOUT BACKEND SERVERS
 
   // Fetch watchlist data from FastAPI
   useEffect(() => {
@@ -69,14 +76,68 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
+
+
+  useEffect(() => {
+    const updateWatchlist = async () => {
+      if (useStaticData) return;
+      try {
+        await fetch("http://10.89.8.201:8000/watchlist/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symbols: selectedItems })
+        });
+      } catch (error) {
+        console.error("Error updating watchlist:", error);
+      }
+    };
+    updateWatchlist();
+  }, [selectedItems]);
+
+  useEffect(() => {
+    if (useStaticData) return;
+  
+    const ws = new WebSocket("ws://10.89.8.201:8000/ws/watchlist");
+    ws.onopen = () => console.log("WebSocket connected for watchlist");
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket data received:", data);
+        setWatchlistItems(data.length > 0 ? data : staticWatchlistData);
+      } catch (error) {
+        console.error("Error parsing WebSocket data:", error);
+      }
+    };
+    ws.onerror = (error) => console.error("WebSocket error:", error);
+    ws.onclose = () => console.log("WebSocket disconnected");
+  
+    return () => ws.close();
+  }, []);
+
+
   const handleNewsScroll = (event) => {
     const contentOffset = event.nativeEvent.contentOffset.x;
     const index = Math.round(contentOffset / screenWidth);
     setActiveNewsIndex(index);
   };
 
+  // const getWatchlistItems = () => {
+  //   return watchlistItems.filter((item) => selectedItems.includes(item.symbol));
+  // };
+
   const getWatchlistItems = () => {
-    return watchlistItems.filter((item) => selectedItems.includes(item.symbol));
+    if (watchlistItems.length === 0) return [];
+    
+    // For debugging
+    console.log("All watchlist items:", watchlistItems);
+    console.log("Selected items:", selectedItems);
+    
+    const filtered = watchlistItems.filter((item) => 
+      selectedItems.includes(item.symbol)
+    );
+    
+    console.log("Filtered items:", filtered);
+    return filtered;
   };
 
   return (
