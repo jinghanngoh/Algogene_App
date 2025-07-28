@@ -1,3 +1,6 @@
+# Entry point for FastAPI-based backend (Connect to market data services, manage WebSocket connections, provide REST API endpoints for frontend application)
+# Real-time market data updates for watchlist, persist data to JSON file and SQLite database
+
 import logging
 import json
 import os
@@ -40,6 +43,8 @@ class WatchlistUpdate(BaseModel):
 # Helper functions
 def save_watchlist_update(symbol, price, change_percent):
     logger = logging.getLogger(__name__)
+    global watchlist_data 
+
     try:
         # Load existing data
         data = {}
@@ -74,7 +79,7 @@ def save_watchlist_update(symbol, price, change_percent):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Set up logging to both file and console
+    # Set up logging to both file and console 
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -102,17 +107,17 @@ async def lifespan(app: FastAPI):
             f.write("")
         logger.debug(f"Created empty {WATCHLIST_PATH}")
 
-    # Start WebSocket client
+    # Start WebSocket client (Runs on startup) 
     start_websocket()
     
-    yield
-    logger.debug("Shutting down lifespan event")
+    yield # Application runs here
+    logger.debug("Shutting down lifespan event") # From here, cleanup code : Runs on application shutdown
     global running
     running = False
 
 app = FastAPI(lifespan=lifespan)
 
-# Enable CORS
+# Enable CORS (Cross-origin requests) to support dev envr
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:19006", "http://localhost", "*"],
@@ -121,13 +126,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize MarketDataConnection
+# Initialize MarketDataConnection (Needed)
 market_data = MarketDataConnection()
 
 class WatchlistUpdate(BaseModel):
     symbols: list[str]
 
-def on_message(ws, message):
+def on_message(ws, message): #Parse message and update watchlist data (Handle server ping/pong). Store & Process market data for HARDCODED symbols (Todo)
     logger = logging.getLogger(__name__)
     global watchlist_data
     
@@ -200,7 +205,7 @@ def on_open(ws):
     ws_connection = ws
     logger.info("Connected to ALGOGENE WebSocket")
     
-    # Subscribe to market data for both BTCUSD and ETHUSD
+    # Subscribe to market data for both BTCUSD and ETHUSD (HARDCODED, todo)
     msg = json.dumps({
         "msg_id": 13,
         "user": "demo2",
@@ -261,7 +266,7 @@ def start_websocket():
     threading.Thread(target=connect_websocket, daemon=True).start()
 
 @app.get("/watchlist")
-async def get_watchlist():  # Remove the self parameter since this is not a class method
+async def get_watchlist(): # For now ETHUSD relies on CoinGecko for market data usage. Probably need to be changed depending on Algogene's API Requirement
     logger = logging.getLogger(__name__)
     result = []
     
@@ -291,7 +296,7 @@ async def get_watchlist():  # Remove the self parameter since this is not a clas
                 logger.error(f"Error parsing JSON from {WATCHLIST_PATH}")
                 # If the file exists but isn't valid JSON, we need to handle this case
                 
-        # If we already have ETHUSD in the result, don't add it again
+        # If hv ETHUSD, don't add it again
         if not any(item["symbol"] == "ETHUSD" for item in result):
             logger.info("No ETH/USD data found in file, adding placeholder")
             
@@ -313,7 +318,6 @@ async def get_watchlist():  # Remove the self parameter since this is not a clas
                 logger.info(f"Added ETHUSD to watchlist response with price {eth_price:.2f} from CoinGecko")
             except Exception as e:
                 logger.error(f"Error fetching ETH price from CoinGecko: {e}")
-                # Fallback to fixed value if API fails
                 result.append({
                     "name": "ETH / USD",
                     "symbol": "ETHUSD",
@@ -366,8 +370,6 @@ async def update_watchlist(update: WatchlistUpdate):
     
     valid_symbols = ["BTCUSD", "ETHUSD"]
     new_symbols = [s for s in update.symbols if s in valid_symbols]
-    
-    # Log the request and validated symbols
     logger.info(f"Watchlist update request with symbols: {update.symbols}")
     logger.info(f"Validated symbols: {new_symbols}")
     
@@ -379,7 +381,6 @@ async def update_watchlist(update: WatchlistUpdate):
     old_symbols = subscribed_symbols.copy()
     subscribed_symbols = new_symbols
     
-    # Log the updated subscription list
     logger.info(f"Updated subscribed symbols from {old_symbols} to {subscribed_symbols}")
     
     # Update WebSocket subscription if connection exists
@@ -401,7 +402,6 @@ async def update_watchlist(update: WatchlistUpdate):
         logger.warning("No active WebSocket connection to update subscription")
     
     return {"status": "success", "symbols": subscribed_symbols}
-
 
 
 @app.post("/rest/v1/app_subaccounts")

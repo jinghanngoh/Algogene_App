@@ -1,3 +1,4 @@
+# Retrieves crypto marketdata from AlgoGene platform. Handles loading watchlist data from local JSON
 import json
 import os
 from dotenv import load_dotenv
