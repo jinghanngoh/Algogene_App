@@ -1,4 +1,4 @@
-# Retrieves crypto marketdata from AlgoGene platform. Handles loading watchlist data from local JSON
+# Retrieves crypto marketdata from AlgoGene platform. Handles loading watchlist data from local JSON. Links with FastAPI backend (provide data that can be served via REST Calls or Websocket)
 import json
 import os
 from dotenv import load_dotenv
@@ -9,10 +9,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WATCHLIST_PATH = os.path.join(BASE_DIR, "watchlist_data.json")
 
 class MarketDataConnection:
-    def __init__(self):
+    def __init__(self): # Constructor for MarketDataConnection class (X need initialization param)
         pass
 
-    def get_watchlist(self):
+    def get_watchlist(self): # Get latest market data for crypto in watchlist 
         latest_data = {"BTCUSD": {}, "ETHUSD": {}}
         try:
             if os.path.exists(WATCHLIST_PATH) and os.path.getsize(WATCHLIST_PATH) > 0:
@@ -44,3 +44,6 @@ class MarketDataConnection:
 if __name__ == "__main__":
     mdc = MarketDataConnection()
     print(mdc.get_watchlist())
+
+# Oh btw, watchlist_data.json contains latest price for BTCUSD and ETHUSD (incl prev price, current price, change percentage, timestamp)
+# Store latest market data. Used in main.py's save_watchlist_update() to store latest market data (Useful for things like percentage change)

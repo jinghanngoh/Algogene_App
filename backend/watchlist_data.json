@@ -1,14 +1,14 @@
 {
   "BTCUSD": {
-    "previous_price": 118850.88,
-    "current_price": 119025.4,
-    "change_percent": 0.14683946807965537,
-    "timestamp": "2025-07-28T16:21:05.932367"
+    "previous_price": 118981.0,
+    "current_price": 118968.0,
+    "change_percent": -0.01092611425353628,
+    "timestamp": "2025-07-28T17:57:25.985971"
   },
   "ETHUSD": {
-    "previous_price": null,
-    "current_price": 3720.98,
-    "change_percent": 0.0,
-    "timestamp": "2025-07-25T17:56:36.222578"
+    "previous_price": 3720.98,
+    "current_price": 3893.6899999999996,
+    "change_percent": 4.641519169681095,
+    "timestamp": "2025-07-28T17:52:52.863860"
   }
 }

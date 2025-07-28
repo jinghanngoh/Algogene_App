@@ -1,6 +1,9 @@
 # Entry point for FastAPI-based backend (Connect to market data services, manage WebSocket connections, provide REST API endpoints for frontend application)
 # Real-time market data updates for watchlist, persist data to JSON file and SQLite database
+# Data flow: Websocket client connects to Algogene API, market data retrieved into main.py -> Main.py stores data in watchlist_data.json
+# When fronend requests data, main.py reads from {}watchlist_data.json and serves it 
 
+# In future when backend handles more than just websocket, can move websocket logic to a separate file and connect to main.py
 import logging
 import json
 import os
@@ -79,17 +82,28 @@ def save_watchlist_update(symbol, price, change_percent):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Set up logging to both file and console 
+    # Set up logging with rotation
+    log_dir = os.path.join(BASE_DIR, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Configure logging with rotation
+    from logging.handlers import RotatingFileHandler
+    
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,  # Change from DEBUG to INFO to reduce verbosity
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
-            logging.FileHandler(os.path.join(BASE_DIR, "app.log")),
+            # RotatingFileHandler(
+            #     os.path.join(log_dir, "app.log"),
+            #     maxBytes=1024*1024,  # 1MB file size
+            #     backupCount=3        # Keep 3 backup files
+            # ),
             logging.StreamHandler(sys.stdout)
         ]
     )
+    
     logger = logging.getLogger(__name__)
-    logger.debug("Starting lifespan event")
+    logger.info("Starting application")
 
     # Initialize SQLite database
     conn = sqlite3.connect(DB_PATH)
@@ -99,19 +113,20 @@ async def lifespan(app: FastAPI):
                       algo_id TEXT, availableBalance REAL, cashBalance REAL, realizedPL REAL, unrealizedPL REAL, 
                       marginUsed REAL, status TEXT, brokerConnected INTEGER, brokerApiKey TEXT, brokerSecret TEXT)''')
     conn.commit()
-    logger.debug("Table subaccounts created or already exists")
+    logger.info("Database initialized")
     conn.close()
 
     if not os.path.exists(WATCHLIST_PATH):
         with open(WATCHLIST_PATH, "w") as f:
-            f.write("")
-        logger.debug(f"Created empty {WATCHLIST_PATH}")
+            json.dump({}, f)
+        logger.info(f"Created empty watchlist file")
 
-    # Start WebSocket client (Runs on startup) 
+    # Start WebSocket client (if needed)
     start_websocket()
     
-    yield # Application runs here
-    logger.debug("Shutting down lifespan event") # From here, cleanup code : Runs on application shutdown
+    yield
+    
+    logger.info("Shutting down application")
     global running
     running = False
 

@@ -35,3 +35,21 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Ignore log files
+*.log
+logs/
+websocket.log
+app.log
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# Database files
+*.db
+*.sqlite3
