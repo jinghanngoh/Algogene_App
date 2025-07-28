@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   Dimensions,
   StyleSheet,
-  Image
+  Image,
+  ActivityIndicator
 } from "react-native";
 import WatchlistModal from "../components/WatchlistModal";
 import NewsModal from "../components/NewsModal";
-import { stubFalse } from "lodash";
-import { FeTurbulence } from "react-native-svg";
+import bitcoin from '../../assets/img/bitcoin.png';
+import ethereum from '../../assets/img/ethereum.png';
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -36,6 +37,17 @@ const staticWatchlistData = [
     change: "-0.10%"
   }
 ];
+
+const getCryptoIcon = (symbol) => {
+  switch (symbol) {
+    case 'BTCUSD':
+      return bitcoin;
+    case 'ETHUSD':
+      return ethereum;
+    default:
+      return null;
+  }
+};
 
 const Home = () => {
   const [activeNewsIndex, setActiveNewsIndex] = useState(0);
@@ -121,23 +133,44 @@ const Home = () => {
     setActiveNewsIndex(index);
   };
 
-  // const getWatchlistItems = () => {
-  //   return watchlistItems.filter((item) => selectedItems.includes(item.symbol));
-  // };
 
   const getWatchlistItems = () => {
     if (watchlistItems.length === 0) return [];
     
-    // For debugging
-    console.log("All watchlist items:", watchlistItems);
-    console.log("Selected items:", selectedItems);
-    
     const filtered = watchlistItems.filter((item) => 
       selectedItems.includes(item.symbol)
-    );
+    ).map(item => ({
+      ...item,
+      localIcon: getCryptoIcon(item.symbol)
+    }));
     
     console.log("Filtered items:", filtered);
     return filtered;
+  };
+
+  const renderWatchlistItem = (item) => {
+    return (
+      <TouchableOpacity key={item.symbol} style={styles.watchlistItem}>
+        <View style={styles.watchlistItemContent}>
+          <Image source={getCryptoIcon(item.symbol)} style={styles.watchlistIcon} />
+          <View style={styles.watchlistItemText}>
+            <Text style={styles.watchlistItemName}>{item.name}</Text>
+            <Text style={styles.watchlistItemSymbol}>{item.symbol}</Text>
+          </View>
+        </View>
+        <View style={styles.watchlistItemRight}>
+          <Text style={styles.watchlistItemPrice}>{item.price}</Text>
+          <Text
+            style={[
+              styles.watchlistItemChange,
+              { color: item.change.startsWith("+") ? "#4CAF50" : "#F44336" },
+            ]}
+          >
+            {item.change}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -186,46 +219,21 @@ const Home = () => {
       </View>
 
       <View style={styles.sectionDivider} />
-
       <View style={styles.watchlistHeader}>
         <Text style={styles.watchListText}>My Watchlist</Text>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
           <Text style={styles.addButton}>+</Text>
         </TouchableOpacity>
       </View>
-
-      {isLoading ? (
-        <Text style={styles.noDataText}>Loading watchlist...</Text>
-      ) : getWatchlistItems().length === 0 ? (
-        <Text style={styles.noDataText}>No watchlist data available</Text>
-      ) : (
-        getWatchlistItems().map((item) => (
-          <TouchableOpacity
-            key={item.symbol}
-            style={styles.watchlistItem}
-            onPress={() => console.log(`${item.name} pressed`)}
-          >
-            <View style={styles.watchlistItemContent}>
-              <Text style={styles.iconPlaceholder}>{item.symbol.slice(0, 3)}</Text>
-              <View style={styles.watchlistItemText}>
-                <Text style={styles.indexName}>{item.name}</Text>
-                <Text style={styles.indexSymbol}>{item.symbol}</Text>
-              </View>
-            </View>
-            <View>
-              <Text style={styles.indexPrice}>{item.price}</Text>
-              <Text
-                style={[
-                  styles.indexChange,
-                  item.change.startsWith("+") ? styles.positiveChange : styles.negativeChange,
-                ]}
-              >
-                {item.change}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))
-      )}
+        
+      <View style={styles.watchlistItemsContainer}>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#4682B4" />
+        ) : (
+          getWatchlistItems().map(item => renderWatchlistItem(item))
+        )
+        }
+      </View>
 
       <WatchlistModal
         visible={modalVisible}
@@ -456,6 +464,88 @@ const styles = StyleSheet.create({
       fontWeight: 'bold',
       fontSize: 16,
   },
+  watchlistItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cryptoIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 10,
+    borderRadius: 12,
+  },
+
+
+  watchlistSection: {
+    marginVertical: 15,
+    backgroundColor: 'black',
+    borderRadius: 10,
+    padding: 15,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  editButton: {
+    color: '#4682B4',
+    fontSize: 14,
+  },
+  
+  // Watchlist item styles (matching modal styles)
+  watchlistItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  watchlistItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  watchlistIcon: {
+    width: 36,
+    height: 36,
+    marginRight: 10,
+    borderRadius: 18,
+  },
+  watchlistItemText: {
+    justifyContent: 'space-between',
+  },
+  watchlistItemName: {
+    color: 'white',
+    fontSize: 16,
+  },
+  watchlistItemSymbol: {
+    color: 'gray',
+    fontSize: 12,
+  },
+  watchlistItemRight: {
+    alignItems: 'flex-end',
+  },
+  watchlistItemPrice: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  watchlistItemChange: {
+    fontSize: 14,
+    // Color will be applied dynamically based on value
+  },
+  watchlistItemsContainer: {
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginHorizontal: 15,
+  },
+
 });
 
 export default Home;
