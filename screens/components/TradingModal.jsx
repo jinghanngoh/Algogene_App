@@ -250,15 +250,22 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
       // Get the strategy's algo_id
       const algo_id = 'jjvp5_qrwkyntz_6194';
       const accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; 
-      const userEmail = 'thegohrilla@gmail.com';
+      const userEmail = await AsyncStorage.getItem('c_Email') || 'thegohrilla@gmail.com';
 
       console.log('Initiating subscription with:', { algo_id, accountId, userEmail });
+
+      const sessionId = await AsyncStorage.getItem('sessionId');
+    
+      if (!sessionId) {
+        throw new Error('No valid session ID found. Please log in to the app first.');
+      }
       
       // Call the subscribeToAlgorithm function
       const result = await apiSubscribeToAlgorithm(
         algo_id,
         accountId,
-        userEmail
+        userEmail,
+        sessionId
       );
 
       console.log('Subscription API Full Response TTTTTTT:', JSON.stringify(result, null, 2));

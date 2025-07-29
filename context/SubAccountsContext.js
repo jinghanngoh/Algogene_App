@@ -1,17 +1,17 @@
-// context/SubAccountsContext.js
+// React Context for managing subaccounts in app. Includes default HARDCODED data for now 
+// Also manages state of trading subaccounts across application (Loading, Saving and Updating Subaccount info)
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import API from '../services/api'; // Adjust path to your API service
 
-export const ALGO_ACCOUNT_MAPPINGS = {
-  'h448195gl0_ujbjcsgin_0452': 'GLKPZPXmtwmMP_qrwkyabjj_2370',
+export const ALGO_ACCOUNT_MAPPINGS = { // Maps the hardcoded algoID (LHS) to respective broker account (RHS)
+  'h448195gl0_ujbjcsgin_0452': 'GLKPZPXmtwmMP_qrwkyabjj_2370', // DeepNet (KuCoin)
   'h448195gl0_ujbjcsgin_0451': 'GLKPZPXmtwmMP_qrwkyntz_6195'// SpiderNet (Binance)
 };
 
-export const getCorrectAccountId = (algoId, providedAccountId) => {
+export const getCorrectAccountId = (algoId, providedAccountId) => { // Make sure correct accountID used for that algo
   if (ALGO_ACCOUNT_MAPPINGS[algoId]) {
-    if (!providedAccountId || !providedAccountId.startsWith('GLKPZP')) {
+    if (!providedAccountId || !providedAccountId.startsWith('GLKPZP')) { // If missing or dont start with GLK...
       console.log(`[MAPPING] Using correct account ID for algo ${algoId}`);
       return ALGO_ACCOUNT_MAPPINGS[algoId];
     }
@@ -63,18 +63,14 @@ const DEFAULT_SUB_ACCOUNTS = [
   }
 ];
 
-export const SubAccountsProvider = ({ children }) => {
+export const SubAccountsProvider = ({ children }) => { // Provide subaccount context to child components
   const [subAccounts, setSubAccounts] = useState(DEFAULT_SUB_ACCOUNTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  // console.log('SubAccountsProvider rendering');
-  // Initialize with the default accounts
-  const getCorrectAccountId = (algoId, providedAccountId) => {
-    // If the algorithm is known in our mappings
-    if (ALGO_ACCOUNT_MAPPINGS[algoId]) {
-      // If the provided account ID doesn't match the expected format 
-      // or is missing/incorrect, return the correct one
-      if (!providedAccountId || !providedAccountId.startsWith('GLKPZP')) {
+  
+  const getCorrectAccountId = (algoId, providedAccountId) => { // Initialize with the default accounts
+    if (ALGO_ACCOUNT_MAPPINGS[algoId]) { // If algorithm is known in our mappings
+      if (!providedAccountId || !providedAccountId.startsWith('GLKPZP')) { // If the provided account ID doesn't match the expected format, return correct one (ALSO HARDCODED)
         console.log(`[MAPPING] Using correct account ID for algo ${algoId}`);
         return ALGO_ACCOUNT_MAPPINGS[algoId];
       }
@@ -82,115 +78,76 @@ export const SubAccountsProvider = ({ children }) => {
     return providedAccountId; // Keep the original if no mapping or format looks correct
   };
 
-  // Function to reset AsyncStorage to default accounts
-  const resetToDefaults = async () => {
-    try {
-      // console.log('Resetting subAccounts to defaults');
+  const resetToDefaults = async () => { // Function to reset AsyncStorage to default hardcoded value and save to AsyncStorage. In future, can straight away store to DB
+    try { 
       await AsyncStorage.setItem('subAccounts', JSON.stringify(DEFAULT_SUB_ACCOUNTS));
       setSubAccounts(DEFAULT_SUB_ACCOUNTS);
     } catch (error) {
-      console.error('Error resetting to defaults:', error);
+      console.error('Error in resetToDefaults:', error);
     }
   };
 
   useEffect(() => {
-    const initializeData = async () => {
+    const initializeData = async () => { // Initialize subaccount data when provider mounts, load data from AsyncStorage
       try {
-        console.log('Initializing SubAccountsContext');
-        
-        // For testing: clear AsyncStorage (remove this in production)
-        // await AsyncStorage.removeItem('subAccounts');
-        
-        // Get saved data from AsyncStorage
-        const savedAccounts = await AsyncStorage.getItem('subAccounts');
+        // await AsyncStorage.removeItem('subAccounts'); // For testing: clear AsyncStorage (remove this in production)
+        const savedAccounts = await AsyncStorage.getItem('subAccounts'); // Get saved data from AsyncStorage
         
         if (savedAccounts) {
           const parsedAccounts = JSON.parse(savedAccounts);
-          // console.log('Found saved accounts:', parsedAccounts);
-          
-          // If saved accounts is an empty array, reset to defaults
-          if (Array.isArray(parsedAccounts) && parsedAccounts.length === 0) {
-            // console.log('Empty array found in storage, resetting to defaults');
+          if (Array.isArray(parsedAccounts) && parsedAccounts.length === 0) { // If saved accounts is an empty array, reset to default
             await resetToDefaults();
           } else {
-            // Otherwise use the saved accounts
             setSubAccounts(parsedAccounts);
           }
         } else {
-          // No saved accounts, save defaults
-          // console.log('No saved accounts, initializing with defaults');
-          await resetToDefaults();
+          await resetToDefaults(); // No saved accounts, use defaults
         }
       } catch (error) {
-        console.error('Error in SubAccountsContext initialization:', error);
-        // On error, make sure we still have the default accounts in state
+        console.error('Error in SubAccountsContext initialization:', error); // Make sure still have default accounts
         setSubAccounts(DEFAULT_SUB_ACCOUNTS);
       }
     };
-    
     initializeData();
   }, []);
 
   const fetchSubAccounts = async () => {
     try {
-      // console.log('Fetching subAccounts...');
-      
-      // Try to get from AsyncStorage first
-      const savedAccounts = await AsyncStorage.getItem('subAccounts');
-      
+      const savedAccounts = await AsyncStorage.getItem('subAccounts'); // Get from storage
       if (savedAccounts) {
-        const parsedAccounts = JSON.parse(savedAccounts);
-        // console.log('Loaded subAccounts from AsyncStorage:', parsedAccounts);
+        const parsedAccounts = JSON.parse(savedAccounts); 
         
-        // If empty array in storage but we have defaults in state, use state
-        if (parsedAccounts.length === 0 && subAccounts.length > 0) {
-          // console.log('Empty array in storage but have accounts in state');
+        if (parsedAccounts.length === 0 && subAccounts.length > 0) { // If empty array but have defaults, use defaults
           await AsyncStorage.setItem('subAccounts', JSON.stringify(subAccounts));
           return subAccounts;
         }
         
-        // Update state if different from current
-        if (JSON.stringify(parsedAccounts) !== JSON.stringify(subAccounts)) {
+        if (JSON.stringify(parsedAccounts) !== JSON.stringify(subAccounts)) { // Update if different
           setSubAccounts(parsedAccounts);
         }
-        
         return parsedAccounts;
       }
       
-      // If nothing in storage but we have state, save state to storage
-      if (subAccounts.length > 0) {
-        // console.log('Nothing in storage, saving current state');
+      if (subAccounts.length > 0) { // If nothing in storage but have state, save state
         await AsyncStorage.setItem('subAccounts', JSON.stringify(subAccounts));
         return subAccounts;
       }
       
-      // Last resort: reset to defaults
-      c// onsole.log('No accounts found anywhere, resetting to defaults');
-      await resetToDefaults();
+      await resetToDefaults(); // Reset to default
       return DEFAULT_SUB_ACCOUNTS;
     } catch (error) {
-      console.error('Error fetching subAccounts:', error);
-      // Return current state on error, or defaults if state is empty
+      console.error('Error fetchsubAccounts:', error);
       return subAccounts.length > 0 ? subAccounts : DEFAULT_SUB_ACCOUNTS;
     }
   };
 
-  // Function to save or update accounts in the database
   const saveSubAccounts = async (updatedAccounts) => {
     try {
-      // console.log('Saving subAccounts:', updatedAccounts);
-      
-      // Update state
       setSubAccounts(updatedAccounts);
-      
-      // Save to AsyncStorage
       await AsyncStorage.setItem('subAccounts', JSON.stringify(updatedAccounts));
-      
-      // console.log('Successfully saved subAccounts');
     } catch (err) {
       console.error('Error saving subAccounts:', err);
-      // Still update state even if storage fails
-      setSubAccounts(updatedAccounts);
+      setSubAccounts(updatedAccounts); // Update if fails
     }
   };
 
@@ -221,7 +178,7 @@ export const SubAccountsProvider = ({ children }) => {
         addSubAccount,
         updateSubAccount,
         deleteSubAccount,
-        resetToDefaults, // Export this so components can reset if needed
+        resetToDefaults, 
       }}
     >
       {children}
@@ -233,9 +190,8 @@ export const SubAccountsProvider = ({ children }) => {
 export const useSubAccounts = () => {
   const context = useContext(SubAccountsContext);
   if (context === undefined) {
-    console.error('useSubAccounts must be used within a SubAccountsProvider');
-    // Return a default value to avoid app crashes
-    return { 
+    console.error('useSubAccounts must be used within a SubAccountsProvider, useSubAccounts error');
+    return {  // Return empty values to prevent crash
       subAccounts: [], 
       setSubAccounts: () => {}, 
       fetchSubAccounts: async () => [],
