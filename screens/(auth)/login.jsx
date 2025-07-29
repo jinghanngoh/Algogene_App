@@ -1,3 +1,6 @@
+// Login page where user enters details
+// hCaptcha is partially complete. hCaptcha works when uncomment the code below but then the actual login button got problem (Todo)
+// OAuth Login not done. Ive only called the Google login for both IOS and Android but we cant actually login via Google yet (Todo)
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
@@ -21,11 +24,10 @@ const Login = () => {
   // const captchaRef = useRef(null);
 
   useEffect(() => {
-    console.log('Platform:', Platform.OS);
-    // console.log('Captcha ref initialized:', captchaRef.current);
+    console.log('Platform:', Platform.OS); // OS indicator
   }, []);
 
-  // const handleHumanCheckPress = useCallback(() => {
+  // const handleHumanCheckPress = useCallback(() => { // Handles pressing the hCaptcha 
   //   if (!isHumanVerified && !isCaptchaLoading) {
   //     setIsCaptchaLoading(true);
   //     if (captchaRef.current) {
@@ -82,7 +84,7 @@ const Login = () => {
       const result = await login({
         email,
         password,
-        captchaToken: '', // Empty since no hCaptcha
+        captchaToken: '', // Empty since no hCaptcha (For now)
       });
       console.log('Login result:', result);
       if (result.success) {
@@ -111,7 +113,7 @@ const Login = () => {
     }
   };
 
-  // const onMessage = (event) => {
+  // const onMessage = (event) => { // Results of the hCaptcha
   //   const message = event.nativeEvent.data;
   //   console.log('Received hCaptcha message (raw):', JSON.stringify(message));
   //   console.log('Current state - isCaptchaLoading:', isCaptchaLoading, 'isHumanVerified:', isHumanVerified);
@@ -262,28 +264,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#121212',
         padding: 20,
     },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: 'white',
-        marginVertical: 10,
-        textAlign: 'center',
-    },
-    imageRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginVertical: 20,
-    },
-    smallLogo: {
-        width: 40,
-        height: 40,
-        marginRight: 10,
-    },
-    loginImage: {
-        width: 10,
-        height: 10,
-    },
     loginContainer: {
         alignItems: 'center'
     },
@@ -294,17 +274,6 @@ const styles = StyleSheet.create({
         color: 'white',
         marginBottom: 8,
         fontSize: 16,
-    },
-    checkboxAndButtonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',  
-        alignItems: 'center',             
-        marginTop: 15,                    
-        gap: 10, 
-    },
-    humanCheckContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
     },
     loginButton: {
         backgroundColor: '#87cefa',
@@ -353,7 +322,7 @@ const styles = StyleSheet.create({
     },
     loginButtonDisabled: {
         opacity: 0.6,
-        backgroundColor: '#87cefa', // Same color but faded
+        backgroundColor: '#87cefa', 
     },
     checkbox: {
         width: 20,
@@ -405,7 +374,7 @@ const styles = StyleSheet.create({
     dividerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 10, // Reduced space
+        marginVertical: 10, 
     },
     dividerLine: {
         flex: 1,
@@ -431,16 +400,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     googleButton: {
-        backgroundColor: '#DB4437', // Google Red
+        backgroundColor: '#DB4437',
     },
     facebookButton: {
-        backgroundColor: '#4267B2', // Facebook Blue
+        backgroundColor: '#4267B2', 
     },
     githubButton: {
-        backgroundColor: '#333333', // GitHub Grey
+        backgroundColor: '#333333', 
     },
     linkedinButton: {
-        backgroundColor: '#0077B5', // LinkedIn Blue
+        backgroundColor: '#0077B5', 
     },
     socialIcon: {
         width: 20,
@@ -452,10 +421,10 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     footerContainer: {
-        alignItems: 'flex-start', // Left-aligned
+        alignItems: 'flex-start',
     },
     footerLink: {
-        color: '#999', // Grey color
+        color: '#999', 
         marginBottom: 8,
         fontSize: 14,
     },

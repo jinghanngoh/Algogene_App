@@ -1,4 +1,4 @@
-// Template: rnfes
+// The first page you see when you load the app
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import { useRouter } from 'expo-router'
 import Logo from '../../assets/img/logo.png';
@@ -7,14 +7,11 @@ const Home = () => {
     const router = useRouter();
 
     const handleGetStarted = () => {
-        // You can add any pre-navigation logic here
-        // For example: analytics, validation checks, etc.
         router.push('/login');
     };
 
     return (
         <View style={styles.container}>
-            {/* Image positioned at 20% from the top */}
             <View style={styles.imageContainer}>
                 <Image source={Logo} style={styles.img} />
             </View>
@@ -45,11 +42,6 @@ const styles = StyleSheet.create({
     },
     img: {
         marginVertical: 20,
-    },
-    title: {
-        fontWeight: 'bold',
-        fontSize: 18,
-        color: 'white',
     },
     button: {
         backgroundColor: '#87cefa',

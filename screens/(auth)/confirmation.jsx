@@ -1,3 +1,4 @@
+// Confirmation screen for when user changes password, create account etc
 import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import logo_s from '../../assets/img/logo_s.png';

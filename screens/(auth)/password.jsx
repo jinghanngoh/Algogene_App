@@ -1,6 +1,7 @@
+// For users to reset or change their password. They get a randomly generated password through a confirmation email
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react'; // Add this import for useState
+import { useState } from 'react'; 
 import logo_s from '../../assets/img/logo_s.png';
 import captcha_icon from '../../assets/img/captcha_icon.png';
 
@@ -13,7 +14,7 @@ const PasswordReset = () => {
     };
 
     const handleNavigateToRegister = () => {
-        router.push('/register'); // Add this navigation handler
+        router.push('/register'); 
     };
 
     const handleResetPassword = () => {
@@ -26,16 +27,13 @@ const PasswordReset = () => {
 
     return (
         <View style={styles.container}>
-            {/* Logo at top left */}
             <Image source={logo_s} style={styles.logo} />
             
-            {/* Left-aligned title and subtitle */}
             <Text style={styles.title}>Lost your Password?</Text>
             <Text style={styles.subtitle}>
                 Please provide below info to get a temporary password from your registered email.
             </Text>
             
-            {/* Email/UserID Input Field */}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
@@ -44,8 +42,7 @@ const PasswordReset = () => {
                 />
             </View>
             
-            {/* Human Checkbox and Captcha */}
-            <View style={styles.humanContainer}>
+            <View style={styles.humanContainer}> 
                 <Pressable 
                     style={[styles.checkboxContainer]}
                     onPress={toggleHumanCheck}
@@ -62,7 +59,6 @@ const PasswordReset = () => {
                 />
             </View>
             
-            {/* Centered Reset Button */}
             <TouchableOpacity 
                 style={styles.resetButton} 
                 onPress={handleResetPassword}
@@ -70,7 +66,6 @@ const PasswordReset = () => {
                 <Text style={styles.resetButtonText}>Reset password</Text>
             </TouchableOpacity>
             
-            {/* Footer Links below the button */}
             <View style={styles.footerContainer}>
                 <TouchableOpacity onPress={handleBackToLogin}>
                     <Text style={styles.footerLink}>Back to Login</Text>
@@ -148,7 +143,6 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
         borderRightWidth: 2,
         backgroundColor: 'green',
-        // transform: [{ rotate: '45deg' }], // Rotate to form a tick mark
     },
     checkmark: {
         width: 10,

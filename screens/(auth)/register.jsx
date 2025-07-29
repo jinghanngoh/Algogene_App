@@ -1,3 +1,4 @@
+// For new users to register and create a new account. Havent really tested this page and most of (auth)
 import React, {useState, useRef, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -22,7 +23,6 @@ const Register = () => {
     const [error, setError] = useState('');
 
     const handleBackToLogin = () => {
-        // router.back();
         router.push('/login');
     };
 
@@ -180,13 +180,6 @@ const Register = () => {
     </View>
   );
 };
-            
-            {/* <TouchableOpacity onPress={handleBackToLogin}>
-                <Text style={styles.footerLink}>Back to Login</Text>
-            </TouchableOpacity>
-        </View>
-    );
-}; */}
 
 const styles = StyleSheet.create({
     container: {
@@ -324,10 +317,9 @@ const styles = StyleSheet.create({
     termsCheckmark: {
         width: 12,
         height: 12,
-        backgroundColor: '#121212', // Dark checkmark for white box
+        backgroundColor: '#121212', 
     },
 
-    // Human Checkbox - Black outline
     humanCheckbox: {
         width: 20,
         height: 20,
@@ -337,26 +329,24 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 4,
-        backgroundColor: 'white', // White background for black outline
+        backgroundColor: 'white', 
     },
     humanCheckedBox: {
-        backgroundColor: 'black', // Black background when checked
+        backgroundColor: 'black', 
     },
     humanCheckmark: {
         width: 12,
         height: 12,
-        backgroundColor: 'white', // White checkmark for black box
+        backgroundColor: 'white', 
     },
-
-    // Adjusted checkbox container spacing
     checkboxGroup: {
-        marginVertical: 1, // Reduced from 20 to bring checkboxes closer
+        marginVertical: 1, 
     },
     checkboxContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 15,
-        marginTop: 5, // Added to reduce space from name input
+        marginTop: 5, 
     },
 
     
