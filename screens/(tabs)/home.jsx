@@ -1,3 +1,5 @@
+// 1st Tab. Home page where we have the Latest News (swipeable and pressable) along with Watchlist for latest prices
+
 import React, { useRef, useState, useEffect } from "react";
 import {
   ScrollView,
@@ -16,14 +18,13 @@ import ethereum from '../../assets/img/ethereum.png';
 
 const { width: screenWidth } = Dimensions.get("window");
 
-const newsItems = [
+const newsItems = [ // Hardcoded news articles for now. Need to connect to DB 
   { id: 1, title: "NEWS 1", heading: "Trade with ALGOGENE", description: "Provide full support for quantitative/algorithmic trading" },
   { id: 2, title: "NEWS 2", heading: "Market Trends", description: "Bullish patterns emerging in crypto markets this quarter" },
   { id: 3, title: "NEWS 3", heading: "Regulation Update", description: "New crypto market regulations effective next month" },
 ];
 
-// Static fallback data for BTCUSD
-const staticWatchlistData = [
+const staticWatchlistData = [ // Temp data for when we aren't connecting the websocket (Trigger in useStaticData below)
   {
     name: "BTC / USD",
     symbol: "BTCUSD",
@@ -38,7 +39,7 @@ const staticWatchlistData = [
   }
 ];
 
-const getCryptoIcon = (symbol) => {
+const getCryptoIcon = (symbol) => { // Hardcoded getting the icon for now
   switch (symbol) {
     case 'BTCUSD':
       return bitcoin;
@@ -54,15 +55,14 @@ const Home = () => {
   const [selectedNews, setSelectedNews] = useState(null);
   const [newsModalVisible, setNewsModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedItems, setSelectedItems] = useState(["BTCUSD", "ETHUSD"]);
+  const [selectedItems, setSelectedItems] = useState(["BTCUSD", "ETHUSD"]); // We only have BTCUSD and ETHUSD for now 
   const [watchlistItems, setWatchlistItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef(null);
 
   const useStaticData = true; // TOGGLE TO FALSE WHEN BACKEND IS RUNNING // SET TO TRUE FOR DEVELOPMENT WITHOUT BACKEND SERVERS
 
-  // Fetch watchlist data from FastAPI
-  useEffect(() => {
+  useEffect(() => {   // Fetch watchlist data from FastAPI and set the values
     const fetchWatchlist = async () => {
       if (useStaticData) {
         setWatchlistItems(staticWatchlistData);
@@ -72,7 +72,7 @@ const Home = () => {
 
       setIsLoading(true);
       try {
-        const response = await fetch("http://10.89.8.201:8000/watchlist"); // My IP address 
+        const response = await fetch("http://10.89.8.201:8000/watchlist"); // My IP address (TO BE CHANGED)
         const data = await response.json();
         setWatchlistItems(data.length > 0 ? data : staticWatchlistData);
       } catch (error) {

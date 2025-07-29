@@ -1,3 +1,5 @@
+// 4th tab. Community tab is kinda like the Twitter for the app where users can make posts and share news/information
+// Currently, no REST API is involved with Community so everything is purely hardcoded here
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native';
 import { MaterialIcons, Feather, FontAwesome } from '@expo/vector-icons';
@@ -10,7 +12,7 @@ const Community = () => {
   const [selectedPost, setSelectedPost] = useState(null);
   const [postModalVisible, setPostModalVisible] = useState(false);
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
-  const [posts, setPosts] = useState([
+  const [posts, setPosts] = useState([ // Hardcoded Sample posts for now (As no link, its all temporary, need to be saved to DB)
     { 
       id: 1,
       username: 'TraderPro',
@@ -85,8 +87,7 @@ const Community = () => {
     setSelectedPost(post);
     setPostModalVisible(true);
     
-    // Increment views
-    setPosts(posts.map(p => 
+    setPosts(posts.map(p =>  // Views + 1 each time
       p.id === post.id ? {...p, views: p.views + 1} : p
     ));
   };
@@ -115,7 +116,6 @@ const Community = () => {
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <MaterialIcons name="search" size={24} color="white" style={styles.searchIcon} />
         <TextInput
@@ -127,7 +127,6 @@ const Community = () => {
         />
       </View>
 
-      {/* Posts */}
       <ScrollView 
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContentContainer}
@@ -138,7 +137,6 @@ const Community = () => {
             style={styles.postBox}
             onPress={() => handlePostPress(post)}
           >
-            {/* User info section */}
             <View style={styles.userContainer}>
               <Image
                 source={require('../../assets/img/placeholder.png')}
@@ -150,11 +148,9 @@ const Community = () => {
               </View>
             </View>
 
-            {/* Post content */}
             <Text style={styles.postTitle}>{post.title}</Text>
             <Text style={styles.postContent}>{post.content}</Text>
 
-            {/* Comment and stats row */}
             <View style={styles.bottomRow}>
               <TextInput
                 style={styles.commentInput}
@@ -177,7 +173,6 @@ const Community = () => {
         ))}
       </ScrollView>
 
-      {/* Add Post Button */}
       <TouchableOpacity 
         style={styles.addButton}
         onPress={() => setCreatePostModalVisible(true)}
@@ -185,7 +180,6 @@ const Community = () => {
         <Image source={newpost} style={styles.addButtonIcon} />
       </TouchableOpacity>
 
-      {/* Post View Modal */}
       <ReadPostModal
         visible={postModalVisible}
         post={selectedPost}
@@ -193,7 +187,6 @@ const Community = () => {
         onLike={handleLike}
       />
 
-      {/* Create Post Modal */}
       <CreatePostModal
         visible={createPostModalVisible}
         onClose={() => setCreatePostModalVisible(false)}
