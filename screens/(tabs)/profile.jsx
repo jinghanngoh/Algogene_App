@@ -1,3 +1,4 @@
+// Entirely hardcoded, didnt link this to anything. Its an independent file
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
@@ -5,7 +6,6 @@ import Placeholder from '../../assets/img/placeholder.png';
 
 const Profile = () => {
     const router = useRouter();
-
     const menuItems = [
         { 
             id: 1, 

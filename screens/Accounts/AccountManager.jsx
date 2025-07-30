@@ -474,7 +474,7 @@ return (
         </TouchableOpacity>
 
         <View style={styles.firstbox}>
-          <Text style={styles.sectionTitle}>Portfolio Overview</Text>
+          <Text style={styles.sectionTitle}>Accounts Overview</Text>
           {loading && <ActivityIndicator size="small" color="#4FC3F7" />}
           {error && <Text style={styles.errorText}>{error}</Text>}
           <View style={styles.detailsRow}>

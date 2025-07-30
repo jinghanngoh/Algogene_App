@@ -1,5 +1,4 @@
 // 1st Tab. Home page where we have the Latest News (swipeable and pressable) along with Watchlist for latest prices
-
 import React, { useRef, useState, useEffect } from "react";
 import {
   ScrollView,
@@ -9,7 +8,8 @@ import {
   Dimensions,
   StyleSheet,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from "react-native";
 import WatchlistModal from "../components/WatchlistModal";
 import NewsModal from "../components/NewsModal";
@@ -50,6 +50,23 @@ const getCryptoIcon = (symbol) => { // Hardcoded getting the icon for now
   }
 };
 
+const getApiBaseUrl = () => { // Define API_BASE_URL based on platform and environment
+  if (__DEV__) {
+    // Use appropriate localhost address based on platform
+    if (Platform.OS === 'android') { // Special IP for Android emulator
+      return 'http://10.0.2.2:8000'; 
+    } else if (Platform.OS === 'ios') { // For iOS simulator
+      return 'http://localhost:8000'; 
+    } else { // Your IP for web or physical device (may need to change this, I havent tested on a device that isnt my laptop or a diff wifi)
+      return 'http://10.89.8.201:8000'; 
+    }
+  } else { // Production URL
+    return 'https://api.algogene.com';
+  }
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
 const Home = () => {
   const [activeNewsIndex, setActiveNewsIndex] = useState(0);
   const [selectedNews, setSelectedNews] = useState(null);
@@ -72,7 +89,7 @@ const Home = () => {
 
       setIsLoading(true);
       try {
-        const response = await fetch("http://10.89.8.201:8000/watchlist"); // My IP address (TO BE CHANGED)
+        const response = await fetch(`${API_BASE_URL}/watchlist`);
         const data = await response.json();
         setWatchlistItems(data.length > 0 ? data : staticWatchlistData);
       } catch (error) {
@@ -88,13 +105,11 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
-
-
   useEffect(() => {
     const updateWatchlist = async () => {
       if (useStaticData) return;
       try {
-        await fetch("http://10.89.8.201:8000/watchlist/update", {
+        await fetch(`${API_BASE_URL}/watchlist/update`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbols: selectedItems })
@@ -109,7 +124,7 @@ const Home = () => {
   useEffect(() => {
     if (useStaticData) return;
   
-    const ws = new WebSocket("ws://10.89.8.201:8000/ws/watchlist");
+    const ws = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/watchlist`);
     ws.onopen = () => console.log("WebSocket connected for watchlist");
     ws.onmessage = (event) => {
       try {

@@ -1,3 +1,4 @@
+// BUG TO BE FIXED: if we visit marketplace from CreateSubAccount, SUBSCRIBE button appears (Fine) but when we exit the SubAccountCreationModal and visit Marketplace, the SUBSCRIBE button still there (Shouldnt exist)
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
@@ -11,10 +12,8 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   const { subscribedAlgorithm, subscribeToAlgorithm: contextSubscribeToAlgorithm } = useSubscription();
   const [generatedChartData, setGeneratedChartData] = useState(null);
   const [performanceStats, setPerformanceStats] = useState(null);
-  // Rename state variable for monthly returns
   const [monthlyReturns, setMonthlyReturns] = useState(null);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
-  // Rename loading state for monthly returns
   const [loadingMonthlyReturns, setLoadingMonthlyReturns] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,59 +21,47 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   const navigation = useNavigation();
 
   useEffect(() => {
-    // console.log('Strategy:', strategy);
     if (strategy?.algo_id) {
       fetchPerformanceStats(strategy.algo_id);
-      fetchMonthlyReturnsData(strategy.algo_id); // Changed from fetchDailyReturnsData
+      fetchMonthlyReturnsData(strategy.algo_id);
       
-      // If the strategy already has chart data (passed from Marketplace), we don't need to regenerate it
-      if (!strategy.chartData || !strategy.chartData.data) {
-        // We'll need to generate chart data if it wasn't provided
+      if (!strategy.chartData || !strategy.chartData.data) { // If already have chart from Marketplace, reuse it. Else generate it
         generateChartData();
       }
     }
   }, [strategy]);
 
-  // Add this function to generate chart data similar to Marketplace:
   const generateChartData = () => {
     if (!performanceStats?.setting?.period_start || !performanceStats?.performance) return;
-    
     const startYear = parseInt(performanceStats.setting.period_start.substring(0, 4));
     const currentYear = new Date().getFullYear();
-    
     const yearSpan = currentYear - startYear;
-    
-    // Determine the interval based on the year span
+
     let yearInterval;
     if (yearSpan <= 3) {
-      yearInterval = 1; // Show every year if span is small
+      yearInterval = 1; 
     } else if (yearSpan <= 6) {
-      yearInterval = 2; // Show every other year for medium spans
+      yearInterval = 2; 
     } else {
-      yearInterval = Math.ceil(yearSpan / 4); // Show 4-5 labels for longer spans
+      yearInterval = Math.ceil(yearSpan / 4); 
     }
 
-    // Generate year labels with the calculated interval
     const yearLabels = [];
     for (let year = startYear; year <= currentYear; year += yearInterval) {
       yearLabels.push(year.toString());
     }
-    // Make sure the end year is included
-    if (yearLabels[yearLabels.length - 1] !== currentYear.toString()) {
+    if (yearLabels[yearLabels.length - 1] !== currentYear.toString()) { // Include end year
       yearLabels.push(currentYear.toString());
     }
     
-    // Generate more detailed data points for the line
     const dataPoints = [];
     const totalReturn = performanceStats.performance.MeanAnnualReturn * yearSpan * 100 || 0;
     const volatility = performanceStats.performance.Volatility * 100 || 5; // Use actual volatility or default to 5%
     
-    // Number of points per year (more points = more detailed graph)
     const pointsPerYear = 12; // Monthly data points
     const totalPoints = yearSpan * pointsPerYear;
     
     for (let i = 0; i <= totalPoints; i++) {
-      // Progress as a percentage of total time
       const progress = i / totalPoints;
       
       // Base cumulative return trend following a slightly non-linear curve
@@ -142,35 +129,20 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     });
   };
 
-  const fetchMonthlyReturnsData = async (algoId) => {
+  const fetchMonthlyReturnsData = async (algoId) => { // Our API 3.3) gets daily return. We use the data from that to generate monthly returns for the Last 5 monthly returns (Better to do monthly returns as not all algos trade daily)
     setLoadingMonthlyReturns(true);
     setErrorMessage(null);
     try {
-      console.log(`[TradingModal] Fetching monthly returns for algo_id: ${algoId}`);
-      
-      // Use the API function that processes monthly returns
       const monthlyData = await fetchAlgoMonthlyReturns(algoId);
       
-      console.log('[TradingModal] Monthly data received:', 
-        monthlyData ? `${monthlyData.length} items` : 'none');
-      
-      // Check if we have data
-      if (monthlyData && monthlyData.length > 0) {
-        console.log(`[TradingModal] Processing ${monthlyData.length} monthly returns`);
-        
-        // Take the most recent 5 months
-        const recentMonthlyReturns = monthlyData.slice(0, 5).map(item => ({
+      if (monthlyData && monthlyData.length > 0) { // Check if we have the monthly returns
+        const recentMonthlyReturns = monthlyData.slice(0, 5).map(item => ({ // Take last 5 months
           date: item.date,
           return: item.mr * 100, // Convert decimal to percentage
           cumulativeReturn: item.cr * 100 // Convert decimal to percentage
         }));
-        
-        console.log('[TradingModal] Processed monthly returns:', 
-          JSON.stringify(recentMonthlyReturns).substring(0, 200));
-        
         setMonthlyReturns(recentMonthlyReturns);
-      } else {
-        console.log('[TradingModal] No monthly data received');
+      } else { // No monthly data retrieved (Can be the case for algos < 5 months so we fill in with NA)
         setMonthlyReturns([]);
       }
     } catch (error) {
@@ -183,7 +155,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
   };
 
   const generateFallbackMonthlyReturns = () => {
-    // Use actual current date rather than a fixed date to ensure we get the latest 5 months
     const currentDate = new Date();
     const fallbackMonthlyReturns = [];
     
@@ -217,9 +188,8 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
         cumulativeReturn: cumulativeReturn
       });
     }
-    
-    // Reverse to show most recent month first
-    setMonthlyReturns(fallbackMonthlyReturns.reverse());
+
+    setMonthlyReturns(fallbackMonthlyReturns.reverse()); // Reverse to show most recent month first
   };
 
   const fetchPerformanceStats = async (algoId) => {
@@ -227,7 +197,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     setErrorMessage(null);
     try {
       const response = await fetchAlgoPerformance(algoId);
-      // console.log('Fetched performanceStats:', response);
       setPerformanceStats(response);
     } catch (error) {
       console.error('Error fetching performance data:', error);
@@ -247,14 +216,14 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
     setError(null);
     
     try {
-      // Get the strategy's algo_id
-      const algo_id = 'jjvp5_qrwkyntz_6194';
-      const accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; 
-      const userEmail = await AsyncStorage.getItem('c_Email') || 'thegohrilla@gmail.com';
+      const algo_id = 'jjvp5_qrwkyntz_6194'; // According to the REST API Docs, we use algo_id 'jjvp5_qrwkyntz_6194' for testing purpose. Remove hardcode when fixed
+      const accountId = 'GLKPZPXmtwmMP_qrwkyntz_6195'; // Same here, todo
+      const userEmail = await AsyncStorage.getItem('c_Email');
 
       console.log('Initiating subscription with:', { algo_id, accountId, userEmail });
 
       const sessionId = await AsyncStorage.getItem('sessionId');
+      console.log("SESSSSSS", sessionId);
     
       if (!sessionId) {
         throw new Error('No valid session ID found. Please log in to the app first.');
@@ -690,7 +659,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
 
         {/* Action Buttons - Modified as per request */}
         <View style={styles.buttonContainer}>
-          {/* Only show SUBSCRIBE button when accessed from SubAccountCreationModal */}
           {isSelectingForSubAccount && (
             <TouchableOpacity
               style={styles.selectButton}
@@ -704,7 +672,6 @@ const TradingModal = ({ visible, onClose, strategy, isSelectingForSubAccount = f
           {/* <TouchableOpacity onPress={() => testPaymentStatus('210737526')} style={styles.testButton}>
             <Text>Test Payment Status</Text>
           </TouchableOpacity> */}
-
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={loading}>
             <Text style={styles.closeButtonText}>CLOSE</Text>

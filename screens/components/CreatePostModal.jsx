@@ -24,7 +24,6 @@ const CreatePostModal = ({ visible, onClose, onPost }) => {
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>
             <Feather name="x" size={24} color="white" />
@@ -38,7 +37,6 @@ const CreatePostModal = ({ visible, onClose, onPost }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Post content */}
         <View style={styles.postContainer}>
           <View style={styles.userContainer}>
             <Ionicons name="person-circle-outline" size={40} color="#555" />
@@ -64,7 +62,6 @@ const CreatePostModal = ({ visible, onClose, onPost }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Reply settings */}
         <TouchableOpacity style={styles.replySettings}>
           <MaterialIcons name="people-outline" size={20} color="#1DA1F2" />
           <Text style={styles.replySettingsText}>{replySetting} can reply</Text>
@@ -85,6 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    marginTop: 40
   },
   postButton: {
     backgroundColor: '#1DA1F2',

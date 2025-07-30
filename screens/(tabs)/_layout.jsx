@@ -40,10 +40,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="portfolio"
+        name="accounts"
         options={{
-          title: 'Portfolio',
-          tabBarLabel: 'Portfolio',
+          title: 'Accounts',
+          tabBarLabel: 'Accounts',
           tabBarIcon: ({ color }) => <Ionicons name="pie-chart" size={28} color={color} />,
         }}
       />

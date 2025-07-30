@@ -509,25 +509,25 @@ export const checkPaymentStatus = async (ticketId, email) => {
 // FOR PROCESSING DAILY RETURNS TO GENERATE MONTHLY RETURNS FOR THE GRAPH: 
 export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
   try {
-    console.log(`[fetchAlgoMonthlyReturns] Starting for algo_id: ${algoId}`);
+    // console.log(`[fetchAlgoMonthlyReturns] Starting for algo_id: ${algoId}`);
     
     // Use the existing function to get daily returns
     const dailyReturns = await fetchAlgoDailyReturns(algoId, '', true, retries);
     
-    console.log(`[fetchAlgoMonthlyReturns] Daily returns received:`, 
-      dailyReturns ? `${dailyReturns.length} items` : 'none');
+    // console.log(`[fetchAlgoMonthlyReturns] Daily returns received:`, 
+      // dailyReturns ? `${dailyReturns.length} items` : 'none');
     
     if (!dailyReturns || !Array.isArray(dailyReturns) || dailyReturns.length === 0) {
-      console.log('[fetchAlgoMonthlyReturns] No daily returns data available');
+      // console.log('[fetchAlgoMonthlyReturns] No daily returns data available');
       return generateCurrentMonthData();
     }
     
     // Log some sample data to check format
-    console.log('[fetchAlgoMonthlyReturns] Sample daily returns:', 
-      dailyReturns.slice(0, 3).map(item => ({
-        date: item.t,
-        cr: item.cr
-      })));
+    // console.log('[fetchAlgoMonthlyReturns] Sample daily returns:', 
+      // dailyReturns.slice(0, 3).map(item => ({
+      //   date: item.t,
+      //   cr: item.cr
+      // })));
     
     // Group returns by month
     const monthlyReturnsMap = new Map();
@@ -535,21 +535,21 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
     // Sort returns by date
     dailyReturns.sort((a, b) => new Date(a.t) - new Date(b.t));
     
-    console.log('[fetchAlgoMonthlyReturns] Date range:', 
-      dailyReturns.length > 0 ? 
-        `${dailyReturns[0].t} to ${dailyReturns[dailyReturns.length-1].t}` : 
-        'No date range');
+    // console.log('[fetchAlgoMonthlyReturns] Date range:', 
+    //   dailyReturns.length > 0 ? 
+    //     `${dailyReturns[0].t} to ${dailyReturns[dailyReturns.length-1].t}` : 
+    //     'No date range');
     
     // Group by month
     dailyReturns.forEach(item => {
       if (!item.t) {
-        console.log('[fetchAlgoMonthlyReturns] Skipping item without date:', item);
+        // console.log('[fetchAlgoMonthlyReturns] Skipping item without date:', item);
         return;
       }
       
       const date = new Date(item.t);
       if (isNaN(date.getTime())) {
-        console.log('[fetchAlgoMonthlyReturns] Skipping item with invalid date:', item.t);
+        // console.log('[fetchAlgoMonthlyReturns] Skipping item with invalid date:', item.t);
         return;
       }
       
@@ -590,8 +590,8 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
       }
     });
     
-    console.log('[fetchAlgoMonthlyReturns] Months found:', 
-      Array.from(monthlyReturnsMap.keys()).join(', '));
+    // console.log('[fetchAlgoMonthlyReturns] Months found:', 
+    //   Array.from(monthlyReturnsMap.keys()).join(', '));
     
     // Process the monthly data
     const monthlyReturns = Array.from(monthlyReturnsMap.values())
@@ -615,8 +615,8 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
           last_day: monthData.lastDay.date
         };
         
-        console.log(`[fetchAlgoMonthlyReturns] Processed month: ${formattedMonth.date}, ` +
-          `mr: ${formattedMonth.mr.toFixed(4)}, cr: ${formattedMonth.cr.toFixed(4)}`);
+        // console.log(`[fetchAlgoMonthlyReturns] Processed month: ${formattedMonth.date}, ` +
+        //   `mr: ${formattedMonth.mr.toFixed(4)}, cr: ${formattedMonth.cr.toFixed(4)}`);
         
         return formattedMonth;
       })
@@ -625,7 +625,7 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
         return b.t.localeCompare(a.t);
       });
     
-    console.log(`[fetchAlgoMonthlyReturns] Final monthly returns: ${monthlyReturns.length} items`);
+    // console.log(`[fetchAlgoMonthlyReturns] Final monthly returns: ${monthlyReturns.length} items`);
     
     // If we have old data but not current data, add current months
     if (monthlyReturns.length > 0) {
@@ -638,7 +638,7 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
       if (lastDataDate.getFullYear() < currentDate.getFullYear() || 
           (lastDataDate.getFullYear() === currentDate.getFullYear() && 
            lastDataDate.getMonth() < currentDate.getMonth())) {
-        console.log('[fetchAlgoMonthlyReturns] Adding current month data');
+        // console.log('[fetchAlgoMonthlyReturns] Adding current month data');
         const currentMonthData = generateCurrentMonthData();
         
         // Add current month data at the beginning (it's already sorted newest first)
@@ -648,7 +648,7 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
     
     // If we have no data or insufficient data, ensure we have 5 months
     if (monthlyReturns.length < 5) {
-      console.log('[fetchAlgoMonthlyReturns] Adding more recent months to reach 5');
+      // console.log('[fetchAlgoMonthlyReturns] Adding more recent months to reach 5');
       const currentMonthData = generateCurrentMonthData();
       
       // Combine and keep only the 5 most recent months

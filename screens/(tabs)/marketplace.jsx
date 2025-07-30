@@ -1,3 +1,4 @@
+// 2nd tab. To retrieve all the algorithms from our Algogene DB to display. We load them in batches of 5 to reduce workload, if not loading time would be v slow
 import React , { useState, useEffect, useCallback} from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Dimensions, Image, Modal , Alert, ActivityIndicator} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
@@ -26,14 +27,13 @@ const Marketplace = () => {
   const itemsPerPage = 5; 
   const width = Dimensions.get('window').width;
 
-  const loadAlgorithms = useCallback(
+  const loadAlgorithms = useCallback( // Calls the API call 3.1) to load algorithms 
     debounce(async () => {
       if (isLoading || !hasMore) return;
   
       setIsLoading(true);
       try {
         const sessionId = await AsyncStorage.getItem('sessionId');
-        console.log('Marketplace sessionId:', sessionId);
         const result = await fetchPublicAlgos();
   
         if (!result || !result.data || !Array.isArray(result.data)) {
@@ -44,7 +44,7 @@ const Marketplace = () => {
         const paginatedData = result.data.slice(startIndex, startIndex + itemsPerPage);
   
         const enrichedData = await Promise.all(
-          paginatedData.map(async (algorithm) => {
+          paginatedData.map(async (algorithm) => { // This part is needed for the graph for each algorithm
             try {
               const performanceResponse = await fetchAlgoPerformance(algorithm.algo_id);
               const dailyReturnsResponse = await fetchAlgoDailyReturns(algorithm.algo_id);
@@ -52,38 +52,29 @@ const Marketplace = () => {
               let chartData;
               
               if (dailyReturnsResponse && Array.isArray(dailyReturnsResponse) && dailyReturnsResponse.length > 0) {
-                // Sort the daily returns by date
-                dailyReturnsResponse.sort((a, b) => new Date(a.t) - new Date(b.t));
+                dailyReturnsResponse.sort((a, b) => new Date(a.t) - new Date(b.t)); // Sort the daily returns by date
                 
-                // Determine the start and end dates
-                let startDate, endDate;
+                let startDate, endDate; // Determine the start and end dates, used for the x-axis
                 
-                if (performanceResponse?.setting?.period_start) {
-                  // Use period_start from performance data if available
+                if (performanceResponse?.setting?.period_start) { // Use period_start from performance data if available                 
                   startDate = new Date(performanceResponse.setting.period_start);
-                } else if (dailyReturnsResponse[0]?.t) {
-                  // Use the first date in the daily returns
+                } else if (dailyReturnsResponse[0]?.t) { // Use the first date in the daily returns
                   startDate = new Date(dailyReturnsResponse[0].t);
-                } else {
-                  // Fallback to created_at date
-                  startDate = new Date(algorithm.created_at || '2020-01-01');
+                } else { // Fallback to created_at date
+                  startDate = new Date(algorithm.created_at);
                 }
-                
-                // Use current date as end date
-                endDate = new Date();
-                
-                // Create an array of all dates between start and end
-                const dates = [];
+                               
+                endDate = new Date(); // Use current date as end date
+                               
+                const dates = []; // Create an array of all dates between start and end
                 for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                   dates.push(new Date(d).toISOString().slice(0, 10));
                 }
                 
-                // Map cumulative returns to dates
-                const dateToCr = new Map(dailyReturnsResponse.map(item => [item.t, item.cr * 100]));
+                const dateToCr = new Map(dailyReturnsResponse.map(item => [item.t, item.cr * 100])); // Map cumulative returns to dates
                 const cumulativeReturns = dates.map(date => dateToCr.get(date) || null);
                 
-                // Fill in null values by carrying forward the last known value
-                let lastKnownValue = 0;
+                let lastKnownValue = 0; // Fill in null values by carrying forward the last known value
                 for (let i = 0; i < cumulativeReturns.length; i++) {
                   if (cumulativeReturns[i] === null) {
                     cumulativeReturns[i] = lastKnownValue;
@@ -91,15 +82,7 @@ const Marketplace = () => {
                     lastKnownValue = cumulativeReturns[i];
                   }
                 }
-                
-                // Add some noise to make the chart look more realistic
-                const volatility = performanceResponse?.performance?.Volatility * 100 || 3;
-                for (let i = 1; i < cumulativeReturns.length; i++) {
-                  // Add small random movements between days for more realistic chart
-                  const dailyNoise = (Math.random() - 0.5) * volatility * 0.1;
-                  cumulativeReturns[i] += dailyNoise;
-                }
-                
+              
                 // Sample data for the chart with strategic points to show detail
                 const maxPoints = 100; // Maximum number of points to display
                 const step = Math.max(1, Math.floor(cumulativeReturns.length / maxPoints));
@@ -114,32 +97,29 @@ const Marketplace = () => {
                   }
                 }
                 
-                // Ensure we include the last data point
-                if (sampledDates[sampledDates.length - 1] !== dates[dates.length - 1]) {
+                if (sampledDates[sampledDates.length - 1] !== dates[dates.length - 1]) { // Ensure we include the last data point
                   sampledReturns.push(cumulativeReturns[cumulativeReturns.length - 1]);
                   sampledDates.push(dates[dates.length - 1]);
                 }
                 
-                // Generate year labels with appropriate intervals
-                const startYear = startDate.getFullYear();
+                const startYear = startDate.getFullYear(); 
                 const endYear = endDate.getFullYear();
                 const yearSpan = endYear - startYear;
                 
                 let yearInterval;
                 if (yearSpan <= 3) {
-                  yearInterval = 1; // Show every year if span is small
+                  yearInterval = 1; 
                 } else if (yearSpan <= 6) {
-                  yearInterval = 2; // Show every other year for medium spans
+                  yearInterval = 2; 
                 } else {
                   yearInterval = Math.ceil(yearSpan / 4); // Show 4-5 labels for longer spans
                 }
   
-                // Generate year labels with the calculated interval
-                const yearLabels = [];
+                const yearLabels = []; // Generate year labels with the calculated interval
                 for (let year = startYear; year <= endYear; year += yearInterval) {
                   yearLabels.push(year.toString());
                 }
-                // Make sure the end year is included
+                
                 if (yearLabels[yearLabels.length - 1] !== endYear.toString()) {
                   yearLabels.push(endYear.toString());
                 }
@@ -227,7 +207,6 @@ const Marketplace = () => {
                   // Base cumulative return trend following a slightly non-linear curve
                   const baseTrend = totalReturn * Math.pow(progress, 1.05);
                   
-                  // Add realistic market noise using volatility
                   // Higher frequency components for short-term movements
                   const shortTermNoise = volatility * 0.4 * (Math.sin(i * 0.8) + Math.cos(i * 1.3));
                   // Medium frequency for market cycles
@@ -259,14 +238,13 @@ const Marketplace = () => {
                   let yearPosition;
                   
                   if (i === yearLabels.length - 1 && year === currentYear) {
-                    // For the last year (2025), shift the label left by 10% of the chart width
+                    // Only for the current year (2025), shift the label left by 10% of the chart width
                     const shiftAmount = Math.round(dataPoints.length * 0.1);
                     yearPosition = Math.min(
                       Math.round(((year - startYear) / (currentYear - startYear || 1)) * (dataPoints.length - 1)),
                       dataPoints.length - 1 - shiftAmount
                     );
                   } else {
-                    // Normal positioning for other years
                     yearPosition = Math.round(((year - startYear) / (currentYear - startYear || 1)) * (dataPoints.length - 1));
                   }
                   
@@ -358,19 +336,6 @@ const Marketplace = () => {
       // Set the selected strategy regardless of mode
       setSelectedStrategy(algorithm);
       
-      // if (isSelectingForSubAccount) {
-      //   // If in selection mode, also store the algorithm in AsyncStorage for the SubAccountCreationModal
-      //   try {
-      //     await AsyncStorage.setItem('selectedAlgorithm', JSON.stringify({
-      //       algo_id: algorithm.algo_id,
-      //       name: algorithm.strategy,
-      //       developer: algorithm.developer
-      //     }));
-      //   } catch (error) {
-      //     console.error('Error storing selected algorithm:', error);
-      //   }
-      // }
-      
       // Show the modal in both modes
       setModalVisible(true);
     };
@@ -378,31 +343,21 @@ const Marketplace = () => {
   const handleAlgorithmSelect = async (algorithm) => {
     if (isSelectingForSubAccount) {
       try {
-        // Store the selected algorithm temporarily
         await AsyncStorage.setItem('selectedAlgorithm', JSON.stringify({
           algo_id: algorithm.algo_id,
           name: algorithm.strategy,
           developer: algorithm.developer
         }));
         
-        // Go back to the SubAccountCreation screen
         router.back();
       } catch (error) {
         console.error('Error storing selected algorithm:', error);
       }
     } else {
-      // Regular flow - show modal
       setSelectedStrategy(algorithm);
       setModalVisible(true);
     }
   };
-  
-
-  //   // Handle algorithm selection
-  //   const handleAlgorithmPress = (algorithm) => {
-  //     setSelectedStrategy(algorithm);
-  //     setModalVisible(true);
-  //   };
 
   const renderContentBoxes = () => {
     if (isLoading && page === 1) {
@@ -512,7 +467,7 @@ const Marketplace = () => {
                 bezier={false}
                 yAxisSuffix="%"
                 fromZero={false}
-                xLabelsOffset={-10} // Keep at -10 to maintain vertical positioning
+                xLabelsOffset={-10} 
                 yLabelsOffset={10}
                 style={{
                   marginVertical: 8,
@@ -522,7 +477,6 @@ const Marketplace = () => {
               />
             </View>
               
-
             <TouchableOpacity
               style={styles.readMoreButton}
               onPress={(e) => {
@@ -575,16 +529,13 @@ const Marketplace = () => {
 
   return (
     <View style={styles.container}>
-      
-      {/* Content Boxes */}
       {renderContentBoxes()}
 
-      {/* Trading Modal */}
       <TradingModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         strategy={selectedStrategy}
-        isSelectingForSubAccount={isSelectingForSubAccount}
+        isSelectingForSubAccount={params?.selectForSubAccount === 'true'} // Only pass true when actually selecting for a subaccount
       />
     </View>
   );

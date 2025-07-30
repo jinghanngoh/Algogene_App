@@ -1,3 +1,5 @@
+// NEED TO CHECK WHETHER SOLVING THE SUBSCRIPTION BUG AFFECTS THIS. Make sure after subscribe that the prev lines are still there
+
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, Alert} from 'react-native';
 import { useSubAccounts } from '../../context/SubAccountsContext';
@@ -21,20 +23,34 @@ const SubAccountCreation = ({ visible, onClose }) => {
   const [brokerPickerVisible, setBrokerPickerVisible] = useState(false);
   const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
   const [algorithmSelected, setAlgorithmSelected] = useState(false);
+  const [isInSelectionFlow, setIsInSelectionFlow] = useState(false); // Add a flag to track if the user is in the middle of a flow
  
   const saveFormState = async () => {
-    try {
-      await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify({
-        id,
-        broker,
-        algorithm,
-        currency,
-        algorithmSelected,
-        brokerManuallySelected: broker !== '' // Add this flag
-      }));
-    } catch (error) {
-      console.error('Error saving form state:', error);
+    if (isInSelectionFlow) {
+      try {
+        await AsyncStorage.setItem('pendingSubAccountData', JSON.stringify({
+          id,
+          broker,
+          algorithm,
+          currency,
+          algorithmSelected,
+          brokerManuallySelected: broker !== '',
+          isInSelectionFlow: true
+        }));
+      } catch (error) {
+        console.error('Error saving form state:', error);
+      }
     }
+  };
+
+  // Reset all form fields
+  const resetForm = () => {
+    setId('');
+    setBroker('');
+    setAlgorithm('');
+    setCurrency('');
+    setAlgorithmSelected(false);
+    setIsInSelectionFlow(false);
   };
 
   useEffect(() => {
@@ -42,45 +58,98 @@ const SubAccountCreation = ({ visible, onClose }) => {
       const loadFormState = async () => {
         try {
           const formStateJson = await AsyncStorage.getItem('pendingSubAccountData');
-          console.log('Loaded form state:', formStateJson); // Add this debug line
+          console.log('Loaded form state:', formStateJson);
+          
           if (formStateJson) {
             const formState = JSON.parse(formStateJson);
-            console.log('Parsed form state:', formState); // Add this debug line
-            setId(formState.id || '');
-            setBroker(formState.broker || ''); // Make sure this is setting to empty string as fallback
-            setAlgorithm(formState.algorithm || '');
-            setCurrency(formState.currency || '');
-            setAlgorithmSelected(!!formState.algorithm);
-
-            if (formState.hasOwnProperty('broker') && formState.broker && 
-            (formState.brokerManuallySelected === true)) {
-              setBroker(formState.broker);
+            console.log('Parsed form state:', formState);
+            
+            // Only restore state if we're in the middle of a selection flow
+            if (formState.isInSelectionFlow) {
+              setId(formState.id || '');
+              setBroker(formState.broker || '');
+              setAlgorithm(formState.algorithm || '');
+              setCurrency(formState.currency || '');
+              setAlgorithmSelected(!!formState.algorithm);
+              setIsInSelectionFlow(true);
             } else {
-              setBroker('');
+              // If not in a flow, start fresh
+              resetForm();
             }
-
           } else {
-            // Reset all fields when no stored data is found
-            setBroker(''); // Explicitly reset to empty 
-            setAlgorithmSelected(false);
+            // No stored data, reset all fields
+            resetForm();
           }
         } catch (error) {
           console.error('Error loading form state:', error);
-          // Reset fields on error
-          setId('');
-          setBroker(''); // Explicitly reset to empty
-          setAlgorithm('');
-          setCurrency('');
-          setAlgorithmSelected(false);
+          resetForm();
         }
       };
       
       loadFormState();
+    } else {
+      // When modal becomes invisible and not in a selection flow,
+      // clear the saved state to ensure fresh start next time
+      if (!isInSelectionFlow) {
+        AsyncStorage.removeItem('pendingSubAccountData');
+      }
     }
   }, [visible]);
 
+  // useEffect(() => {
+  //   if (visible) {
+  //     const loadFormState = async () => {
+  //       try {
+  //         const formStateJson = await AsyncStorage.getItem('pendingSubAccountData');
+  //         if (formStateJson) {
+  //           const formState = JSON.parse(formStateJson);
+  //           setId(formState.id || '');
+  //           setBroker(formState.broker || ''); // Make sure this is setting to empty string as fallback
+  //           setAlgorithm(formState.algorithm || '');
+  //           setCurrency(formState.currency || '');
+  //           setAlgorithmSelected(!!formState.algorithm);
 
+  //           if (formState.hasOwnProperty('broker') && formState.broker && 
+  //           (formState.brokerManuallySelected === true)) {
+  //             setBroker(formState.broker);
+  //           } else {
+  //             setBroker('');
+  //           }
+
+  //         } else {
+  //           // Reset all fields when no stored data is found
+  //           setBroker(''); // Explicitly reset to empty 
+  //           setAlgorithmSelected(false);
+  //         }
+  //       } catch (error) {
+  //         console.error('Error loading form state:', error);
+  //         // Reset fields on error
+  //         setId('');
+  //         setBroker(''); // Explicitly reset to empty
+  //         setAlgorithm('');
+  //         setCurrency('');
+  //         setAlgorithmSelected(false);
+  //       }
+  //     };
+      
+  //     loadFormState();
+  //   }
+  // }, [visible]);
+
+
+    // const handleBrokerSelect = async () => {
+    //   // Save current form state before navigating
+    //   await saveFormState();
+      
+    //   // Navigate to marketplace with broker selection flag
+    //   router.push({
+    //     pathname: '/(tabs)/marketplace',
+    //     params: { selectBrokerForSubAccount: 'true' }
+    //   });
+    // };
     const handleBrokerSelect = async () => {
+      // Mark that we're starting a selection flow
+      setIsInSelectionFlow(true);
       // Save current form state before navigating
       await saveFormState();
       
@@ -91,7 +160,43 @@ const SubAccountCreation = ({ visible, onClose }) => {
       });
     };
 
+    // const handleAlgorithmSelect = async () => {
+    //   // Save current form state before navigating
+    //   await saveFormState();
+      
+    //   try {
+    //     // First, close the modal to prevent navigation issues
+    //     onClose();
+        
+    //     // Short delay to ensure modal is closed before navigation
+    //     setTimeout(() => {
+    //       try {
+    //         if (Platform.OS === 'ios') {
+    //           // For iOS, use the direct navigation API with params
+    //           router.push({
+    //             pathname: '/marketplace',
+    //             params: { selectForSubAccount: 'true' }
+    //           });
+    //         } else {
+    //           // For Android, use the existing router method
+    //           router.push({
+    //             pathname: '/(tabs)/marketplace',
+    //             params: { selectForSubAccount: 'true' }
+    //           });
+    //         }
+    //       } catch (error) {
+    //         console.error('Delayed navigation error:', error);
+    //         // Final fallback with params
+    //         router.navigate('marketplace', { selectForSubAccount: 'true' });
+    //       }
+    //     }, 300); // 300ms delay
+    //   } catch (error) {
+    //     console.error('Navigation setup error:', error);
+    //   }
+    // };
     const handleAlgorithmSelect = async () => {
+      // Mark that we're starting a selection flow
+      setIsInSelectionFlow(true);
       // Save current form state before navigating
       await saveFormState();
       
@@ -127,17 +232,25 @@ const SubAccountCreation = ({ visible, onClose }) => {
     };
     
     // Handle modal close with cleanup
+    // const handleClose = () => {
+    //   // Clear stored form data when explicitly closing
+    //   AsyncStorage.removeItem('pendingSubAccountData');
+    //   // Reset all form fields
+    //   setId('');
+    //   setBroker('');
+    //   setAlgorithm('');
+    //   setCurrency('');
+    //   setAlgorithmSelected(false);
+    //   onClose();
+    // };
     const handleClose = () => {
       // Clear stored form data when explicitly closing
       AsyncStorage.removeItem('pendingSubAccountData');
       // Reset all form fields
-      setId('');
-      setBroker('');
-      setAlgorithm('');
-      setCurrency('');
-      setAlgorithmSelected(false);
+      resetForm();
       onClose();
     };
+
   const handleCreate = async () => {
     // Validation logic
     if (!id || !broker || !algorithm || !currency) {

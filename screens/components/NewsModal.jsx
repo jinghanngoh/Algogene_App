@@ -14,10 +14,9 @@ const NewsDetailModal = ({ visible, onClose, newsItem }) => {
       description: "Provide full support for quantitative/algorithmic trading",
       fullContent: "ALGOGENE offers comprehensive support for quantitative and algorithmic trading strategies. Our platform provides backtesting capabilities, live trading integration, and a robust API for developers. Whether you're a beginner or an experienced quant, our tools help you test and implement your strategies efficiently."
     },
-    // ... other news items with fullContent
+    // Hardcoded news for News 1
   ];
 
-  // Find the full news item details
   const fullItem = newsItems.find(item => item.id === newsItem.id) || newsItem;
 
   return (
@@ -29,7 +28,6 @@ const NewsDetailModal = ({ visible, onClose, newsItem }) => {
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          {/* Close button (X) in top right corner */}
           <TouchableOpacity style={styles.closeIcon} onPress={onClose}>
             <Text style={styles.closeIconText}>✕</Text>
           </TouchableOpacity>

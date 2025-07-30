@@ -1,15 +1,12 @@
+// Master page for Account Manager, Sub Accounts and AI Portfolio Analysis
 import { StyleSheet, Text, View, Image, TouchableOpacity , ScrollView, Dimensions, Modal} from "react-native";
 import React from 'react'; 
 import { useRouter } from 'expo-router';
 import Logo from '../../assets/img/logo.png';
 import { Ionicons } from '@expo/vector-icons'; 
-import placeholder from '../../assets/img/placeholder.png';
-import { LineChart } from 'react-native-chart-kit';
-import { useSubscription } from '../../context/SubscriptionContext'; 
 
-const Portfolio = () => {
+const Accounts = () => {
     const router = useRouter();
-    const { subscribedAlgorithm } = useSubscription(); 
 
     const menuItems = [
         { id: 1, name: "Account Manager"},
@@ -87,11 +84,11 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         marginTop: 20,
-        gap: 15, // Adds space between menu items
+        gap: 15, 
     },
     menuItem: {
-        backgroundColor: '#333', // Gray background
-        borderRadius: 10, // Rounded corners
+        backgroundColor: '#333', 
+        borderRadius: 10,
         paddingVertical: 18,
         paddingHorizontal: 20,
     },
@@ -114,7 +111,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 10,
     },
-    // These should match your Marketplace styles:
     contentBox: {
         backgroundColor: 'white',
         borderRadius: 10,

@@ -28,12 +28,12 @@ export default function RootLayout() {
           <Stack.Screen name="Profile/Update" />
           
           {/* Portfolio screens */}
-          <Stack.Screen name="Portfolio/AIPortfolioAnalysis" />
-          <Stack.Screen name="Portfolio/LiveTest" />
-          <Stack.Screen name="Portfolio/AccountManager" />
-          <Stack.Screen name="Portfolio/RealTrade" />
-          <Stack.Screen name="Portfolio/PortfolioResult" />
-          <Stack.Screen name="Portfolio/SubAccounts" />
+          <Stack.Screen name="Accounts/AIPortfolioAnalysis" />
+          <Stack.Screen name="Accounts/LiveTest" />
+          <Stack.Screen name="Accounts/AccountManager" />
+          <Stack.Screen name="Accounts/RealTrade" />
+          <Stack.Screen name="Accounts/PortfolioResult" />
+          <Stack.Screen name="Accounts/SubAccounts" />
         </Stack>
       </SubAccountsProvider>
     </SubscriptionProvider>

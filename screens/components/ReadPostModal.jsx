@@ -13,14 +13,12 @@ const ReadPostModal = ({ visible, post, onClose, onLike }) => {
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>
             <Feather name="x" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
-        {/* Post content */}
         <View style={styles.postContainer}>
           <View style={styles.userContainer}>
             <Image
@@ -36,7 +34,6 @@ const ReadPostModal = ({ visible, post, onClose, onLike }) => {
           <Text style={styles.postTitle}>{post.title}</Text>
           <Text style={styles.postContent}>{post.content}</Text>
 
-          {/* Like and view stats */}
           <View style={styles.statsContainer}>
             <TouchableOpacity style={styles.statItem} onPress={onLike}>
               <FontAwesome name={post.liked ? "heart" : "heart-o"} size={20} color={post.liked ? "red" : "white"} />
@@ -49,16 +46,13 @@ const ReadPostModal = ({ visible, post, onClose, onLike }) => {
           </View>
         </View>
 
-        {/* Comments section */}
         <View style={styles.commentsContainer}>
           <Text style={styles.commentsTitle}>Comments ({post.comments})</Text>
-          {/* Here you would map through actual comments */}
           <View style={styles.commentItem}>
             <Text style={styles.commentText}>Sample comment: This is really helpful!</Text>
           </View>
         </View>
 
-        {/* Add comment */}
         <View style={styles.addCommentContainer}>
           <TextInput
             style={styles.commentInput}
