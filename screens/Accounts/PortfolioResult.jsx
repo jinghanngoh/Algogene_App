@@ -1,3 +1,4 @@
+// Result from Portfolio Optimizer (Still quite alot todo for each button)
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
@@ -24,10 +25,8 @@ const PortfolioResult = () => {
   useEffect(() => {
     setIsLoading(true);
     try {
-      // Destructure specific properties from params
       const { resultData: rawResultData, underlyingAssets: rawUnderlyingAssets, rebalanceStrategy: rawRebalanceStrategy } = params;
   
-      // Parse resultData
       if (rawResultData) {
         const parsedData = JSON.parse(decodeURIComponent(rawResultData));
         if (JSON.stringify(parsedData) !== JSON.stringify(resultData)) {
@@ -37,7 +36,6 @@ const PortfolioResult = () => {
         console.warn('No resultData in params', { params });
       }
   
-      // Parse underlyingAssets
       if (rawUnderlyingAssets) {
         const parsedAssets = JSON.parse(decodeURIComponent(rawUnderlyingAssets));
         setUnderlyingAssets(Array.isArray(parsedAssets) ? parsedAssets : []);
@@ -45,7 +43,6 @@ const PortfolioResult = () => {
         console.warn('No underlyingAssets in params', { params });
       }
   
-      // Parse rebalanceStrategy
       if (rawRebalanceStrategy) {
         setRebalanceStrategy(decodeURIComponent(rawRebalanceStrategy));
       } else {
@@ -77,15 +74,8 @@ const PortfolioResult = () => {
 
   const seriesSum = seriesWithColors.reduce((sum, item) => sum + (item.value || 0), 0);
 
-  // console.log('Result Data Assets:', resultData.assets);
-  // console.log('Underlying Assets:', underlyingAssets);
-  // console.log('Rebalance Strategy:', rebalanceStrategy);
-  // console.log('Slice Colors:', sliceColors);
-  // console.log('Generated Series:', seriesWithColors);
-
   return (
     <ScrollView style={styles.container}>
-      {/* Tab Buttons (2x2 Grid) */}
       <View style={styles.tabContainer}>
         <View style={styles.tabRow}>
           <TouchableOpacity
@@ -139,20 +129,10 @@ const PortfolioResult = () => {
         <>
           {activeTab === 'Result' && (
             <>
-              {/* Optimal Allocation Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Optimal Allocation</Text>
                 {seriesSum > 0 && seriesWithColors.length > 0 ? (
                   <>
-                    {/* {console.log('PieChart Props:', {
-                      data: seriesWithColors.map(item => ({
-                        name: item.label || 'Unknown',
-                        population: item.value || 0,
-                        color: item.color || '#000000',
-                        legendFontColor: '#FFFFFF',
-                        legendFontSize: 14,
-                      })),
-                    })} */}
                     <PieChart
                       data={seriesWithColors.map(item => ({
                         name: item.label || 'Unknown',
@@ -194,7 +174,6 @@ const PortfolioResult = () => {
                 )}
               </View>
 
-              {/* Optimal Portfolio Result Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Optimal Portfolio Result</Text>
                 <View style={styles.resultTable}>
@@ -235,7 +214,6 @@ const PortfolioResult = () => {
                 </View>
               </View>
 
-              {/* Asset Allocation Table */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Asset Allocation</Text>
                 <View style={styles.assetTable}>
@@ -480,7 +458,6 @@ const PortfolioResult = () => {
                 {Array.isArray(resultData.assets) && resultData.assets.length > 0 ? (
                   resultData.assets.map((asset, index) => {
                     if (!asset || typeof asset.id === 'undefined') {
-                      // console.warn('Skipping invalid asset:', asset);
                       return null; // Skip invalid assets
                     }
                     return (
@@ -494,7 +471,6 @@ const PortfolioResult = () => {
                   <Text style={styles.noDataText}>No assets available for correlation</Text>
                 )}
              </View>
-              {/* console.log('Correlation Render - Assets:', resultData.assets, 'Loading:', isLoading) */}
             </View>
           )}
 

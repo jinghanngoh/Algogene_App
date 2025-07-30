@@ -17,13 +17,13 @@ const Accounts = () => {
     const handleMenuItemPress = (itemName) => {
         switch (itemName) {
             case "Account Manager":
-                router.push('/Portfolio/AccountManager');
+                router.push('/Accounts/AccountManager');
                 break; 
             case "Sub Accounts":
-                router.push('/Portfolio/SubAccounts');
+                router.push('/Accounts/SubAccounts');
                 break;
             case "AI Portfolio Analysis":
-                router.push('/Portfolio/AIPortfolioAnalysis');
+                router.push('/Accounts/AIPortfolioAnalysis');
                 break; 
             default:
                 console.log(`${itemName} pressed`);
@@ -203,4 +203,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default Portfolio;
+export default Accounts;

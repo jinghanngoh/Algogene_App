@@ -1,14 +1,13 @@
+// Most work to do for now, so need to implement the list for say all the stocks in Equity (US) for example. Now its hardcoded as the API wasnt given to me
+// Works for crypto as asset classes. Mainly BTCUSD, ETHUSD
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, FlatList, Platform, ScrollView, Button} from 'react-native';
-// import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { optimizePortfolio, objectiveMap } from '../../services/PortfolioApi';
 import { useRouter } from 'expo-router';
 
-// Edit such that we cant have ending date and starting date switched 
 const AIPortfolioAnalysis = () => {
-  // const navigation = useNavigation(); // Initialize navigation
   const router = useRouter();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -100,7 +99,7 @@ const AIPortfolioAnalysis = () => {
     'Equity (TYO)': [],
     'Equity (US)': ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'],
     'Forex': ["EURUSD"], 
-    // ASK BOSS FOR WHERE TO GET THIS LIST
+    // ASK BOSS FOR WHERE TO GET THIS LIST (We hardcoded everything for now, need reference the web page to get the exact ones)
   }; 
 
   const showDatePicker = (field) => {
@@ -112,37 +111,6 @@ const AIPortfolioAnalysis = () => {
   const hideDatePicker = () => {
     setDatePickerVisible(false);
   };
-
-  // const handleDateChange = (event, selected) => {
-  //   if (event.type === 'dismissed') {
-  //     hideDatePicker();
-  //     return;
-  //   }
-  //   if (selected) {
-  //     const today = new Date();
-  //     today.setHours(0, 0, 0, 0);
-  //     if (selected > today) {
-  //       alert('Date cannot be today or in the future.');
-  //       return;
-  //     }
-  //     const formattedDate = selected.toISOString().split('T')[0]; // YYYY-MM-DD
-  //     if (selectedField === 'startDate') {
-  //       if (endDate && new Date(formattedDate) > new Date(endDate)) {
-  //         alert('Start date cannot be after end date.');
-  //         return;
-  //       }
-  //       setStartDate(formattedDate);
-  //     }
-  //     if (selectedField === 'endDate') {
-  //       if (startDate && new Date(formattedDate) < new Date(startDate)) {
-  //         alert('End date cannot be before start date.');
-  //         return;
-  //       }
-  //       setEndDate(formattedDate);
-  //     }
-  //   }
-  //   hideDatePicker();
-  // };
 
   const handleDateChange = (event, selected) => {
     if (Platform.OS === 'ios' && event.type === 'dismissed') {
@@ -170,18 +138,11 @@ const AIPortfolioAnalysis = () => {
           alert('End date cannot be before start date.');
           return;
         }
-          setEndDate(formattedDate);
-      // } else if (selectedField === 'endDate') {
-      //   if (startDate && new Date(formattedDate) < new Date(startDate)) {
-      //     alert('End date cannot be before start date.');
-      //     return;
-      //   }
-      //   setEndDate(formattedDate);
+        setEndDate(formattedDate);
       }
       setDate(selected);
     }
 
-    // On iOS, keep the picker open until confirmed; on Android, close it
     if (Platform.OS !== 'ios') {
       hideDatePicker();
     }
@@ -203,7 +164,7 @@ const AIPortfolioAnalysis = () => {
     if (field === 'symbol') {
       const category = tableData[index]?.assetClass || 'Commodity';
       setAssetClassOptions(assetClassCategories[category] || assetClassCategories['Commodity']);
-      setAssetClassModalVisible(true); // Reuse asset class modal for symbols
+      setAssetClassModalVisible(true); 
     }
     if (field === 'benchmark') setBenchmarkModalVisible(true);
     if (field === 'rebalanceFrequency') setRebalanceModalVisible(true);
@@ -281,7 +242,6 @@ const AIPortfolioAnalysis = () => {
       setIsLoading(true);
       setErrorMessage('');
 
-      // Validate inputs
       console.log('Input Validation:', { startDate, endDate, objective, tableData });
       if (!startDate || !endDate) throw new Error('Please select date range');
       if (new Date(endDate) < new Date(startDate)) throw new Error('End date cannot be earlier than start date');
@@ -290,7 +250,6 @@ const AIPortfolioAnalysis = () => {
       }
       if (!objective) throw new Error('Please select an objective');
 
-      // Extract symbol strings
       const validSymbols = tableData
         .filter(row => row.symbol && row.holding)
         .map(row => row.symbol);
@@ -300,19 +259,18 @@ const AIPortfolioAnalysis = () => {
         throw new Error('Please add at least one asset');
       }
 
-      // Prepare API parameters
       const apiParams = {
         StartDate: startDate,
         EndDate: endDate,
         arrSymbol: validSymbols,
         objective: objectiveMap[objective] !== undefined ? objectiveMap[objective] : objectiveMap['Global Minimum Variance'],
         target_return: parseFloat(targetReturn) / 100 || 0.15,
-        risk_tolerance: parseFloat(riskTolerance) / 100 || 0.3,
+        risk_tolerance: parseFloat(riskTolerance) / 100 || 0.3, // We have quite alot of hardcoded values for now, change in future 
         allowShortSell: allowShortSell || false,
         risk_free_rate: parseFloat(riskFreeRate) / 100 || 0.01,
         basecur: currency || 'USD',
         total_portfolio_value: parseFloat(initialCapital) || 1000000,
-        group_cond: {
+        group_cond: { // Not quite sure how to do this part or what it means
           map: validSymbols.reduce((acc, symbol, idx) => ({
             ...acc,
             [symbol]: `Group${idx + 1}`,
@@ -330,12 +288,11 @@ const AIPortfolioAnalysis = () => {
         },
       };
 
-      console.log('API Parameters (Pre-Request):', JSON.stringify(apiParams, null, 2));
+      // console.log('API Parameters (Pre-Request):', JSON.stringify(apiParams, null, 2));
 
       const result = await optimizePortfolio(apiParams);
 
-      // console.log('API Response:', JSON.stringify(result, null, 2));
-      console.log('Asset Allocate:', result.data?.asset_allocate);
+      // console.log('Asset Allocate:', result.data?.asset_allocate);
 
       if (!result.data) {
         throw new Error('No data returned from API');
@@ -372,7 +329,7 @@ const AIPortfolioAnalysis = () => {
       console.log('Result Data for Navigation:', JSON.stringify(resultData, null, 2));
 
     router.push({
-      pathname: 'Portfolio/PortfolioResult',
+      pathname: 'Accounts/PortfolioResult',
       params: {
         resultData: encodeURIComponent(JSON.stringify(resultData)),
         assetAllocate: encodeURIComponent(JSON.stringify(result.data?.asset_allocate)),
@@ -380,8 +337,6 @@ const AIPortfolioAnalysis = () => {
         rebalanceStrategy: encodeURIComponent(rebalanceFrequency || 'None'),
       },
     });
-    
-    // console.log("FULL RESPONSE XXXXXXXXXXXXXXXXX ", JSON.stringify(result))
 
       if (result.data.asset_allocate?.length > 0) {
         setTableData(
@@ -705,11 +660,11 @@ const AIPortfolioAnalysis = () => {
               <TextInput
                 style={[styles.tableInput , { flex: 1, paddingRight: 5}]}
                 value={row.holding}
-                onChangeText={(text) => !row.isLocked && updateHolding(text, index)} // Only allow changes when unlocked
+                onChangeText={(text) => !row.isLocked && updateHolding(text, index)} 
                 placeholder="0"
                 placeholderTextColor="gray"
                 keyboardType="numeric"
-                editable={!row.isLocked} // Disable editing when locked
+                editable={!row.isLocked} 
               />
               {row.isLocked ? (
                 <View style={styles.iconContainer}>
@@ -744,15 +699,6 @@ const AIPortfolioAnalysis = () => {
         <Text style={styles.computeButtonText}>COMPUTE</Text>
       </TouchableOpacity>
 
-      {/* {isDatePickerVisible && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="calendar"
-          onChange={handleDateChange}
-          style={styles.datePicker}
-        />
-      )} */}
       {isDatePickerVisible && (
         <Modal transparent visible={isDatePickerVisible} animationType="slide">
           <View style={styles.modalOverlay}>
@@ -816,7 +762,7 @@ const AIPortfolioAnalysis = () => {
                 renderItem={({ item }) => (
                 <TouchableOpacity 
                     style={styles.modalOption} 
-                    onPress={() => selectOption(item, modalIndex)} // Use modalIndex state
+                    onPress={() => selectOption(item, modalIndex)} 
                 >
                     <Text style={styles.modalText}>{item}</Text>
                 </TouchableOpacity>
@@ -893,12 +839,12 @@ const styles = StyleSheet.create({
   inputWithArrows: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1, // Ensure it aligns with the label
+    flex: 1, 
     backgroundColor: 'white',
     borderRadius: 5,
     paddingHorizontal: 5,
     marginLeft: 10,
-    minHeight: 40, // Match the height of other inputs
+    minHeight: 40,
   },
   arrowContainer: {
     flexDirection: 'column',
@@ -982,7 +928,7 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     minHeight: 40,
     textAlignVertical: 'center',
-    marginRight: 2, // Reduce margin to prevent overlap
+    marginRight: 2, 
   },
   tableText: {
     color: 'black',
@@ -1081,13 +1027,13 @@ const styles = StyleSheet.create({
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: 60, // Match the width of okButton
+    width: 60,
   },
   iconButton: {
     padding: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 30, // Half of okButton width
+    width: 30, 
   },
   iconText: {
     fontSize: 16,

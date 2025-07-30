@@ -1,3 +1,6 @@
+// For users to view and manage trading accounts (Display portfolio value, account balances, position data, performance metrics and trading history)
+// Uses SubAccountsContext to access account info and makes API calls to retrieve real-time trading data
+// Throttled is done to reduce frequency of API calls, to make the app faster and less jammed 
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
@@ -19,10 +22,9 @@ const AccountManager = () => {
   const [dailyPositions, setDailyPositions] = useState([]);
   const [tradeHistory, setTradeHistory] = useState([]);
   const [algoStats, setAlgoStats] = useState(null);
-  const [activeAlgoId, setActiveAlgoId] = useState('jjvp5_qrwkyntz_6194');
+  const [activeAlgoId, setActiveAlgoId] = useState('jjvp5_qrwkyntz_6194'); // Hardcoded this as we use this algo for testing 
 
-  // Calculate Account-level metrics
-  const totalPortfolioValue = subAccounts.length > 0
+  const totalPortfolioValue = subAccounts.length > 0  // Calculate Account-level metrics
     ? subAccounts.reduce((sum, acc) => sum + parseFloat(acc.availableBalance || 0) + parseFloat(acc.cashBalance || 0), 0).toFixed(2)
     : '0.00';
   const totalPL = subAccounts.length > 0
@@ -32,8 +34,7 @@ const AccountManager = () => {
   const totalPositions = positions.length;
   const totalMarketValue = positions.reduce((sum, pos) => sum + parseFloat(pos.marketValue || 0), 0).toFixed(2);
 
-  // Data for BarChart (total cash balance across Sub Accounts)
-  const cashBalanceData = {
+  const cashBalanceData = { // Data for BarChart (total cash balance across Sub Accounts)
     labels: subAccounts.map(acc => acc.id),
     datasets: [
       {
@@ -42,28 +43,23 @@ const AccountManager = () => {
     ],
   };
 
-  // Placeholder for bank account/credit card data
-  const accountBalance = {
+  const accountBalance = { // Hardcoded placeholder for bank account/credit card data
     availableBalance: '1500000.0',
     cashBalance: '1200000.0',
   };
 
   const fetchPortfolioData = async () => {
     if (loading) return; // Prevent concurrent fetches
-    
     setLoading(true);
     setError(null);
     
     try {
-      console.log('Fetching portfolio data...');
-      
       const updatedAccounts = await Promise.all(
         subAccounts.map(async (account) => {
           try {
             const balanceResponse = await throttledGetRealTimeAccountBalance(account.brokerId || account.id);
             const positionResponse = await throttledGetRealTimeAccountPosition(account.brokerId || account.id);
             
-            // Only log errors, not successful operations
             if (!balanceResponse || !balanceResponse.balance) {
               console.log(`No valid balance data for account ${account.id}`);
               return account;
@@ -71,13 +67,11 @@ const AccountManager = () => {
             
             if (!positionResponse) {
               console.log(`No valid position data for account ${account.id}`);
-            } else if (positionResponse.positions && positionResponse.positions.length > 0) {
-              // Only update and log positions if there are any
+            } else if (positionResponse.positions && positionResponse.positions.length > 0) { // Update position if there are things to be updated
               setPositions(prev => [
                 ...prev.filter(pos => pos.accountId !== account.id),
                 ...positionResponse.positions.map(pos => ({ ...pos, accountId: account.id })),
               ]);
-              console.log(`Updated ${positionResponse.positions.length} positions for account ${account.id}`);
             }
             
             return {
@@ -94,11 +88,14 @@ const AccountManager = () => {
           }
         })
       );
+
+      // Fetch trade history data for all accounts
+      if (subAccounts.length > 0) {
+        await fetchTradeHistoryData();
+      }
       
-      // Compare if there are actual changes before updating state
-      const hasChanges = JSON.stringify(updatedAccounts) !== JSON.stringify(subAccounts);
+      const hasChanges = JSON.stringify(updatedAccounts) !== JSON.stringify(subAccounts); // See if got changes
       if (hasChanges) {
-        console.log('Updating account data with new values');
         setSubAccounts(updatedAccounts);
         saveSubAccounts(updatedAccounts);
       } else {
@@ -111,22 +108,57 @@ const AccountManager = () => {
     }
   };
 
-  // Fetch performance data (statistics, P/L, positions, trades, algo stats)
-  const fetchPerformanceData = async () => {
+  // Add a new function to fetch trade history data:
+  const fetchTradeHistoryData = async () => {
     try {
-      // Get the first account or return if no accounts available
+      // Get the most active account or the first one
+      const account = subAccounts.find(acc => acc.status === 'ACTIVE') || subAccounts[0];
+      if (!account) return;
+      
+      const accountId = account.brokerId || account.id;
+      const algoId = activeAlgoId || 'jjvp5_qrwkyntz_6194'; // Use your active algo ID
+      
+      console.log(`Fetching trade history for algo: ${algoId}`);
+      
+      // Use getAlgoStatistics for transactions history
+      const response = await throttledGetAlgoStatistics(accountId, algoId);
+      
+      if (response && response.response && response.response.trades) {
+        // Transform the trades data into the format your component expects
+        const formattedTrades = response.response.trades.map(trade => ({
+          date: trade.timestamp || trade.date || trade.transTime,
+          symbol: trade.symbol || trade.instrumentId,
+          side: trade.side || trade.orderSide || (trade.action === 'buy' ? 'BUY' : 'SELL'),
+          price: parseFloat(trade.price || trade.fillPrice || trade.avgPrice || 0),
+          quantity: parseFloat(trade.quantity || trade.size || trade.fillSize || 0),
+          value: parseFloat(trade.value || (trade.price * trade.quantity) || 0),
+          id: trade.id || trade.tradeId || trade.orderID,
+          status: trade.status || 'FILLED',
+          pnl: parseFloat(trade.pnl || trade.realizedPnl || 0)
+        }));
+        
+        setTradeHistory(formattedTrades);
+        console.log(`Fetched ${formattedTrades.length} trades from getAlgoStatistics`);
+      } else {
+        console.log('No valid trade history data returned from getAlgoStatistics');
+        setTradeHistory([]);
+      }
+    } catch (error) {
+      console.error('Error fetching trade history:', error);
+      setTradeHistory([]);
+    }
+  };
+
+  const fetchPerformanceData = async () => { // Fetch performance data (statistics, P/L, positions, trades, algo stats)
+    try {
       if (!subAccounts || subAccounts.length === 0) {
         console.log('No accounts available for performance data');
         return;
       }
       
-      // Use the first account (typically your Binance account)
-      const account = subAccounts[0];
+      const account = subAccounts[0]; // Use first account (Hardcoded for now, need to decide which to use later on)
       const accountId = account.brokerId || account.id;
       
-      console.log('Fetching performance data for account:', accountId);
-      
-      // Get performance statistics
       try {
         const performanceResponse = await throttledGetTradingPerformanceStats(accountId);
         if (performanceResponse) {
@@ -136,8 +168,7 @@ const AccountManager = () => {
         console.error('Error fetching performance stats:', perfError);
       }
       
-      // Get daily cumulative P/L data
-      try {
+      try { // Get daily cumulative P/L data
         const plResponse = await throttledGetDailyCumulativePL(accountId);
         if (plResponse) {
           setDailyPL(plResponse.data || []);
@@ -146,26 +177,20 @@ const AccountManager = () => {
         console.error('Error fetching daily P/L data:', plError);
       }
       
-      // Get daily position data
-      try {
+      try { // Get daily position data
         const positionResponse = await throttledGetDailyPosition(accountId);
         if (positionResponse && positionResponse.status) {
-          console.log('Daily positions loaded:', positionResponse.data.length);
           setDailyPositions(positionResponse.data || []);
         }
       } catch (posError) {
         console.error('Error fetching daily positions:', posError);
       }
 
-      try {
-        // Use activeAlgoId if available, or try to get it from the account
-        const algoId = activeAlgoId || account.algoId || 'jjvp5_qrwkyntz_6194';
-        
-        console.log('Fetching algo statistics for:', algoId);
-        
+      try { // Use activeAlgoId if available, or try to get it from the account
+        const algoId = activeAlgoId || account.algoId || 'jjvp5_qrwkyntz_6194'; // Remove the hardcode later 
+
         const algoResponse = await throttledGetAlgoStatistics(accountId, algoId);
         if (algoResponse && algoResponse.status) {
-          console.log('Algo statistics loaded for:', algoId);
           setAlgoStats({
             statistics: algoResponse.statistics || {},
             performance: algoResponse.performance || {}
@@ -181,72 +206,12 @@ const AccountManager = () => {
     }
   };
   
-  // Initial data load and polling setup
   useEffect(() => {
     if (subAccounts.length > 0) {
-      // Initial data fetch
-      fetchPortfolioData();
-      fetchPerformanceData();
-      
-      // Set up polling interval (every 30 seconds)
-      const intervalId = setInterval(() => {
-        console.log('Scheduled data refresh (30s interval)');
-        fetchPortfolioData();
-      }, 30000);
-      
-      // Clean up interval on component unmount
-      return () => {
-        console.log('Cleaning up interval');
-        clearInterval(intervalId);
-      };
+      fetchTradeHistoryData();
     }
-  }, [subAccounts.length]); // Only run when component mounts or subAccount length changes
-
-  // Account Card Component
-  const AccountCard = ({ account }) => {
-    return (
-      <TouchableOpacity 
-        style={styles.accountCard}
-        onPress={() => navigation.navigate('AccountDetails', { accountId: account.id })}
-      >
-        <View style={styles.accountHeader}>
-          <Text style={styles.accountId}>Account #{account.id}</Text>
-          <View style={[styles.statusBadge, 
-            { backgroundColor: account.status === 'ACTIVE' ? '#4caf50' : '#ff9800' }]}>
-            <Text style={styles.statusText}>{account.status}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.accountBalance}>
-          <Text style={styles.balanceLabel}>Available Balance:</Text>
-          <Text style={styles.balanceAmount}>
-            {account.currency} {parseFloat(account.availableBalance).toFixed(2)}
-          </Text>
-        </View>
-        
-        <View style={styles.accountMeta}>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Cash:</Text>
-            <Text style={styles.metaValue}>
-              {account.currency} {parseFloat(account.cashBalance).toFixed(2)}
-            </Text>
-          </View>
-          
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Broker:</Text>
-            <Text style={styles.metaValue}>{account.broker || 'N/A'}</Text>
-          </View>
-        </View>
-        
-        {account.errorMessage && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{account.errorMessage}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
+  }, [subAccounts.length, activeAlgoId]); // Re-fetch when accounts or active algo changes
+  
   const DailyPositionSection = ({ dailyPositions }) => {
     if (!dailyPositions || dailyPositions.length === 0) {
       return (
@@ -284,57 +249,84 @@ const AccountManager = () => {
     );
   };
 
-  // Trade History Section Component
-  const TradeHistorySection = ({ trades }) => {
-    if (!trades || trades.length === 0) {
+  const TradeHistorySection = ({ trades, isLoading, onRefresh }) => {
+    if (isLoading) {
       return (
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Recent Trades</Text>
-          <Text style={styles.emptyText}>No trade history available</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#4FC3F7" />
+          <Text style={styles.loadingText}>Loading trade history...</Text>
         </View>
       );
     }
-
+    
+    if (!trades || trades.length === 0) {
+      return (
+        <View style={styles.emptyTradeHistory}>
+          <Text style={styles.sectionTitle}>Recent Trades</Text>
+          <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyText}>No trade history available</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={onRefresh}
+            >
+              <Text style={styles.refreshButtonText}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+    
     return (
-      <View style={styles.sectionContainer}>
+      <View>
         <Text style={styles.sectionTitle}>Recent Trades</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.tableContainer}>
-            <View style={styles.tableHeader}>
-              <Text style={styles.tableHeaderCell}>Date</Text>
-              <Text style={styles.tableHeaderCell}>Symbol</Text>
-              <Text style={styles.tableHeaderCell}>Side</Text>
-              <Text style={styles.tableHeaderCell}>Price</Text>
-              <Text style={styles.tableHeaderCell}>Quantity</Text>
-              <Text style={styles.tableHeaderCell}>Value</Text>
-            </View>
-            {trades.slice(0, 10).map((trade, index) => (
-              <View key={index} style={styles.tableRow}>
-                <Text style={styles.tableCell}>{trade.date || 'N/A'}</Text>
-                <Text style={styles.tableCell}>{trade.symbol || 'N/A'}</Text>
+        <View style={styles.tradeHistoryTable}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Date</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Symbol</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Side</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Price</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Size</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>P&L</Text>
+          </View>
+          
+          <ScrollView style={styles.tableScrollView}>
+            {trades.map((trade, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={styles.tableRow}
+                onPress={() => alert(`Trade Details:\nID: ${trade.id || 'N/A'}\nCommission: $${(trade.commission || 0).toFixed(2)}\nStatus: ${trade.status || 'FILLED'}`)}
+              >
+                <Text style={[styles.tableCell, { flex: 1.5 }]}>
+                  {new Date(trade.date).toLocaleDateString()} {new Date(trade.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{trade.symbol}</Text>
                 <Text style={[
                   styles.tableCell, 
+                  { flex: 1 }, 
                   trade.side === 'BUY' ? styles.buyText : styles.sellText
                 ]}>
-                  {trade.side || 'N/A'}
+                  {trade.side}
                 </Text>
-                <Text style={styles.tableCell}>{trade.price ? `$${parseFloat(trade.price).toFixed(2)}` : 'N/A'}</Text>
-                <Text style={styles.tableCell}>{trade.quantity || '0'}</Text>
-                <Text style={styles.tableCell}>
-                  {trade.value ? `$${parseFloat(trade.value).toFixed(2)}` : '$0.00'}
+                <Text style={[styles.tableCell, { flex: 1 }]}>${trade.price.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{trade.quantity.toFixed(4)}</Text>
+                <Text style={[
+                  styles.tableCell, 
+                  { flex: 1.5 }, 
+                  (trade.pnl || 0) >= 0 ? styles.profitText : styles.lossText
+                ]}>
+                  ${(trade.pnl || 0).toFixed(2)}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
-          </View>
-        </ScrollView>
-        {trades.length > 10 && (
-          <TouchableOpacity 
-            style={styles.viewMoreButton}
-            onPress={() => navigation.navigate('TradeHistory', { trades })}
-          >
-            <Text style={styles.viewMoreText}>View all {trades.length} trades</Text>
-          </TouchableOpacity>
-        )}
+          </ScrollView>
+        </View>
+        
+        <TouchableOpacity 
+          style={styles.viewMoreButton}
+          onPress={() => navigation.navigate('TradeHistory', { accountId: subAccounts[0]?.id })} // TO BE IMPLEMENTED, a page retrieving all trading history
+        >
+          <Text style={styles.viewMoreText}>View all trades</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -411,13 +403,6 @@ const AccountManager = () => {
     </View>
   );
 };
-
-
-  // useEffect(() => {
-  //   if (subAccounts.length > 0) {
-  //     fetchPortfolioData();
-  //   }
-  // }, [subAccounts]);
 
   useEffect(() => {
     if (subAccounts.length > 0) {
@@ -506,7 +491,7 @@ return (
             <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => navigation.navigate('Portfolio/SubAccounts')}
+              onPress={() => navigation.navigate('Accounts/SubAccounts')}
             >
               <Text style={styles.actionButtonText}>View Sub Accounts</Text>
             </TouchableOpacity>
@@ -518,6 +503,7 @@ return (
             </TouchableOpacity>
           </View>
         </View>
+
 
         <View style= {styles.box}>
           <DailyPositionSection dailyPositions={dailyPositions} />
@@ -537,17 +523,14 @@ return (
             withHorizontalLabels={true}
             withVerticalLabels={true}
             chartConfig={{
-              backgroundColor: '#000000',
-              backgroundGradientFrom: '#000000',
-              backgroundGradientTo: '#000000',
+              backgroundColor: '#1a1a1a',
+              backgroundGradientFrom: '#1a1a1a',
+              backgroundGradientTo: '#1a1a1a',
               decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(30, 144, 255, ${opacity})`,
+              color: (opacity = 1) => `rgba(79, 195, 247, ${opacity})`,
               labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
               style: {
                 borderRadius: 16,
-              },
-              propsForDots: {
-                r: '0',
               },
               barPercentage: 0.4,
               propsForLabels: {
@@ -583,6 +566,14 @@ return (
               </View>
             ))
           )}
+        </View>
+
+        <View style={styles.box}>
+          <TradeHistorySection 
+            trades={tradeHistory} 
+            isLoading={loading} 
+            onRefresh={fetchTradeHistoryData} 
+          />
         </View>
 
         <View style={styles.box}>
@@ -747,6 +738,13 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginVertical: 15,
   },
+  viewMoreText: {
+    marginTop: 10,
+    color: '#4FC3F7',
+  },
+  refreshButtonText: {
+    color: '#888',
+  }
 });
 
 export default AccountManager;

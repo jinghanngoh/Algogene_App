@@ -3,15 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Pre-configured instance 
 const API = axios.create({
-  
-  // baseURL: 'https://7840b2f6f14c.ngrok-free.app',
-  baseURL: 'https://blindly-beloved-muskox.ngrok-free.app',
-  // baseURL: 'https://algogene.com',
+  baseURL: 'https://blindly-beloved-muskox.ngrok-free.app', // To use development server
+  // baseURL: 'https://algogene.com', // To use Production Server
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 10000,
-  //withCredentials: true,
 });
 
 // Request interceptor for session ID - runs before every API call

@@ -1,38 +1,23 @@
 // Test out the public marketplace endpoint 
-// MarketplaceApi.js
 import API from './api';
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Generate a 32-character session ID
 const generateSessionId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
-// const generateSessionId = () => {
-//   return uuidv4().replace(/-/g, ''); // 32 chars
-// };
 
 // Delay function for retry logic
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const authenticateUser = async (retries = 3) => {
   try {
-    console.log('Attempting to authenticate user...');
-    
-    // Create the authentication payload
     const payload = {
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
       user: 'AGBOT1',
-      // Note: For login, we need password/credentials but they're not in your code
-      // Since this is a test API, let's try a standard approach
       c_Email: 'thegohrilla@gmail.com',
-      // You might need additional auth fields here based on the API documentation
     };
     
-    console.log('Authentication payload:', JSON.stringify(payload, null, 2));
-    
-    // Make the API request to authenticate
     const response = await fetch('https://blindly-beloved-muskox.ngrok-free.app/rest/v1/app_userlogin', {
       method: 'POST',
       headers: {
@@ -41,18 +26,13 @@ export const authenticateUser = async (retries = 3) => {
       body: JSON.stringify(payload),
     });
     
-    console.log('Authentication response status:', response.status);
-    
     const data = await response.json();
-    console.log('Authentication response data:', JSON.stringify(data, null, 2));
     
     if (response.ok && data.status && data.sid) {
       // Save the valid session ID
       await AsyncStorage.setItem('sessionId', data.sid);
-      console.log('Authentication successful! Session ID:', data.sid);
       return data.sid;
     } else {
-      console.error('Authentication failed:', data.res || 'Unknown error');
       throw new Error(`Authentication failed: ${data.res || 'Unknown error'}`);
     }
   } catch (error) {
@@ -64,16 +44,12 @@ export const authenticateUser = async (retries = 3) => {
       await delay(1000);
       return authenticateUser(retries - 1);
     }
-    
     throw error;
   }
 };
 
 export const login = async () => {
   try {
-    console.log("Attempting to login to get a valid session ID...");
-    
-    // Login payload
     const payload = {
       api_key: '13c80d4bd1094d07ceb974baa684cf8ccdd18f4aea56a7c46cc91abf0cc883ff',
       user: 'AGBOT1',
@@ -97,7 +73,6 @@ export const login = async () => {
     console.log("Login response data:", JSON.stringify(data, null, 2));
     
     if (response.ok && data.status && data.sid) {
-      // Save the session ID
       await AsyncStorage.setItem('sessionId', data.sid);
       console.log("Login successful! New sessionId:", data.sid);
       return data.sid;
@@ -173,8 +148,6 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
 
     // Check cache first
     const cacheKey = `performance_${algoId}_${accountingDate || 'latest'}`;
-
-    // console.log(`Making API Request to /rest/v1/strategy_stats for algo_id: ${algoId}, acdate: ${accountingDate || 'latest'}`);
     let sessionId = await AsyncStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = generateSessionId();
@@ -200,10 +173,6 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
       throw new Error('Performance data not available.');
     }
 
-    // Log formatted response
-    // logFullApiResponse(response);
-
-    // Cache the full response
     try {
       await AsyncStorage.setItem(cacheKey, JSON.stringify(response));
     } catch (cacheError) {
@@ -222,8 +191,8 @@ export const fetchAlgoPerformance = async (algoId, accountingDate = null, retrie
 
     // Handle rate limit error
     if (error.response?.status === 400 && error.response?.data?.res?.includes('Exceed maximum access count') && retries > 0) {
-      console.log(`Rate limit hit. Retrying in 65 seconds... (${retries} retries left)`);
-      await delay(65000); // Wait 65 seconds
+      console.log(`Rate limit hit. Retrying in 60 seconds... (${retries} retries left)`);
+      await delay(60000); 
       return fetchAlgoPerformance(algoId, accountingDate, retries - 1);
     }
 
@@ -509,47 +478,24 @@ export const checkPaymentStatus = async (ticketId, email) => {
 // FOR PROCESSING DAILY RETURNS TO GENERATE MONTHLY RETURNS FOR THE GRAPH: 
 export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
   try {
-    // console.log(`[fetchAlgoMonthlyReturns] Starting for algo_id: ${algoId}`);
-    
     // Use the existing function to get daily returns
     const dailyReturns = await fetchAlgoDailyReturns(algoId, '', true, retries);
     
-    // console.log(`[fetchAlgoMonthlyReturns] Daily returns received:`, 
-      // dailyReturns ? `${dailyReturns.length} items` : 'none');
-    
     if (!dailyReturns || !Array.isArray(dailyReturns) || dailyReturns.length === 0) {
-      // console.log('[fetchAlgoMonthlyReturns] No daily returns data available');
       return generateCurrentMonthData();
     }
-    
-    // Log some sample data to check format
-    // console.log('[fetchAlgoMonthlyReturns] Sample daily returns:', 
-      // dailyReturns.slice(0, 3).map(item => ({
-      //   date: item.t,
-      //   cr: item.cr
-      // })));
-    
-    // Group returns by month
+  
     const monthlyReturnsMap = new Map();
     
-    // Sort returns by date
     dailyReturns.sort((a, b) => new Date(a.t) - new Date(b.t));
-    
-    // console.log('[fetchAlgoMonthlyReturns] Date range:', 
-    //   dailyReturns.length > 0 ? 
-    //     `${dailyReturns[0].t} to ${dailyReturns[dailyReturns.length-1].t}` : 
-    //     'No date range');
-    
-    // Group by month
+
     dailyReturns.forEach(item => {
       if (!item.t) {
-        // console.log('[fetchAlgoMonthlyReturns] Skipping item without date:', item);
         return;
       }
       
       const date = new Date(item.t);
       if (isNaN(date.getTime())) {
-        // console.log('[fetchAlgoMonthlyReturns] Skipping item with invalid date:', item.t);
         return;
       }
       
@@ -567,14 +513,11 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
             date: item.t,
             cr: item.cr
           },
-          // Store all daily returns for this month if needed for more detailed calculations
           dailyReturns: [item]
         });
       } else {
-        // Update the month data
         const monthData = monthlyReturnsMap.get(monthKey);
         
-        // Update last day
         const currentDate = new Date(item.t);
         const lastDate = new Date(monthData.lastDay.date);
         
@@ -585,21 +528,15 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
           };
         }
         
-        // Add to the daily returns array
         monthData.dailyReturns.push(item);
       }
     });
-    
-    // console.log('[fetchAlgoMonthlyReturns] Months found:', 
-    //   Array.from(monthlyReturnsMap.keys()).join(', '));
-    
+
     // Process the monthly data
     const monthlyReturns = Array.from(monthlyReturnsMap.values())
       .map(monthData => {
-        // Calculate monthly return from first and last day's cumulative return
         const monthlyReturn = monthData.lastDay.cr - monthData.firstDay.cr;
         
-        // Extract month and year for display
         const date = new Date(monthData.firstDay.date);
         const monthNames = [
           'January', 'February', 'March', 'April', 'May', 'June',
@@ -607,25 +544,19 @@ export const fetchAlgoMonthlyReturns = async (algoId, retries = 3) => {
         ];
         
         const formattedMonth = {
-          t: monthData.month, // Keep the YYYY-MM format for sorting
+          t: monthData.month, 
           date: `${monthNames[date.getMonth()]} ${date.getFullYear()}`,
-          mr: monthlyReturn, // Monthly return (decimal)
-          cr: monthData.lastDay.cr, // Cumulative return at end of month (decimal)
+          mr: monthlyReturn, 
+          cr: monthData.lastDay.cr, 
           first_day: monthData.firstDay.date,
           last_day: monthData.lastDay.date
         };
         
-        // console.log(`[fetchAlgoMonthlyReturns] Processed month: ${formattedMonth.date}, ` +
-        //   `mr: ${formattedMonth.mr.toFixed(4)}, cr: ${formattedMonth.cr.toFixed(4)}`);
-        
         return formattedMonth;
       })
       .sort((a, b) => {
-        // Sort by date in descending order (newest first)
         return b.t.localeCompare(a.t);
       });
-    
-    // console.log(`[fetchAlgoMonthlyReturns] Final monthly returns: ${monthlyReturns.length} items`);
     
     // If we have old data but not current data, add current months
     if (monthlyReturns.length > 0) {

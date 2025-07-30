@@ -1,3 +1,4 @@
+// Now got to do the Paper Test and Real Trade (Ive already connected the Rest APIs)
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -29,10 +30,7 @@ const SubAccounts = () => {
       try {
         const accounts = await fetchSubAccounts();
         
-        // If we still get an empty array after fetching, try resetting
-        if (accounts.length === 0) {
-          // console.log('Still no accounts after fetch, resetting to defaults');
-          // await resetToDefaults();
+        if (accounts.length === 0) { // If we still get an empty array after fetching, try resetting
         }
       } catch (err) {
         console.error('Error loading subaccounts:', err);
@@ -73,7 +71,6 @@ const SubAccounts = () => {
     try {
       const sessionId = await AsyncStorage.getItem('sessionId');
       if (!sessionId) {
-        // console.log('No session ID, attempting login...');
         await login();
       }
       const response = await configureBroker(
@@ -83,7 +80,6 @@ const SubAccounts = () => {
         account.brokerPassphrase
       );
       console.log('API Response:', response);
-      // Dynamically use the account_id from response.account_map
       const accountId = response.account_map?.[0]?.[0] || account.id; // Handle nested array format
       const updatedAccounts = subAccounts.map((acc) =>
         acc.id === account.id
@@ -258,9 +254,6 @@ return (
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
-                    onPress={() => {
-                      // console.log(`Starting Paper Test for ${account.id} with ${account.algorithm}`);
-                    }}
                   >
                     <Text style={styles.actionButtonText}>Paper Test</Text>
                   </TouchableOpacity>
@@ -278,11 +271,6 @@ return (
                       },
                     ]}
                     disabled={account.status !== 'ACTIVE'}
-                    // onPress={() => {
-                    //    console.log(
-                    //     `Starting Real Trade for ${account.id} with ${account.algorithm}` +
-                    //     `${account.brokerConnected ? ' (Live)' : ' (Simulated, upload optional)'}`);
-                    // }}
                   >
                     <Text style={styles.actionButtonText}>Real Trade</Text>
                   </TouchableOpacity>

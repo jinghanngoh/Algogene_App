@@ -1,4 +1,4 @@
-// components/CreatePostModal.jsx
+// 
 import React, { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, TextInput, Keyboard } from 'react-native';
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
