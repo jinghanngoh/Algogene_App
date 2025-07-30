@@ -26,6 +26,7 @@
     "fastapi": "^0.0.8",
     "hcaptcha": "^0.2.0",
     "lodash": "^4.17.21",
+    "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
     "pydantic": "^0.0.1-security",
     "react": "19.0.0",
